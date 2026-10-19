@@ -57,6 +57,16 @@ public class SecurityConfig {
                                 "/api/v1/rooms/**",
                                 "/api/v1/showtimes/**"
                         ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/genres/**",
+                                "/api/v1/actors/**",
+                                "/api/v1/movies/**",
+                                "/api/v1/cinemas/**",
+                                "/api/v1/rooms/**",
+                                "/api/v1/showtimes/**",
+                                "/api/v1/vouchers/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

@@ -61,7 +61,6 @@ public class ShowtimeService {
             throw new AppException(ErrorCode.ROOM_INACTIVE);
         }
 
-        // 3. Tính end_time = start_time + duration_minutes và cleaning_end_time = end_time + 15 phút
         LocalDateTime startTime = request.startTime();
         LocalDateTime endTime = startTime.plusMinutes(movie.getDurationMinutes());
         LocalDateTime cleaningEndTime = endTime.plusMinutes(15);
@@ -128,8 +127,19 @@ public class ShowtimeService {
         if (!showtimeRepository.existsById(showtimeId)) {
             throw new AppException(ErrorCode.SHOWTIME_NOT_FOUND);
         }
-        return showtimeSeatRepository.findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtimeId).stream()
-                .map(showtimeMapper::toSeatResponse)
+
+        List<ShowtimeSeat> seats = showtimeSeatRepository
+                .findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtimeId);
+        java.util.Set<Long> expiredHeldSeatIds = showtimeSeatRepository
+                .findExpiredHeldSeatIdsByShowtime(showtimeId, LocalDateTime.now());
+
+        return seats.stream()
+                .map(ss -> {
+                    ShowtimeSeatStatus displayStatus = expiredHeldSeatIds.contains(ss.getId())
+                            ? ShowtimeSeatStatus.AVAILABLE
+                            : ss.getStatus();
+                    return showtimeMapper.toSeatResponse(ss, displayStatus);
+                })
                 .toList();
     }
 
