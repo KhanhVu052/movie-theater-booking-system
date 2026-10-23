@@ -7,6 +7,7 @@ import com.example.cinema.showtime.dto.response.ShowtimeSeatResponse;
 import com.example.cinema.showtime.entity.Room;
 import com.example.cinema.showtime.entity.Showtime;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
+import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -65,6 +66,18 @@ public class ShowtimeMapper {
                 .seatType(showtimeSeat.getSeat().getType())
                 .price(showtimeSeat.getPrice())
                 .status(showtimeSeat.getStatus())
+                .build();
+    }
+
+    public ShowtimeSeatResponse toSeatResponse(ShowtimeSeat showtimeSeat, ShowtimeSeatStatus effectiveStatus) {
+        return ShowtimeSeatResponse.builder()
+                .id(showtimeSeat.getId())
+                .seatId(showtimeSeat.getSeat().getId())
+                .rowName(showtimeSeat.getSeat().getRowName())
+                .seatNumber(showtimeSeat.getSeat().getSeatNumber())
+                .seatType(showtimeSeat.getSeat().getType())
+                .price(showtimeSeat.getPrice())
+                .status(effectiveStatus)
                 .build();
     }
 }

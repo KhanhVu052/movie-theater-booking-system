@@ -69,4 +69,14 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.internalServerError().body(apiResponse);
     }
+
+    @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePessimisticLockingFailure(
+            org.springframework.dao.PessimisticLockingFailureException ex
+    ) {
+        ErrorCode errorCode = ErrorCode.CONCURRENCY_LOCK_CONFLICT;
+        return ResponseEntity
+                .status(errorCode.getStatusCode())
+                .body(ApiResponse.error(errorCode.getCode(), errorCode.getMessage()));
+    }
 }
