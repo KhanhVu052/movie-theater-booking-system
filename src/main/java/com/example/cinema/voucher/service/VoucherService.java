@@ -119,7 +119,6 @@ public class VoucherService {
         voucherRedemptionRepository.save(redemption);
     }
 
-
     @Transactional
     public void releaseVoucherIfPresent(Booking booking) {
         if (booking.getVoucher() == null) {
@@ -140,5 +139,84 @@ public class VoucherService {
                 }
             }
         });
+    }
+
+    @Transactional
+    public void confirmVoucherIfPresent(Booking booking) {
+        if (booking.getVoucher() == null) {
+            return;
+        }
+
+        Voucher lockedVoucher = voucherRepository.findByIdForUpdate(booking.getVoucher().getId())
+                .orElse(null);
+
+        voucherRedemptionRepository.findByBookingId(booking.getId()).ifPresent(redemption -> {
+            if (redemption.getStatus() == VoucherRedemptionStatus.RESERVED) {
+                redemption.setStatus(VoucherRedemptionStatus.USED);
+                voucherRedemptionRepository.save(redemption);
+
+                if (lockedVoucher != null) {
+                    if (lockedVoucher.getReservedCount() > 0) {
+                        lockedVoucher.setReservedCount(lockedVoucher.getReservedCount() - 1);
+                    }
+                    lockedVoucher.setUsedCount(lockedVoucher.getUsedCount() + 1);
+                    voucherRepository.save(lockedVoucher);
+                }
+            }
+        });
+    }
+
+    @Transactional
+    public boolean tryReclaimAndConfirmVoucher(Booking booking) {
+        if (booking.getVoucher() == null) {
+            return true;
+        }
+
+        Voucher lockedVoucher = voucherRepository.findByIdForUpdate(booking.getVoucher().getId())
+                .orElse(null);
+        if (lockedVoucher == null) {
+            return false;
+        }
+
+        VoucherRedemption redemption = voucherRedemptionRepository.findByBookingId(booking.getId())
+                .orElse(null);
+        if (redemption == null) {
+            return false;
+        }
+
+        if (redemption.getStatus() == VoucherRedemptionStatus.USED) {
+            return true;
+        }
+
+        if (redemption.getStatus() == VoucherRedemptionStatus.RESERVED) {
+            redemption.setStatus(VoucherRedemptionStatus.USED);
+            voucherRedemptionRepository.save(redemption);
+            if (lockedVoucher.getReservedCount() > 0) {
+                lockedVoucher.setReservedCount(lockedVoucher.getReservedCount() - 1);
+            }
+            lockedVoucher.setUsedCount(lockedVoucher.getUsedCount() + 1);
+            voucherRepository.save(lockedVoucher);
+            return true;
+        }
+
+        if (lockedVoucher.getReservedCount() + lockedVoucher.getUsedCount() >= lockedVoucher.getUsageLimit()) {
+            return false;
+        }
+
+        long activeUserRedemptions = voucherRedemptionRepository.countActiveRedemptionsByUser(
+                lockedVoucher.getId(),
+                booking.getUser().getId(),
+                List.of(VoucherRedemptionStatus.RESERVED, VoucherRedemptionStatus.USED)
+        );
+        if (activeUserRedemptions >= lockedVoucher.getPerUserLimit()) {
+            return false;
+        }
+
+        redemption.setStatus(VoucherRedemptionStatus.USED);
+        voucherRedemptionRepository.save(redemption);
+
+        lockedVoucher.setUsedCount(lockedVoucher.getUsedCount() + 1);
+        voucherRepository.save(lockedVoucher);
+        return true;
     }
 }
