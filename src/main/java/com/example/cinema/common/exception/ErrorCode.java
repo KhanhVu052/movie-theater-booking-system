@@ -62,7 +62,14 @@ public enum ErrorCode {
     SEAT_SELECTION_INVALID(1503, "Selected seats contain duplicates or do not belong to the requested showtime", HttpStatus.CONFLICT),
     SEAT_NOT_AVAILABLE(1504, "One or more selected seats are currently held or already booked", HttpStatus.CONFLICT),
     BOOKING_CANNOT_BE_CANCELLED(1505, "Only PENDING_PAYMENT bookings can be cancelled", HttpStatus.CONFLICT),
-    BOOKING_EXPIRED(1506, "Booking hold time (10 minutes) has already expired", HttpStatus.CONFLICT);
+    BOOKING_EXPIRED(1506, "Booking hold time (10 minutes) has already expired", HttpStatus.CONFLICT),
+
+    // --- Payment & Refund Errors (1600 - 1699) ---
+    PAYMENT_NOT_FOUND(1601, "Payment transaction not found", HttpStatus.NOT_FOUND),
+    BOOKING_NOT_PAYABLE(1602, "Booking is not in PENDING_PAYMENT status", HttpStatus.CONFLICT),
+    PAYMENT_MAX_ATTEMPTS_EXCEEDED(1603, "Maximum of 3 payment attempts allowed per booking has been reached", HttpStatus.CONFLICT),
+    PAYMENT_INVALID_SIGNATURE(1604, "Invalid VNPay digital signature (checksum failed)", HttpStatus.BAD_REQUEST),
+    PAYMENT_REFUND_NOT_REQUIRED(1605, "Only payments with REFUND_REQUIRED status can be marked as REFUNDED", HttpStatus.CONFLICT);
 
     int code;
     String message;
