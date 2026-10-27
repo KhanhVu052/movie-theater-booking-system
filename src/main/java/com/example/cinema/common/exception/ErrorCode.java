@@ -69,7 +69,12 @@ public enum ErrorCode {
     BOOKING_NOT_PAYABLE(1602, "Booking is not in PENDING_PAYMENT status", HttpStatus.CONFLICT),
     PAYMENT_MAX_ATTEMPTS_EXCEEDED(1603, "Maximum of 3 payment attempts allowed per booking has been reached", HttpStatus.CONFLICT),
     PAYMENT_INVALID_SIGNATURE(1604, "Invalid VNPay digital signature (checksum failed)", HttpStatus.BAD_REQUEST),
-    PAYMENT_REFUND_NOT_REQUIRED(1605, "Only payments with REFUND_REQUIRED status can be marked as REFUNDED", HttpStatus.CONFLICT);
+    PAYMENT_REFUND_NOT_REQUIRED(1605, "Only payments with REFUND_REQUIRED status can be marked as REFUNDED", HttpStatus.CONFLICT),
+
+    REVIEW_NOT_FOUND(1701, "Review not found", HttpStatus.NOT_FOUND),
+    REVIEW_ALREADY_EXISTS(1702, "You have already reviewed this movie", HttpStatus.CONFLICT),
+    REVIEW_NOT_ELIGIBLE(1703, "You can only review this movie after purchasing a confirmed ticket and the showtime has ended", HttpStatus.FORBIDDEN),
+    REVIEW_HIDDEN_CANNOT_EDIT(1704, "This review has been hidden by an administrator and cannot be edited", HttpStatus.FORBIDDEN);
 
     int code;
     String message;

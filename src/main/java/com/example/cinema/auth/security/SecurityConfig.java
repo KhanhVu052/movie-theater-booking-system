@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/api/v1/payments/vnpay-return",
                                 "/api/v1/payments/vnpay-ipn"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/movie/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception
