@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ToastProvider } from './context/ToastContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -12,37 +13,39 @@ import NotFound from './pages/NotFound';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* GoToro Cinema Landing Page */}
-        <Route path="/" element={<Home />} />
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* GoToro Cinema Landing Page */}
+          <Route path="/" element={<Home />} />
 
-        {/* Authentication Pages */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+          {/* Authentication Pages */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* Movie Detail Page */}
-        <Route path="/movies/:id" element={<MovieDetail />} />
+          {/* Movie Detail Page */}
+          <Route path="/movies/:id" element={<MovieDetail />} />
 
-        {/* Seat Selection & 10-Minute Hold */}
-        <Route path="/booking/:showtimeId" element={<SeatSelection />} />
+          {/* Seat Selection & 10-Minute Hold */}
+          <Route path="/booking/:showtimeId" element={<SeatSelection />} />
 
-        {/* Payment Checkout & VNPAY Integration */}
-        <Route path="/payment/:bookingId" element={<Payment />} />
+          {/* Payment Checkout & VNPAY Integration */}
+          <Route path="/payment/:bookingId" element={<Payment />} />
 
-        {/* Payment Confirmation & Digital E-Ticket */}
-        <Route path="/payment/result" element={<PaymentResult />} />
-        <Route path="/payment/vnpay-return" element={<PaymentResult />} />
+          {/* Payment Confirmation & Digital E-Ticket */}
+          <Route path="/payment/result" element={<PaymentResult />} />
+          <Route path="/payment/vnpay-return" element={<PaymentResult />} />
 
-        {/* Customer Booking History & Reviews */}
-        <Route path="/my-bookings" element={<MyBookings />} />
+          {/* Customer Booking History & Reviews */}
+          <Route path="/my-bookings" element={<MyBookings />} />
 
-        {/* Admin Management & Revenue Reporting Console */}
-        <Route path="/admin" element={<AdminDashboard />} />
+          {/* Admin Management & Revenue Reporting Console */}
+          <Route path="/admin" element={<AdminDashboard />} />
 
-        {/* Fallback 404 Route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Fallback 404 Route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }

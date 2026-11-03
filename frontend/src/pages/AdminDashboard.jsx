@@ -29,6 +29,7 @@ import {
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { adminApi } from '../api/adminApi';
 import { movieApi } from '../api/movieApi';
+import { useToast } from '../context/ToastContext';
 
 const formatCurrency = (amount) => {
   return `${Number(amount || 0).toLocaleString('en-US')} VND`;
@@ -66,6 +67,7 @@ const formatDateTime = (isoString) => {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { showToast, confirm } = useToast();
 
   // Active Tab: REVENUE | SHOWTIMES | PAYMENTS | MOVIES | VOUCHERS | REVIEWS
   const [activeTab, setActiveTab] = useState('REVENUE');
@@ -322,15 +324,22 @@ export default function AdminDashboard() {
 
   // Handle Manual Refund Confirmation
   const handleConfirmRefund = async (paymentId) => {
-    if (!window.confirm('Confirm manual refund settlement for this transaction?')) return;
+    const confirmed = await confirm({
+      title: 'Confirm Manual Refund Settlement',
+      message: `Are you sure you want to confirm manual refund settlement for Payment #${paymentId}? This will update the transaction to REFUNDED.`,
+      confirmText: 'Confirm Refund',
+      cancelText: 'Cancel',
+      isDestructive: false,
+    });
+    if (!confirmed) return;
+
     setRefundingId(paymentId);
     try {
       await adminApi.confirmManualRefund(paymentId);
-      setNotice(`Payment #${paymentId} confirmed as REFUNDED.`);
+      showToast(`Payment #${paymentId} confirmed as REFUNDED.`, 'success');
       fetchPayments();
-      setTimeout(() => setNotice(''), 3000);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to confirm refund.');
+      showToast(err.response?.data?.message || 'Failed to confirm refund.', 'error');
     } finally {
       setRefundingId(null);
     }
@@ -342,7 +351,7 @@ export default function AdminDashboard() {
       await adminApi.toggleVoucherStatus(id, !currentStatus);
       fetchVouchers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update voucher status.');
+      showToast(err.response?.data?.message || 'Failed to update voucher status.', 'error');
     }
   };
 
@@ -353,7 +362,7 @@ export default function AdminDashboard() {
       await adminApi.updateReviewStatus(id, nextStatus);
       fetchReviews();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update review visibility.');
+      showToast(err.response?.data?.message || 'Failed to update review visibility.', 'error');
     }
   };
 
@@ -393,14 +402,21 @@ export default function AdminDashboard() {
 
   // Cancel Showtime
   const handleCancelShowtime = async (id) => {
-    if (!window.confirm(`Are you sure you want to cancel Showtime #${id}?`)) return;
+    const confirmed = await confirm({
+      title: 'Cancel Showtime Schedule',
+      message: `Are you sure you want to cancel Showtime #${id}? All unbooked seats will be removed from circulation.`,
+      confirmText: 'Yes, Cancel Showtime',
+      cancelText: 'Keep Scheduled',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
+
     try {
       await adminApi.cancelShowtime(id);
-      setNotice(`Showtime #${id} has been cancelled.`);
+      showToast(`Showtime #${id} has been cancelled.`, 'info');
       fetchShowtimes();
-      setTimeout(() => setNotice(''), 3000);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to cancel showtime.');
+      showToast(err.response?.data?.message || 'Failed to cancel showtime.', 'error');
     }
   };
 
@@ -414,7 +430,7 @@ export default function AdminDashboard() {
       fetchMovies();
       setTimeout(() => setNotice(''), 3000);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create movie.');
+      showToast(err.response?.data?.message || 'Failed to create movie.', 'error');
     }
   };
 
@@ -433,7 +449,7 @@ export default function AdminDashboard() {
       fetchVouchers();
       setTimeout(() => setNotice(''), 3000);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create voucher campaign.');
+      showToast(err.response?.data?.message || 'Failed to create voucher campaign.', 'error');
     }
   };
 

@@ -16,6 +16,7 @@ import {
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { bookingApi } from '../api/bookingApi';
 import { paymentApi } from '../api/paymentApi';
+import { useToast } from '../context/ToastContext';
 
 const formatCurrency = (amount) => {
   return `${Number(amount || 0).toLocaleString('en-US')} VND`;
@@ -53,6 +54,7 @@ const formatDate = (isoString) => {
 export default function Payment() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
+  const { showToast, confirm } = useToast();
 
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -170,17 +172,24 @@ export default function Payment() {
 
   // Handle Cancel Booking
   const handleCancelReservation = async () => {
-    if (!window.confirm('Are you sure you want to cancel this seat reservation?')) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Cancel Reservation',
+      message: 'Are you sure you want to cancel this seat reservation? Your held seats will be released immediately.',
+      confirmText: 'Yes, Cancel Seats',
+      cancelText: 'Keep Reservation',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
 
     setCancelling(true);
     try {
       await bookingApi.cancelBooking(bookingId);
+      showToast('Reservation cancelled successfully.', 'info');
       navigate('/');
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to cancel reservation.';
       setPaymentError(msg);
+      showToast(msg, 'error');
     } finally {
       setCancelling(false);
     }
