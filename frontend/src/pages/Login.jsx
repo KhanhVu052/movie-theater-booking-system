@@ -143,8 +143,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Cập nhật State chuẩn bất biến (Functional Updater)
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
     if (error) setError('');
   };
 
@@ -154,15 +159,26 @@ export default function Login() {
     setError('');
     try {
       const response = await authApi.login(formData);
-      const token = response.data?.data?.token || response.data?.token;
+      // Backend trả về accessToken trong data wrapper
+      const token = response.data?.data?.accessToken || response.data?.accessToken;
+      const user = response.data?.data?.user;
+
       if (token) {
         localStorage.setItem('token', token);
+        if (user) {
+          localStorage.setItem('user', JSON.stringify(user));
+        }
         navigate('/');
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Invalid email or password. Please try again.'
-      );
+      const resData = err.response?.data;
+      if (resData?.errors && typeof resData.errors === 'object') {
+        setError(Object.values(resData.errors).join(', '));
+      } else {
+        setError(
+          resData?.message || 'Invalid email or password. Please try again.'
+        );
+      }
     } finally {
       setLoading(false);
     }
