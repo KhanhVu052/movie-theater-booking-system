@@ -139,8 +139,13 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Cập nhật State chuẩn bất biến (Functional Updater)
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
     if (error) setError('');
   };
 
@@ -152,9 +157,14 @@ export default function Register() {
       await authApi.register(formData);
       navigate('/login');
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Registration failed. Please check your details.'
-      );
+      const resData = err.response?.data;
+      if (resData?.errors && typeof resData.errors === 'object') {
+        setError(Object.values(resData.errors).join(', '));
+      } else {
+        setError(
+          resData?.message || 'Registration failed. Please check your details.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -261,6 +271,7 @@ export default function Register() {
                   type="text"
                   name="fullName"
                   required
+                  maxLength={100}
                   value={formData.fullName}
                   onChange={handleChange}
                   className="w-full bg-[#140f0a] border border-[#3d3020] rounded-lg px-4 py-2.5 text-sm text-[#f5ece0] focus:outline-none focus:border-[#e0b354] focus:ring-1 focus:ring-[#e0b354]/30 transition-all"
@@ -296,9 +307,13 @@ export default function Register() {
                   id="phone"
                   type="tel"
                   name="phone"
+                  required
+                  placeholder="0912345678"
+                  pattern="^(0|\+84)[0-9]{9}$"
+                  title="Vietnamese phone number: 10 digits starting with 0 or +84"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full bg-[#140f0a] border border-[#3d3020] rounded-lg px-4 py-2.5 text-sm text-[#f5ece0] focus:outline-none focus:border-[#e0b354] focus:ring-1 focus:ring-[#e0b354]/30 transition-all"
+                  className="w-full bg-[#140f0a] border border-[#3d3020] rounded-lg px-4 py-2.5 text-sm text-[#f5ece0] placeholder:text-[#6e5d49] focus:outline-none focus:border-[#e0b354] focus:ring-1 focus:ring-[#e0b354]/30 transition-all"
                 />
               </div>
 
@@ -307,7 +322,7 @@ export default function Register() {
                   htmlFor="password"
                   className="block text-sm font-medium text-[#d4c3ad] mb-1"
                 >
-                  Password
+                  Password (min 6 characters)
                 </label>
                 <div className="relative">
                   <input
@@ -315,6 +330,8 @@ export default function Register() {
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     required
+                    minLength={6}
+                    maxLength={50}
                     value={formData.password}
                     onChange={handleChange}
                     className="w-full bg-[#140f0a] border border-[#3d3020] rounded-lg pl-4 pr-10 py-2.5 text-sm text-[#f5ece0] focus:outline-none focus:border-[#e0b354] focus:ring-1 focus:ring-[#e0b354]/30 transition-all"
