@@ -6,6 +6,7 @@ import MovieDetail from './pages/MovieDetail';
 import SeatSelection from './pages/SeatSelection';
 import Payment from './pages/Payment';
 import PaymentResult from './pages/PaymentResult';
+import MyBookings from './pages/MyBookings';
 
 export default function App() {
   return (
@@ -30,6 +31,9 @@ export default function App() {
         {/* Payment Confirmation & Digital E-Ticket */}
         <Route path="/payment/result" element={<PaymentResult />} />
         <Route path="/payment/vnpay-return" element={<PaymentResult />} />
+
+        {/* Customer Booking History & Reviews */}
+        <Route path="/my-bookings" element={<MyBookings />} />
 
         {/* Fallback wildcard */}
         <Route path="*" element={<Navigate to="/" replace />} />

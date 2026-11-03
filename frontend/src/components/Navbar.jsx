@@ -101,6 +101,14 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
           >
             Vouchers
           </button>
+          {token && (
+            <Link
+              to="/my-bookings"
+              className="hover:text-[#f3cb62] transition-colors cursor-pointer"
+            >
+              My Bookings
+            </Link>
+          )}
         </nav>
       </div>
 
@@ -126,14 +134,13 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
                 {user.fullName}
               </span>
             )}
-            <button
-              type="button"
-              onClick={() => scrollToSection('movies-section')}
+            <Link
+              to="/my-bookings"
               className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1f1912] border border-[#4d3c26] text-xs font-medium text-[#e6c27a] hover:border-[#e0b354] transition-colors cursor-pointer"
             >
               <Ticket className="w-3.5 h-3.5" />
               <span>My Tickets</span>
-            </button>
+            </Link>
             <button
               type="button"
               onClick={handleLogout}
@@ -204,10 +211,19 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
           <button
             type="button"
             onClick={() => scrollToSection('vouchers-section')}
-            className="text-left py-2 text-sm text-[#c7b59d]"
+            className="text-left py-2 text-sm text-[#c7b59d] border-b border-[#2e2316]"
           >
             Promo Vouchers
           </button>
+          {token && (
+            <Link
+              to="/my-bookings"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-left py-2 text-sm text-[#f3cb62] font-semibold"
+            >
+              My Bookings &amp; Tickets
+            </Link>
+          )}
         </div>
       )}
     </header>
