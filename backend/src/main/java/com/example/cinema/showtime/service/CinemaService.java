@@ -23,6 +23,12 @@ public class CinemaService {
     CinemaRepository cinemaRepository;
     CinemaMapper cinemaMapper;
 
+    @Transactional
+    public CinemaResponse createCinema(CinemaRequest request) {
+        Cinema cinema = cinemaMapper.toEntity(request);
+        return cinemaMapper.toResponse(cinemaRepository.save(cinema));
+    }
+
     @Transactional(readOnly = true)
     public List<CinemaResponse> getAllCinemas() {
         return cinemaRepository.findAll().stream()

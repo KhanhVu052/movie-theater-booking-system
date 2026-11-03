@@ -1,12 +1,14 @@
 package com.example.cinema.common.exception;
 
 import com.example.cinema.common.dto.ApiResponse;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -58,16 +60,40 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(apiResponse);
     }
 
-    @ExceptionHandler(value = Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handlingRuntimeException(Exception exception) {
-        log.error("Uncategorized Exception: ", exception);
+    @ExceptionHandler(value = ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException exception) {
+        Map<String, String> errors = new HashMap<>();
+        exception.getConstraintViolations().forEach(violation -> {
+            String propertyPath = violation.getPropertyPath().toString();
+            String field = propertyPath.contains(".")
+                    ? propertyPath.substring(propertyPath.lastIndexOf('.') + 1)
+                    : propertyPath;
+            errors.put(field, violation.getMessage());
+        });
 
         ApiResponse<Void> apiResponse = ApiResponse.error(
-                ErrorCode.UNCATEGORIZED_EXCEPTION.getCode(),
-                ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage()
+                ErrorCode.VALIDATION_ERROR.getCode(),
+                ErrorCode.VALIDATION_ERROR.getMessage(),
+                errors
         );
 
-        return ResponseEntity.internalServerError().body(apiResponse);
+        return ResponseEntity.badRequest().body(apiResponse);
+    }
+
+    @ExceptionHandler(value = HandlerMethodValidationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHandlerMethodValidationException(HandlerMethodValidationException exception) {
+        Map<String, String> errors = new HashMap<>();
+        exception.getAllErrors().forEach(error -> {
+            errors.put("parameter", error.getDefaultMessage());
+        });
+
+        ApiResponse<Void> apiResponse = ApiResponse.error(
+                ErrorCode.VALIDATION_ERROR.getCode(),
+                ErrorCode.VALIDATION_ERROR.getMessage(),
+                errors
+        );
+
+        return ResponseEntity.badRequest().body(apiResponse);
     }
 
     @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
@@ -78,5 +104,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getStatusCode())
                 .body(ApiResponse.error(errorCode.getCode(), errorCode.getMessage()));
+    }
+
+    @ExceptionHandler(value = Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handlingRuntimeException(Exception exception) {
+        log.error("Uncategorized Exception: ", exception);
+
+        ApiResponse<Void> apiResponse = ApiResponse.error(
+                ErrorCode.UNCATEGORIZED_EXCEPTION.getCode(),
+                ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage()
+        );
+
+        return ResponseEntity.internalServerError().body(apiResponse);
     }
 }
