@@ -13,9 +13,12 @@ import com.example.cinema.common.exception.AppException;
 import com.example.cinema.common.exception.ErrorCode;
 import com.example.cinema.payment.config.VnPayProperties;
 import com.example.cinema.payment.config.VnPayUtil;
+import com.example.cinema.payment.dto.projection.DailyRevenueProjection;
+import com.example.cinema.payment.dto.projection.MovieRevenueProjection;
 import com.example.cinema.payment.dto.request.PaymentCreateRequest;
 import com.example.cinema.payment.dto.response.PaymentResponse;
 import com.example.cinema.payment.dto.response.PaymentUrlResponse;
+import com.example.cinema.payment.dto.response.RevenueReportResponse;
 import com.example.cinema.payment.dto.response.VnPayIpnResponse;
 import com.example.cinema.payment.dto.response.VnPayReturnResponse;
 import com.example.cinema.payment.entity.Payment;
@@ -42,7 +45,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,7 +156,6 @@ public class PaymentService {
                 .build();
     }
 
-
     @Transactional(readOnly = true)
     public VnPayReturnResponse handleVnPayReturn(Map<String, String> params) {
         boolean signatureValid = VnPayUtil.verifySignature(params, vnPayProperties.getHashSecret());
@@ -216,7 +220,6 @@ public class PaymentService {
                 .message(message)
                 .build();
     }
-
 
     @Transactional
     public VnPayIpnResponse processVnPayIpn(Map<String, String> params) {
@@ -398,6 +401,56 @@ public class PaymentService {
 
         payment.setRefundStatus(PaymentRefundStatus.REFUNDED);
         return paymentMapper.toResponse(paymentRepository.save(payment));
+    }
+
+    @Transactional(readOnly = true)
+    public RevenueReportResponse getRevenueReport(LocalDate fromDate, LocalDate toDate) {
+        if (fromDate == null) {
+            fromDate = LocalDate.now().minusDays(30);
+        }
+        if (toDate == null) {
+            toDate = LocalDate.now();
+        }
+        if (fromDate.isAfter(toDate)) {
+            LocalDate temp = fromDate;
+            fromDate = toDate;
+            toDate = temp;
+        }
+
+        LocalDateTime startDateTime = fromDate.atStartOfDay();
+        LocalDateTime endDateTime = toDate.atTime(LocalTime.MAX);
+
+        Long totalRevenue = paymentRepository.calculateTotalNetRevenue(startDateTime, endDateTime);
+
+        List<DailyRevenueProjection> dailyProjections = paymentRepository.getDailyRevenueStatistics(startDateTime, endDateTime);
+        List<RevenueReportResponse.DailyRevenueItem> dailyItems = dailyProjections.stream()
+                .map(p -> RevenueReportResponse.DailyRevenueItem.builder()
+                        .date(p.getReportDate())
+                        .revenue(p.getTotalRevenue())
+                        .transactionCount(p.getTransactionCount())
+                        .build())
+                .toList();
+
+        List<MovieRevenueProjection> movieProjections = paymentRepository.getRevenueByMovie(startDateTime, endDateTime);
+        List<RevenueReportResponse.MovieRevenueItem> movieItems = movieProjections.stream()
+                .map(p -> RevenueReportResponse.MovieRevenueItem.builder()
+                        .movieId(p.getMovieId())
+                        .movieTitle(p.getMovieTitle())
+                        .revenue(p.getTotalRevenue())
+                        .totalBookings(p.getTotalBookings())
+                        .build())
+                .toList();
+
+        long totalTransactions = dailyProjections.stream()
+                .mapToLong(DailyRevenueProjection::getTransactionCount)
+                .sum();
+
+        return RevenueReportResponse.builder()
+                .totalRevenue(totalRevenue)
+                .totalSuccessfulTransactions(totalTransactions)
+                .dailyBreakdown(dailyItems)
+                .movieBreakdown(movieItems)
+                .build();
     }
 
     private String generateUniqueTransactionRef(String bookingCode, int attemptNumber) {

@@ -7,6 +7,7 @@ import com.example.cinema.payment.config.VnPayUtil;
 import com.example.cinema.payment.dto.request.PaymentCreateRequest;
 import com.example.cinema.payment.dto.response.PaymentResponse;
 import com.example.cinema.payment.dto.response.PaymentUrlResponse;
+import com.example.cinema.payment.dto.response.RevenueReportResponse;
 import com.example.cinema.payment.dto.response.VnPayIpnResponse;
 import com.example.cinema.payment.dto.response.VnPayReturnResponse;
 import com.example.cinema.payment.enums.PaymentRefundStatus;
@@ -19,6 +20,7 @@ import jakarta.validation.constraints.Min;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -111,5 +114,16 @@ public class PaymentController {
                 () -> paymentService.confirmManualRefund(id)
         );
         return ResponseEntity.ok(ApiResponse.success("Payment marked as REFUNDED successfully", response));
+    }
+
+    @GetMapping("/reports/revenue")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<RevenueReportResponse>> getRevenueReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                paymentService.getRevenueReport(fromDate, toDate)
+        ));
     }
 }
