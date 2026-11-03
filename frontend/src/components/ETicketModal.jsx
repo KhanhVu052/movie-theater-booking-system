@@ -6,50 +6,15 @@ import {
   Check,
   MapPin,
   Calendar,
-  Clock,
-  Ticket,
-  Film,
-  Sparkles,
 } from 'lucide-react';
 import { CinemaBadgeIcon } from './Navbar';
-
-const formatCurrency = (amount) => {
-  return `${Number(amount || 0).toLocaleString('en-US')} VND`;
-};
-
-const formatHour = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return isoString;
-  }
-};
-
-const formatDate = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return isoString;
-  }
-};
+import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
 
 // High-fidelity SVG QR Code graphic
 function TicketQRCode({ code = 'GOTORO' }) {
   return (
     <svg viewBox="0 0 100 100" className="w-28 h-28 bg-white p-2 rounded-lg shadow-inner">
+      <title>{code}</title>
       <rect x="5" y="5" width="25" height="25" fill="#140e08" />
       <rect x="10" y="10" width="15" height="15" fill="#ffffff" />
       <rect x="13" y="13" width="9" height="9" fill="#140e08" />

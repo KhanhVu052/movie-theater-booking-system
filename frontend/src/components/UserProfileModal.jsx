@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   X,
   User,
@@ -15,24 +15,9 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { authApi } from '../api/authApi';
-import { CinemaBadgeIcon } from './Navbar';
-
-const formatDate = (isoString) => {
-  if (!isoString) return 'Active Member';
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return isoString;
-  }
-};
+import { formatDate } from '../utils/formatters';
 
 export default function UserProfileModal({ isOpen, onClose, onLogout }) {
-  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -60,13 +45,17 @@ export default function UserProfileModal({ isOpen, onClose, onLogout }) {
         if (isMounted && data) {
           setProfile(data);
           // Sync localStorage with latest verified details
-          localStorage.setItem('user', JSON.stringify({ ...localUser, ...data }));
+          const currentStored = localStorage.getItem('user');
+          const parsed = currentStored ? JSON.parse(currentStored) : {};
+          localStorage.setItem('user', JSON.stringify({ ...parsed, ...data }));
         }
       } catch (err) {
         if (isMounted) {
           // Graceful fallback to local cache
-          if (localUser) {
-            setProfile(localUser);
+          const currentStored = localStorage.getItem('user');
+          const parsed = currentStored ? JSON.parse(currentStored) : null;
+          if (parsed) {
+            setProfile(parsed);
           } else {
             setError(err.response?.data?.message || 'Failed to retrieve profile.');
           }
@@ -192,7 +181,7 @@ export default function UserProfileModal({ isOpen, onClose, onLogout }) {
                 <Calendar className="w-3.5 h-3.5 text-[#e0b354]" />
                 Member Since
               </span>
-              <span className="text-[#c7b59d]">{formatDate(activeUser?.createdAt)}</span>
+              <span className="text-[#c7b59d]">{formatDate(activeUser?.createdAt) || 'Active Member'}</span>
             </div>
           </div>
 

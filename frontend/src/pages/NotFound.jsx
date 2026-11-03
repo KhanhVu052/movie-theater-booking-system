@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Film, Home, Ticket, ArrowLeft } from 'lucide-react';
-import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
+import { Film, Home, Ticket } from 'lucide-react';
+import Navbar from '../components/Navbar';
 
 export default function NotFound() {
   return (

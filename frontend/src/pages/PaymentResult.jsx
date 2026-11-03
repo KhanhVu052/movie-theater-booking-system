@@ -1,60 +1,22 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
   CheckCircle2,
   XCircle,
-  Clock,
   Printer,
-  ArrowLeft,
   Copy,
   Check,
-  MapPin,
-  Calendar,
-  Ticket,
-  Film,
   Loader2,
-  AlertCircle,
   Home,
 } from 'lucide-react';
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { paymentApi } from '../api/paymentApi';
 import { bookingApi } from '../api/bookingApi';
 
-const formatCurrency = (amount) => {
-  return `${Number(amount || 0).toLocaleString('en-US')} VND`;
-};
-
-const formatHour = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return isoString;
-  }
-};
-
-const formatDate = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return isoString;
-  }
-};
+import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
 
 // SVG QR Code Placeholder Pattern
-function QRCodeGraphic({ value = "GOTORO-TICKET" }) {
+function QRCodeGraphic({ value: _value = "GOTORO-TICKET" }) {
   return (
     <svg viewBox="0 0 100 100" className="w-28 h-28 bg-white p-2 rounded-lg shadow-inner">
       <rect x="5" y="5" width="25" height="25" fill="#140e08" />
@@ -100,7 +62,6 @@ function QRCodeGraphic({ value = "GOTORO-TICKET" }) {
 
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   const [verifying, setVerifying] = useState(true);
   const [returnStatus, setReturnStatus] = useState(null);

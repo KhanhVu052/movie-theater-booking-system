@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Ticket,
   Clock,
@@ -24,41 +24,9 @@ import { reviewApi } from '../api/reviewApi';
 import ETicketModal from '../components/ETicketModal';
 import { useToast } from '../context/ToastContext';
 
-const formatCurrency = (amount) => {
-  return `${Number(amount || 0).toLocaleString('en-US')} VND`;
-};
-
-const formatHour = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return isoString;
-  }
-};
-
-const formatDate = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return isoString;
-  }
-};
+import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
 
 export default function MyBookings() {
-  const navigate = useNavigate();
   const { showToast, confirm } = useToast();
 
   const [bookings, setBookings] = useState([]);

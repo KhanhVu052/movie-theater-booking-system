@@ -5,7 +5,6 @@ import {
   Clock,
   MapPin,
   Calendar,
-  Film,
   Ticket,
   Tag,
   Check,
@@ -18,41 +17,7 @@ import Navbar from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
 import { bookingApi } from '../api/bookingApi';
 
-// Format currency
-const formatCurrency = (amount) => {
-  return `${Number(amount || 0).toLocaleString('en-US')} VND`;
-};
-
-// Format showtime hour
-const formatHour = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return isoString;
-  }
-};
-
-// Format date
-const formatDate = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return isoString;
-  }
-};
+import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
 
 export default function SeatSelection() {
   const { showtimeId } = useParams();

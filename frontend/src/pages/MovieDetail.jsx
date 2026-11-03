@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Play,
-  Ticket,
   Clock,
   Calendar,
   Star,
@@ -14,7 +13,6 @@ import {
   AlertCircle,
   X,
   MessageSquare,
-  ShieldCheck,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
