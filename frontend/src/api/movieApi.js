@@ -1,7 +1,7 @@
 import axiosClient from './axiosClient';
 
 export const movieApi = {
-  // Lấy toàn bộ danh sách phim (kèm phân trang, lọc theo trạng thái, thể loại, tìm kiếm)
+  // Fetch all movies with optional pagination, status, genre, and search filters
   getAllMovies: (params = {}) => {
     return axiosClient.get('/movies', {
       params: {
@@ -12,42 +12,42 @@ export const movieApi = {
     });
   },
 
-  // Lấy chi tiết 1 bộ phim theo ID
+  // Fetch movie details by ID
   getMovieById: (id) => {
     return axiosClient.get(`/movies/${id}`);
   },
 
-  // Lấy danh sách tất cả cụm rạp
+  // Fetch all cinema locations
   getAllCinemas: () => {
     return axiosClient.get('/cinemas');
   },
 
-  // Lấy chi tiết cụm rạp theo ID
+  // Fetch cinema details by ID
   getCinemaById: (id) => {
     return axiosClient.get(`/cinemas/${id}`);
   },
 
-  // Lấy danh sách tất cả thể loại phim
+  // Fetch all movie genres
   getAllGenres: () => {
     return axiosClient.get('/genres');
   },
 
-  // Lấy danh sách mã giảm giá / khuyến mãi
+  // Fetch all promotional vouchers
   getAllVouchers: () => {
     return axiosClient.get('/vouchers');
   },
 
-  // Alias lấy khuyến mãi đang hoạt động
+  // Alias for active vouchers
   getActiveVouchers: () => {
     return axiosClient.get('/vouchers');
   },
 
-  // Kiểm tra mã voucher cụ thể
+  // Lookup voucher by code
   getVoucherByCode: (code) => {
     return axiosClient.get(`/vouchers/code/${encodeURIComponent(code)}`);
   },
 
-  // Lấy danh sách suất chiếu (hỗ trợ lọc theo movieId, roomId, showDate, fromTime, toTime, status)
+  // Fetch showtimes with automatic date-to-ISO range conversion
   getShowtimes: (params = {}) => {
     const queryParams = {
       page: 1,
@@ -56,7 +56,7 @@ export const movieApi = {
       ...params,
     };
 
-    // Nếu truyền showDate (YYYY-MM-DD), tự động ánh xạ sang fromTime và toTime ISO
+    // If showDate (YYYY-MM-DD) is provided, convert to fromTime and toTime ISO strings
     if (params.showDate) {
       if (!params.fromTime) {
         queryParams.fromTime = `${params.showDate}T00:00:00`;
@@ -67,28 +67,28 @@ export const movieApi = {
       delete queryParams.showDate;
     }
 
-    // cinemaId được lọc phía client dựa theo cinemaId có sẵn trên từng ShowtimeResponse
+    // cinemaId is filtered on client side using cinemaId on each ShowtimeResponse
     delete queryParams.cinemaId;
 
     return axiosClient.get('/showtimes', { params: queryParams });
   },
 
-  // Lấy suất chiếu theo phim và ngày chiếu
+  // Fetch showtimes by movie and date
   getShowtimesByMovie: (movieId, date) => {
     return movieApi.getShowtimes({ movieId, showDate: date });
   },
 
-  // Lấy chi tiết 1 suất chiếu
+  // Fetch showtime detail by ID
   getShowtimeById: (id) => {
     return axiosClient.get(`/showtimes/${id}`);
   },
 
-  // Lấy sơ đồ ghế và trạng thái đặt ghế của 1 suất chiếu
+  // Fetch seat layout and real-time seat availability
   getShowtimeSeats: (id) => {
     return axiosClient.get(`/showtimes/${id}/seats`);
   },
 
-  // Lấy tóm tắt đánh giá và danh sách review của bộ phim
+  // Fetch movie reviews and rating summary
   getMovieReviews: (movieId, params = {}) => {
     return axiosClient.get(`/reviews/movie/${movieId}`, { params });
   },

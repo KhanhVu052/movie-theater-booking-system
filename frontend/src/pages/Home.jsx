@@ -5,7 +5,6 @@ import {
   Ticket,
   Clock,
   Calendar,
-  Star,
   Sparkles,
   ChevronLeft,
   ChevronRight,
@@ -24,7 +23,7 @@ import {
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
 
-// Chuẩn hóa và bóc tách dữ liệu từ cấu trúc ApiResponse<T> hoặc PageResponse<T> của Backend
+// Normalize and extract data from Backend ApiResponse<T> or PageResponse<T>
 const extractPayload = (response) => {
   const raw = response?.data?.data ?? response?.data;
   if (Array.isArray(raw)) return raw;
@@ -33,7 +32,7 @@ const extractPayload = (response) => {
   return [];
 };
 
-// Chuẩn hóa chuỗi hiển thị thể loại
+// Normalize genre display string
 const formatGenreText = (movie) => {
   if (!movie) return '';
   if (typeof movie.genre === 'string' && movie.genre) return movie.genre;
@@ -46,7 +45,7 @@ const formatGenreText = (movie) => {
   return '';
 };
 
-// Chuẩn hóa chuỗi hiển thị diễn viên (ngăn lỗi crash React khi actors là mảng đối tượng ActorResponse)
+// Normalize actor list string (prevent React child crash on ActorResponse objects)
 const formatActorText = (movie) => {
   if (!movie) return '';
   if (typeof movie.actors === 'string') return movie.actors;
@@ -59,7 +58,7 @@ const formatActorText = (movie) => {
   return '';
 };
 
-// Chuẩn hóa ngày phát hành (YYYY-MM-DD -> DD/MM/YYYY)
+// Format release date (YYYY-MM-DD -> DD/MM/YYYY)
 const formatReleaseDate = (dateStr) => {
   if (!dateStr) return '';
   try {
@@ -73,12 +72,12 @@ const formatReleaseDate = (dateStr) => {
   }
 };
 
-// Format giờ chiếu từ chuỗi ISO startTime
+// Format showtime hour from ISO string
 const formatShowtimeHour = (isoString) => {
   if (!isoString) return '';
   try {
     const date = new Date(isoString);
-    return date.toLocaleTimeString('vi-VN', {
+    return date.toLocaleTimeString('en-GB', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -88,7 +87,7 @@ const formatShowtimeHour = (isoString) => {
   }
 };
 
-// Chuyển đổi URL Youtube thường sang URL Embed cho Iframe Modal
+// Convert regular YouTube URL to Iframe Embed URL
 const getEmbedTrailerUrl = (url) => {
   if (!url) return '';
   if (url.includes('youtube.com/embed/')) return url;
@@ -105,7 +104,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { id: paramMovieId } = useParams();
 
-  // Data States kết nối với Backend
+  // Data States
   const [movies, setMovies] = useState([]);
   const [cinemas, setCinemas] = useState([]);
   const [vouchers, setVouchers] = useState([]);
@@ -134,7 +133,7 @@ export default function Home() {
   const [trailerModal, setTrailerModal] = useState(null);
   const [copiedCode, setCopiedCode] = useState('');
 
-  // 1. Tải danh sách Movies, Cinemas, Vouchers từ Backend
+  // 1. Fetch initial Movies, Cinemas, Vouchers from Backend
   useEffect(() => {
     let isMounted = true;
 
@@ -154,7 +153,7 @@ export default function Home() {
           const movieList = extractPayload(moviesRes.value);
           setMovies(movieList);
 
-          // Nếu có paramMovieId trên URL, ưu tiên chọn phim đó
+          // If paramMovieId exists in URL, preselect that movie
           if (paramMovieId) {
             setQuickMovieId(String(paramMovieId));
           } else {
@@ -166,7 +165,7 @@ export default function Home() {
             }
           }
         } else {
-          setError('Không thể tải danh sách phim từ máy chủ.');
+          setError('Unable to load movie list from server.');
         }
 
         if (cinemasRes.status === 'fulfilled') {
@@ -182,7 +181,7 @@ export default function Home() {
         }
       } catch {
         if (isMounted) {
-          setError('Lỗi kết nối tới hệ thống máy chủ.');
+          setError('Connection error to the backend server.');
         }
       } finally {
         if (isMounted) {
@@ -197,7 +196,7 @@ export default function Home() {
     };
   }, [paramMovieId]);
 
-  // 2. Tự động truy vấn suất chiếu thực tế khi thay đổi Phim, Rạp hoặc Ngày chiếu
+  // 2. Query showtimes when Movie, Cinema, or Date changes
   useEffect(() => {
     if (!quickMovieId || !quickDate) {
       setAvailableShowtimes([]);
@@ -217,7 +216,7 @@ export default function Home() {
         if (!isMounted) return;
         const showtimeList = extractPayload(res);
 
-        // Lọc theo cụm rạp nếu người dùng đã chọn cụm rạp
+        // Filter by cinema if selected
         const filtered = quickCinemaId
           ? showtimeList.filter(
               (st) => String(st.cinemaId) === String(quickCinemaId)
@@ -246,7 +245,7 @@ export default function Home() {
     };
   }, [quickMovieId, quickCinemaId, quickDate]);
 
-  // Danh sách phim đang chiếu cho Hero Spotlight
+  // Spotlight movies for Hero Banner
   const spotlightMovies = useMemo(
     () => movies.filter((m) => m.status === 'NOW_SHOWING').slice(0, 5),
     [movies]
@@ -254,7 +253,7 @@ export default function Home() {
 
   const currentHero = spotlightMovies[heroIndex] || movies[0] || null;
 
-  // Tự động chuyển Hero Spotlight sau 7.5 giây
+  // Auto-advance hero carousel
   useEffect(() => {
     if (spotlightMovies.length <= 1) return;
     const timer = setInterval(() => {
@@ -263,7 +262,7 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [spotlightMovies.length]);
 
-  // Trích xuất danh sách thể loại từ dữ liệu thực tế
+  // Extract unique genres
   const genres = useMemo(() => {
     const set = new Set(['ALL']);
     movies.forEach((m) => {
@@ -281,7 +280,7 @@ export default function Home() {
     return Array.from(set);
   }, [movies]);
 
-  // Lọc danh sách phim theo Tab, Thể loại và Từ khóa tìm kiếm
+  // Filter movies by Tab, Genre, and Search Query
   const filteredMovies = useMemo(() => {
     return movies.filter((movie) => {
       const matchesTab = movie.status === activeTab;
@@ -303,7 +302,6 @@ export default function Home() {
     });
   }, [movies, activeTab, selectedGenre, searchQuery]);
 
-  // Xử lý chuyển hướng đặt vé
   const handleBookMovie = useCallback(
     (movieId) => {
       navigate(`/movies/${movieId}`);
@@ -333,17 +331,17 @@ export default function Home() {
       {/* 1. Header & Navigation */}
       <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-      {/* Trạng thái đang tải */}
+      {/* Loading State */}
       {loading && (
         <div className="flex-1 flex flex-col items-center justify-center py-32 gap-3.5">
           <Loader2 className="w-10 h-10 animate-spin text-[#e6c27a]" />
           <p className="text-sm font-medium text-[#ab9a84]">
-            Đang tải dữ liệu phim và lịch chiếu từ GoToro Cinema...
+            Loading movies and showtimes from GoToro Cinema...
           </p>
         </div>
       )}
 
-      {/* Trạng thái lỗi máy chủ */}
+      {/* Server Error State */}
       {!loading && error && (
         <div className="max-w-3xl mx-auto my-12 px-6 w-full">
           <div className="p-6 rounded-2xl bg-red-950/30 border border-red-800/60 flex items-start gap-4 text-red-200">
@@ -351,14 +349,14 @@ export default function Home() {
             <div className="text-sm">
               <p className="font-bold text-red-300">{error}</p>
               <p className="text-xs text-red-300/80 mt-1">
-                Vui lòng kiểm tra lại dịch vụ Backend (cổng 8080) và tải lại trang.
+                Please ensure the backend service (port 8080) is running and refresh the page.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Nội dung chính */}
+      {/* Main Content */}
       {!loading && !error && (
         <>
           {/* 2. HERO SPOTLIGHT BANNER */}
@@ -391,7 +389,7 @@ export default function Home() {
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span className="px-3 py-1 rounded-md bg-[#1f1912] border border-[#5e4727] text-xs font-bold text-[#e6c27a] tracking-wider uppercase flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" />
-                      Phim Nổi Bật
+                      Spotlight
                     </span>
                     {currentHero.ageRating && (
                       <span className="px-2.5 py-1 rounded-md bg-[#e0b354] text-[#140e08] text-xs font-black tracking-wide">
@@ -408,7 +406,7 @@ export default function Home() {
                     {(currentHero.durationMinutes || currentHero.duration) && (
                       <span className="flex items-center gap-1.5">
                         <Clock className="w-4 h-4 text-[#ab9a84]" />
-                        {currentHero.durationMinutes || currentHero.duration} phút
+                        {currentHero.durationMinutes || currentHero.duration} mins
                       </span>
                     )}
                     {(currentHero.originalLanguage || currentHero.language) && (
@@ -428,13 +426,13 @@ export default function Home() {
                   <div className="text-xs text-[#a89680] space-y-1">
                     {currentHero.director && (
                       <p>
-                        <strong className="text-[#d4c3ad]">Đạo diễn:</strong>{' '}
+                        <strong className="text-[#d4c3ad]">Director:</strong>{' '}
                         {currentHero.director}
                       </p>
                     )}
                     {formatActorText(currentHero) && (
                       <p className="line-clamp-1">
-                        <strong className="text-[#d4c3ad]">Diễn viên:</strong>{' '}
+                        <strong className="text-[#d4c3ad]">Cast:</strong>{' '}
                         {formatActorText(currentHero)}
                       </p>
                     )}
@@ -453,7 +451,7 @@ export default function Home() {
                       className="px-7 py-3.5 rounded-xl bg-gradient-to-b from-[#f3cb62] to-[#dda938] hover:from-[#f7d576] hover:to-[#e5b344] text-[#1a1209] font-body font-bold text-sm shadow-[0_6px_20px_rgba(221,169,56,0.3)] flex items-center gap-2.5 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       <Ticket className="w-4 h-4" />
-                      <span>Đặt Vé Ngay</span>
+                      <span>Book Tickets Now</span>
                     </button>
 
                     {currentHero.trailerUrl && (
@@ -463,7 +461,7 @@ export default function Home() {
                         className="px-6 py-3.5 rounded-xl bg-[#1a140e]/90 hover:bg-[#261d14] border border-[#4d3c26] hover:border-[#e6c27a] text-[#f2e8dc] font-body font-semibold text-sm flex items-center gap-2.5 transition-all cursor-pointer"
                       >
                         <Play className="w-4 h-4 text-[#e6c27a] fill-[#e6c27a]" />
-                        <span>Xem Trailer</span>
+                        <span>Watch Trailer</span>
                       </button>
                     )}
                   </div>
@@ -481,7 +479,7 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => setTrailerModal(currentHero)}
-                          title="Xem Trailer"
+                          title="Watch Trailer"
                           className="w-11 h-11 rounded-full bg-[#120d09]/90 border border-[#e6c27a] flex items-center justify-center text-[#e6c27a] hover:scale-110 transition-transform cursor-pointer shadow-lg"
                         >
                           <Play className="w-5 h-5 fill-[#e6c27a] ml-0.5" />
@@ -504,7 +502,7 @@ export default function Home() {
                           spotlightMovies.length
                       )
                     }
-                    title="Phim trước"
+                    title="Previous movie"
                     className="w-9 h-9 rounded-lg bg-[#16110b]/90 border border-[#3d2f1d] hover:border-[#e6c27a] flex items-center justify-center text-[#d4c3ad] hover:text-[#e6c27a] transition-colors cursor-pointer"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -515,7 +513,7 @@ export default function Home() {
                         key={item.id}
                         type="button"
                         onClick={() => setHeroIndex(idx)}
-                        aria-label={`Đi tới phim ${idx + 1}`}
+                        aria-label={`Go to movie ${idx + 1}`}
                         className={`h-1.5 rounded-full transition-all cursor-pointer ${
                           idx === heroIndex
                             ? 'w-6 bg-[#e6c27a]'
@@ -529,7 +527,7 @@ export default function Home() {
                     onClick={() =>
                       setHeroIndex((prev) => (prev + 1) % spotlightMovies.length)
                     }
-                    title="Phim tiếp theo"
+                    title="Next movie"
                     className="w-9 h-9 rounded-lg bg-[#16110b]/90 border border-[#3d2f1d] hover:border-[#e6c27a] flex items-center justify-center text-[#d4c3ad] hover:text-[#e6c27a] transition-colors cursor-pointer"
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -539,7 +537,7 @@ export default function Home() {
             </section>
           )}
 
-          {/* 3. THANH ĐẶT VÉ NHANH */}
+          {/* 3. QUICK BOOKING BAR */}
           <section
             id="quick-booking"
             className="w-full max-w-7xl mx-auto px-6 lg:px-12 -mt-7 relative z-20"
@@ -548,18 +546,18 @@ export default function Home() {
               onSubmit={handleQuickBookSubmit}
               className="bg-[#1a140e] border border-[#4d3c26] rounded-2xl p-5 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.85)] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end"
             >
-              {/* Chọn Phim */}
+              {/* Select Movie */}
               <div className="lg:col-span-3">
                 <label className="block text-xs font-semibold tracking-wider text-[#b89d72] mb-2 flex items-center gap-1.5">
                   <Film className="w-3.5 h-3.5" />
-                  Chọn Phim
+                  Select Movie
                 </label>
                 <select
                   value={quickMovieId}
                   onChange={(e) => setQuickMovieId(e.target.value)}
                   className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg px-3.5 py-2.5 text-sm text-[#f5ece0] focus:outline-none focus:border-[#e0b354] transition-colors"
                 >
-                  <option value="">-- Chọn phim --</option>
+                  <option value="">-- Select a movie --</option>
                   {movies
                     .filter((m) => m.status === 'NOW_SHOWING')
                     .map((m) => (
@@ -570,18 +568,18 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Chọn Cụm Rạp */}
+              {/* Select Cinema */}
               <div className="lg:col-span-3">
                 <label className="block text-xs font-semibold tracking-wider text-[#b89d72] mb-2 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5" />
-                  Cụm Rạp
+                  Cinema
                 </label>
                 <select
                   value={quickCinemaId}
                   onChange={(e) => setQuickCinemaId(e.target.value)}
                   className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg px-3.5 py-2.5 text-sm text-[#f5ece0] focus:outline-none focus:border-[#e0b354] transition-colors"
                 >
-                  <option value="">-- Chọn rạp --</option>
+                  <option value="">-- Select a cinema --</option>
                   {cinemas.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -590,11 +588,11 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Ngày Chiếu */}
+              {/* Show Date */}
               <div className="lg:col-span-2">
                 <label className="block text-xs font-semibold tracking-wider text-[#b89d72] mb-2 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
-                  Ngày Chiếu
+                  Show Date
                 </label>
                 <input
                   type="date"
@@ -604,11 +602,11 @@ export default function Home() {
                 />
               </div>
 
-              {/* Suất Chiếu từ Backend */}
+              {/* Showtime */}
               <div className="lg:col-span-2">
                 <label className="block text-xs font-semibold tracking-wider text-[#b89d72] mb-2 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" />
-                  Suất Chiếu
+                  Showtime
                 </label>
                 <select
                   value={selectedShowtimeId}
@@ -617,9 +615,9 @@ export default function Home() {
                   className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg px-3.5 py-2.5 text-sm text-[#f5ece0] focus:outline-none focus:border-[#e0b354] disabled:opacity-50 transition-colors"
                 >
                   {loadingShowtimes ? (
-                    <option value="">Đang tải suất chiếu...</option>
+                    <option value="">Loading showtimes...</option>
                   ) : availableShowtimes.length === 0 ? (
-                    <option value="">Không có suất chiếu</option>
+                    <option value="">No showtimes available</option>
                   ) : (
                     availableShowtimes.map((st) => (
                       <option key={st.id} value={st.id}>
@@ -630,7 +628,7 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Nút Đặt Vé */}
+              {/* Submit CTA */}
               <div className="lg:col-span-2">
                 <button
                   type="submit"
@@ -638,13 +636,13 @@ export default function Home() {
                   className="w-full py-2.5 px-4 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] hover:from-[#f7d576] hover:to-[#e5b344] text-[#1a1209] font-body font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-[0.99]"
                 >
                   <Ticket className="w-4 h-4" />
-                  <span>Giữ Ghế Ngay</span>
+                  <span>Reserve Seats</span>
                 </button>
               </div>
             </form>
           </section>
 
-          {/* 4. DANH SÁCH PHIM */}
+          {/* 4. MOVIE LIST SECTION */}
           <section
             id="movies-section"
             className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-16 flex-1"
@@ -652,10 +650,10 @@ export default function Home() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#2e2316] pb-6 mb-8">
               <div>
                 <h2 className="font-body font-bold text-2xl sm:text-3xl text-[#f7efe4] tracking-tight">
-                  Lịch Phim Chiếu Rạp
+                  Now & Upcoming Releases
                 </h2>
                 <p className="text-sm text-[#9c8b75] mt-1">
-                  Cập nhật lịch chiếu theo thời gian thực tại toàn bộ hệ thống GoToro.
+                  Real-time showtimes across all GoToro Cinema locations.
                 </p>
               </div>
 
@@ -669,7 +667,7 @@ export default function Home() {
                       : 'text-[#ab9a84] hover:text-[#f2e8dc]'
                   }`}
                 >
-                  Phim Đang Chiếu (
+                  Now Showing (
                   {movies.filter((m) => m.status === 'NOW_SHOWING').length})
                 </button>
                 <button
@@ -681,13 +679,13 @@ export default function Home() {
                       : 'text-[#ab9a84] hover:text-[#f2e8dc]'
                   }`}
                 >
-                  Phim Sắp Chiếu (
+                  Coming Soon (
                   {movies.filter((m) => m.status === 'COMING_SOON').length})
                 </button>
               </div>
             </div>
 
-            {/* Thể loại */}
+            {/* Genre Filter */}
             <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 no-scrollbar">
               {genres.map((genre) => (
                 <button
@@ -700,20 +698,20 @@ export default function Home() {
                       : 'bg-[#140f0a] border-[#2e2316] text-[#9c8b75] hover:border-[#5e4727] hover:text-[#e6c27a]'
                   }`}
                 >
-                  {genre === 'ALL' ? 'Tất cả thể loại' : genre}
+                  {genre === 'ALL' ? 'All Genres' : genre}
                 </button>
               ))}
             </div>
 
-            {/* Grid danh sách phim */}
+            {/* Movies Grid */}
             {filteredMovies.length === 0 ? (
               <div className="bg-[#15100b] border border-[#2e2316] rounded-2xl p-12 text-center">
                 <Film className="w-10 h-10 text-[#8a765d] mx-auto mb-3" />
                 <p className="text-base font-semibold text-[#e6c27a]">
-                  Không tìm thấy bộ phim nào phù hợp với điều kiện tìm kiếm
+                  No movies found matching your search criteria
                 </p>
                 <p className="text-xs text-[#9c8b75] mt-1.5">
-                  Vui lòng thử tìm với từ khóa khác hoặc chọn lại thể loại phim.
+                  Try adjusting your search keywords or selecting a different genre.
                 </p>
               </div>
             ) : (
@@ -744,7 +742,7 @@ export default function Home() {
                           <button
                             type="button"
                             onClick={() => setTrailerModal(movie)}
-                            title={`Xem Trailer ${movie.title}`}
+                            title={`Watch ${movie.title} Trailer`}
                             className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer"
                           >
                             <div className="w-12 h-12 rounded-full bg-[#1a130d]/95 border border-[#e6c27a] flex items-center justify-center text-[#e6c27a] shadow-lg transform group-hover:scale-110 transition-transform">
@@ -764,7 +762,7 @@ export default function Home() {
 
                         {formatActorText(movie) && (
                           <p className="text-[11px] text-[#9c8b75] mt-1.5 line-clamp-1">
-                            <strong className="text-[#c7b59d]">Diễn viên:</strong>{' '}
+                            <strong className="text-[#c7b59d]">Cast:</strong>{' '}
                             {formatActorText(movie)}
                           </p>
                         )}
@@ -773,7 +771,7 @@ export default function Home() {
                           {(movie.durationMinutes || movie.duration) && (
                             <span className="flex items-center gap-1.5">
                               <Clock className="w-3.5 h-3.5 text-[#8a765d]" />
-                              {movie.durationMinutes || movie.duration} phút
+                              {movie.durationMinutes || movie.duration} mins
                             </span>
                           )}
                           {movie.releaseDate && (
@@ -795,8 +793,8 @@ export default function Home() {
                         <Ticket className="w-4 h-4" />
                         <span>
                           {movie.status === 'NOW_SHOWING'
-                            ? 'Mua Vé Ngay'
-                            : 'Xem Chi Tiết'}
+                            ? 'Book Tickets'
+                            : 'View Details'}
                         </span>
                       </button>
                     </div>
@@ -806,7 +804,7 @@ export default function Home() {
             )}
           </section>
 
-          {/* 5. VOUCHERS ƯU ĐÃI THÀNH VIÊN */}
+          {/* 5. VOUCHERS & PROMOTIONS SECTION */}
           {vouchers.length > 0 && (
             <section
               id="vouchers-section"
@@ -816,10 +814,10 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                   <div>
                     <h2 className="font-body font-bold text-2xl sm:text-3xl text-[#f7efe4]">
-                      Mã Ưu Đãi Đặt Vé Trực Tuyến
+                      Exclusive Online Promotions
                     </h2>
                     <p className="text-sm text-[#9c8b75] mt-1">
-                      Áp dụng khi thanh toán đặt vé online qua ứng dụng hoặc website GoToro Cinema.
+                      Applicable when booking tickets online via GoToro Cinema website or mobile app.
                     </p>
                   </div>
                 </div>
@@ -835,12 +833,12 @@ export default function Home() {
                           <span className="px-2.5 py-1 rounded bg-[#2b2014] border border-[#6e522b] text-xs font-extrabold text-[#f3cb62] flex items-center gap-1.5">
                             <Tag className="w-3.5 h-3.5" />
                             {voucher.discountType === 'PERCENTAGE'
-                              ? `GIẢM ${voucher.discountValue}%`
-                              : `GIẢM ${Number(voucher.discountValue).toLocaleString('vi-VN')}đ`}
+                              ? `${voucher.discountValue}% OFF`
+                              : `${Number(voucher.discountValue).toLocaleString('en-US')} VND OFF`}
                           </span>
                           {(voucher.endAt || voucher.expirationDate) && (
                             <span className="text-[11px] text-[#8a765d]">
-                              HSD:{' '}
+                              Expires:{' '}
                               {formatReleaseDate(
                                 (voucher.endAt || voucher.expirationDate).split('T')[0]
                               )}
@@ -855,27 +853,27 @@ export default function Home() {
                         <div className="text-xs text-[#a89680] mt-2 space-y-1">
                           {voucher.minOrderValue > 0 && (
                             <p>
-                              Đơn tối thiểu:{' '}
+                              Min Order:{' '}
                               <strong className="text-[#d4c3ad]">
-                                {Number(voucher.minOrderValue).toLocaleString('vi-VN')}đ
+                                {Number(voucher.minOrderValue).toLocaleString('en-US')} VND
                               </strong>
                             </p>
                           )}
                           {voucher.maxDiscountAmount > 0 && (
                             <p>
-                              Giảm tối đa:{' '}
+                              Max Discount:{' '}
                               <strong className="text-[#d4c3ad]">
-                                {Number(voucher.maxDiscountAmount).toLocaleString('vi-VN')}đ
+                                {Number(voucher.maxDiscountAmount).toLocaleString('en-US')} VND
                               </strong>
                             </p>
                           )}
                           {voucher.remainingQuota != null && (
                             <p className="text-[#ab9a84]">
-                              Còn lại:{' '}
+                              Remaining:{' '}
                               <span className="text-[#f3cb62] font-semibold">
                                 {voucher.remainingQuota}
                               </span>{' '}
-                              lượt
+                              left
                             </p>
                           )}
                         </div>
@@ -893,12 +891,12 @@ export default function Home() {
                           {copiedCode === voucher.code ? (
                             <>
                               <Check className="w-3.5 h-3.5 text-emerald-400" />
-                              <span className="text-emerald-300">Đã sao chép</span>
+                              <span className="text-emerald-300">Copied!</span>
                             </>
                           ) : (
                             <>
                               <Copy className="w-3.5 h-3.5 text-[#e6c27a]" />
-                              <span>Sao chép</span>
+                              <span>Copy</span>
                             </>
                           )}
                         </button>
@@ -922,7 +920,7 @@ export default function Home() {
                 GoToro Cinema
               </span>
               <p className="text-xs text-[#75644f]">
-                Hệ thống rạp chiếu phim hiện đại &bull; Đặt vé và giữ chỗ trực tuyến
+                Premium Cinema Experience &bull; Instant Real-time Online Booking
               </p>
             </div>
           </div>
@@ -930,30 +928,30 @@ export default function Home() {
           <div className="flex flex-wrap items-center gap-6 text-xs text-[#ab9a84]">
             <span className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-[#e0b354]" />
-              Khóa giữ ghế tức thì
+              Instant 10-Min Seat Hold
             </span>
             <span className="flex items-center gap-1.5">
               <CreditCard className="w-4 h-4 text-[#e0b354]" />
-              Cổng thanh toán bảo mật VNPAY
+              Secure VNPAY Payment Gateway
             </span>
             <span className="flex items-center gap-1.5">
               <Ticket className="w-4 h-4 text-[#e0b354]" />
-              Vé điện tử QR tại rạp
+              Instant E-Ticket & QR Check-in
             </span>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span>&copy; 2026 GoToro Cinema. Toàn quyền bảo lưu.</span>
+          <span>&copy; 2026 GoToro Cinema. All rights reserved.</span>
           <div className="flex items-center gap-6">
             <span>Hotline: 1900 6868</span>
-            <span>Điều khoản sử dụng</span>
-            <span>Chính sách bảo mật</span>
+            <span>Terms of Service</span>
+            <span>Privacy Policy</span>
           </div>
         </div>
       </footer>
 
-      {/* 7. MODAL TRAILER */}
+      {/* 7. TRAILER MODAL */}
       {trailerModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-3xl bg-[#18120c] border border-[#4d3c26] rounded-2xl overflow-hidden shadow-2xl">
@@ -961,13 +959,13 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <Film className="w-4 h-4 text-[#e6c27a]" />
                 <span className="font-body font-bold text-sm text-[#f7efe4] truncate max-w-md">
-                  {trailerModal.title} &mdash; Trailer
+                  {trailerModal.title} &mdash; Official Trailer
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setTrailerModal(null)}
-                title="Đóng trailer"
+                title="Close trailer"
                 className="text-[#ab9a84] hover:text-[#f3cb62] p-1 cursor-pointer transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -976,7 +974,7 @@ export default function Home() {
             <div className="aspect-video w-full bg-black">
               <iframe
                 src={getEmbedTrailerUrl(trailerModal.trailerUrl)}
-                title={`${trailerModal.title} Trailer`}
+                title={`${trailerModal.title} Official Trailer`}
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
