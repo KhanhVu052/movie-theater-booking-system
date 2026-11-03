@@ -21,6 +21,7 @@ import {
 import Navbar from '../components/Navbar';
 import { bookingApi } from '../api/bookingApi';
 import { reviewApi } from '../api/reviewApi';
+import ETicketModal from '../components/ETicketModal';
 
 const formatCurrency = (amount) => {
   return `${Number(amount || 0).toLocaleString('en-US')} VND`;
@@ -75,6 +76,7 @@ export default function MyBookings() {
 
   // Cancelling state
   const [cancellingId, setCancellingId] = useState(null);
+  const [selectedTicketBooking, setSelectedTicketBooking] = useState(null);
 
   const token = localStorage.getItem('token');
 
@@ -418,13 +420,14 @@ export default function MyBookings() {
                         <div className="flex items-center gap-2">
                           {isConfirmed && (
                             <>
-                              <Link
-                                to={`/payment/result?bookingId=${b.id}`}
-                                className="px-4 py-2 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] hover:from-[#f7d576] hover:to-[#e5b344] text-[#1a1209] font-body font-bold text-xs shadow-sm flex items-center gap-1.5"
+                              <button
+                                type="button"
+                                onClick={() => setSelectedTicketBooking(b)}
+                                className="px-4 py-2 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] hover:from-[#f7d576] hover:to-[#e5b344] text-[#1a1209] font-body font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer"
                               >
                                 <Ticket className="w-3.5 h-3.5" />
                                 <span>View E-Ticket</span>
-                              </Link>
+                              </button>
 
                               <button
                                 type="button"
@@ -583,6 +586,12 @@ export default function MyBookings() {
           </div>
         </div>
       )}
+      {/* DIGITAL E-TICKET MODAL */}
+      <ETicketModal
+        booking={selectedTicketBooking}
+        isOpen={!!selectedTicketBooking}
+        onClose={() => setSelectedTicketBooking(null)}
+      />
     </div>
   );
 }
