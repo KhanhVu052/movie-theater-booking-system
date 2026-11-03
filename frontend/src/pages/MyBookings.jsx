@@ -22,6 +22,7 @@ import Navbar from '../components/Navbar';
 import { bookingApi } from '../api/bookingApi';
 import { reviewApi } from '../api/reviewApi';
 import ETicketModal from '../components/ETicketModal';
+import { useToast } from '../context/ToastContext';
 
 const formatCurrency = (amount) => {
   return `${Number(amount || 0).toLocaleString('en-US')} VND`;
@@ -58,6 +59,7 @@ const formatDate = (isoString) => {
 
 export default function MyBookings() {
   const navigate = useNavigate();
+  const { showToast, confirm } = useToast();
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -133,16 +135,22 @@ export default function MyBookings() {
   };
 
   const handleCancelBooking = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel this pending booking?')) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Cancel Reservation',
+      message: 'Are you sure you want to cancel this pending booking? The held seats will be released back to the auditorium.',
+      confirmText: 'Yes, Cancel Booking',
+      cancelText: 'Keep Booking',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
 
     setCancellingId(id);
     try {
       await bookingApi.cancelBooking(id);
+      showToast('Booking reservation cancelled.', 'info');
       fetchMyBookings();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to cancel booking.');
+      showToast(err.response?.data?.message || 'Failed to cancel booking.', 'error');
     } finally {
       setCancellingId(null);
     }
