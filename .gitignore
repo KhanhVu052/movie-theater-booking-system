@@ -34,3 +34,8 @@ build/
 
 # Ignore sensitive application configurations
 src/main/resources/application.yaml
+
+
+# Data seeds raw dumps
+*.jsonl
+data-seed/*.jsonl
