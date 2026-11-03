@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Ticket, LogOut, User, Menu, X } from 'lucide-react';
+import { Search, Ticket, LogOut, User, Menu, X, ShieldAlert } from 'lucide-react';
 
 export function CinemaBadgeIcon({ className = "w-9 h-9" }) {
   return (
@@ -43,6 +43,7 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
       return null;
     }
   })();
+  const isAdmin = user?.role === 'ADMIN';
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -109,6 +110,15 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
               My Bookings
             </Link>
           )}
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="text-red-300 hover:text-white font-bold transition-colors cursor-pointer flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-red-950/80 border border-red-700"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+              <span>Admin Portal</span>
+            </Link>
+          )}
         </nav>
       </div>
 
@@ -133,6 +143,14 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
               <span className="hidden md:inline-block text-xs font-semibold text-[#f3cb62] max-w-[120px] truncate" title={user.fullName}>
                 {user.fullName}
               </span>
+            )}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-700 text-xs font-bold text-red-300 hover:bg-red-900/60 transition-colors cursor-pointer"
+              >
+                <span>Admin Console</span>
+              </Link>
             )}
             <Link
               to="/my-bookings"
@@ -219,9 +237,18 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
             <Link
               to="/my-bookings"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-left py-2 text-sm text-[#f3cb62] font-semibold"
+              className="text-left py-2 text-sm text-[#f3cb62] font-semibold border-b border-[#2e2316]"
             >
               My Bookings &amp; Tickets
+            </Link>
+          )}
+          {isAdmin && (
+            <Link
+              to="/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-left py-2 text-sm text-red-300 font-bold"
+            >
+              Admin Operations Console
             </Link>
           )}
         </div>
