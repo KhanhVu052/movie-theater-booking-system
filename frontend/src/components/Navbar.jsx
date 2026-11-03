@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Ticket, LogOut, User, Menu, X, ShieldAlert } from 'lucide-react';
+import UserProfileModal from './UserProfileModal';
 
 export function CinemaBadgeIcon({ className = "w-9 h-9" }) {
   return (
@@ -33,6 +34,7 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const token = localStorage.getItem('token');
   const user = (() => {
@@ -64,195 +66,228 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#120d09]/95 backdrop-blur-md border-b border-[#362919] px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between select-none">
-      {/* Left: Brand Logo */}
-      <div className="flex items-center gap-8">
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <CinemaBadgeIcon className="w-9 h-9 transition-transform group-hover:scale-105" />
-          <div className="flex flex-col">
-            <span className="font-body font-extrabold text-2xl tracking-tight text-[#e6c27a] leading-none">
-              GoToro
-            </span>
-            <span className="text-[10px] tracking-[0.2em] uppercase text-[#8a765d] font-medium mt-0.5">
-              Cinema
-            </span>
-          </div>
-        </Link>
+    <>
+      <header className="sticky top-0 z-40 w-full bg-[#120d09]/95 backdrop-blur-md border-b border-[#362919] px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between select-none">
+        {/* Left: Brand Logo */}
+        <div className="flex items-center gap-8">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <CinemaBadgeIcon className="w-9 h-9 transition-transform group-hover:scale-105" />
+            <div className="flex flex-col">
+              <span className="font-body font-extrabold text-2xl tracking-tight text-[#e6c27a] leading-none">
+                GoToro
+              </span>
+              <span className="text-[10px] tracking-[0.2em] uppercase text-[#8a765d] font-medium mt-0.5">
+                Cinema
+              </span>
+            </div>
+          </Link>
 
-        {/* Center Navigation Links */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#c7b59d]">
-          <button
-            type="button"
-            onClick={() => scrollToSection('movies-section')}
-            className="hover:text-[#f3cb62] transition-colors cursor-pointer"
-          >
-            Movies
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection('quick-booking')}
-            className="hover:text-[#f3cb62] transition-colors cursor-pointer"
-          >
-            Showtimes
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection('vouchers-section')}
-            className="hover:text-[#f3cb62] transition-colors cursor-pointer"
-          >
-            Vouchers
-          </button>
-          {token && (
-            <Link
-              to="/my-bookings"
+          {/* Center Navigation Links */}
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#c7b59d]">
+            <button
+              type="button"
+              onClick={() => scrollToSection('movies-section')}
               className="hover:text-[#f3cb62] transition-colors cursor-pointer"
             >
-              My Bookings
-            </Link>
-          )}
-          {isAdmin && (
-            <Link
-              to="/admin"
-              className="text-red-300 hover:text-white font-bold transition-colors cursor-pointer flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-red-950/80 border border-red-700"
+              Movies
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('quick-booking')}
+              className="hover:text-[#f3cb62] transition-colors cursor-pointer"
             >
-              <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
-              <span>Admin Portal</span>
-            </Link>
-          )}
-        </nav>
-      </div>
-
-      {/* Right: Search Bar & Auth Actions */}
-      <div className="flex items-center gap-3 sm:gap-4">
-        {onSearchChange && (
-          <div className="relative hidden sm:block w-56 lg:w-64">
-            <Search className="w-4 h-4 text-[#8a765d] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search movies, genres..."
-              className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-3.5 py-1.5 text-xs text-[#f5ece0] placeholder:text-[#6e5d49] focus:outline-none focus:border-[#e0b354] transition-colors"
-            />
-          </div>
-        )}
-
-        {token ? (
-          <div className="flex items-center gap-2.5">
-            {user?.fullName && (
-              <span className="hidden md:inline-block text-xs font-semibold text-[#f3cb62] max-w-[120px] truncate" title={user.fullName}>
-                {user.fullName}
-              </span>
+              Showtimes
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('vouchers-section')}
+              className="hover:text-[#f3cb62] transition-colors cursor-pointer"
+            >
+              Vouchers
+            </button>
+            {token && (
+              <Link
+                to="/my-bookings"
+                className="hover:text-[#f3cb62] transition-colors cursor-pointer"
+              >
+                My Bookings
+              </Link>
             )}
             {isAdmin && (
               <Link
                 to="/admin"
-                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-700 text-xs font-bold text-red-300 hover:bg-red-900/60 transition-colors cursor-pointer"
+                className="text-red-300 hover:text-white font-bold transition-colors cursor-pointer flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-red-950/80 border border-red-700"
               >
-                <span>Admin Console</span>
+                <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+                <span>Admin Portal</span>
               </Link>
             )}
-            <Link
-              to="/my-bookings"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1f1912] border border-[#4d3c26] text-xs font-medium text-[#e6c27a] hover:border-[#e0b354] transition-colors cursor-pointer"
-            >
-              <Ticket className="w-3.5 h-3.5" />
-              <span>My Tickets</span>
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              title="Sign Out"
-              className="px-3 py-1.5 rounded-lg bg-[#1a130d] border border-[#3d3020] hover:border-red-800/70 text-xs text-[#c7b59d] hover:text-red-300 flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2.5">
-            <Link
-              to="/login"
-              className="px-4 py-1.5 rounded-lg bg-[#1f1912] border border-[#4d3c26] hover:border-[#e0b354] text-xs font-semibold text-[#e6c27a] transition-colors flex items-center gap-1.5"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Sign In</span>
-            </Link>
-            <Link
-              to="/register"
-              className="hidden sm:inline-flex px-4 py-1.5 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] hover:from-[#f7d576] hover:to-[#e5b344] text-[#1a1209] font-bold text-xs shadow-sm transition-all"
-            >
-              Sign Up
-            </Link>
-          </div>
-        )}
+          </nav>
+        </div>
 
-        {/* Mobile menu button */}
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden text-[#c7b59d] hover:text-[#e6c27a] p-1"
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-      </div>
-
-      {/* Mobile Dropdown */}
-      {mobileMenuOpen && (
-        <div className="absolute top-16 left-0 w-full bg-[#15100b] border-b border-[#362919] p-4 flex flex-col gap-3 md:hidden z-50">
+        {/* Right: Search Bar & Auth Actions */}
+        <div className="flex items-center gap-3 sm:gap-4">
           {onSearchChange && (
-            <div className="relative w-full">
-              <Search className="w-4 h-4 text-[#8a765d] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <div className="relative hidden sm:block w-56 lg:w-64">
+              <Search className="w-4 h-4 text-[#8a765d] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Search movies, genres..."
-                className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-4 py-2 text-xs text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
+                className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-3.5 py-1.5 text-xs text-[#f5ece0] placeholder:text-[#6e5d49] focus:outline-none focus:border-[#e0b354] transition-colors"
               />
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => scrollToSection('movies-section')}
-            className="text-left py-2 text-sm text-[#e6c27a] font-medium border-b border-[#2e2316]"
-          >
-            Movies
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection('quick-booking')}
-            className="text-left py-2 text-sm text-[#c7b59d] border-b border-[#2e2316]"
-          >
-            Quick Showtimes
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection('vouchers-section')}
-            className="text-left py-2 text-sm text-[#c7b59d] border-b border-[#2e2316]"
-          >
-            Promo Vouchers
-          </button>
-          {token && (
-            <Link
-              to="/my-bookings"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-left py-2 text-sm text-[#f3cb62] font-semibold border-b border-[#2e2316]"
-            >
-              My Bookings &amp; Tickets
-            </Link>
+
+          {token ? (
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setProfileModalOpen(true)}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#1a130d] border border-[#3d2f1d] hover:border-[#e0b354] text-xs font-semibold text-[#f3cb62] transition-colors cursor-pointer group"
+                title="View Account Profile"
+              >
+                <div className="w-5 h-5 rounded-full bg-[#241a10] border border-[#e0b354] flex items-center justify-center text-[10px] text-[#f3cb62]">
+                  <User className="w-3 h-3 text-[#f3cb62]" />
+                </div>
+                {user?.fullName && (
+                  <span className="hidden md:inline-block max-w-[120px] truncate">
+                    {user.fullName}
+                  </span>
+                )}
+              </button>
+
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-700 text-xs font-bold text-red-300 hover:bg-red-900/60 transition-colors cursor-pointer"
+                >
+                  <span>Admin Console</span>
+                </Link>
+              )}
+              <Link
+                to="/my-bookings"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1f1912] border border-[#4d3c26] text-xs font-medium text-[#e6c27a] hover:border-[#e0b354] transition-colors cursor-pointer"
+              >
+                <Ticket className="w-3.5 h-3.5" />
+                <span>My Tickets</span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                title="Sign Out"
+                className="px-3 py-1.5 rounded-lg bg-[#1a130d] border border-[#3d3020] hover:border-red-800/70 text-xs text-[#c7b59d] hover:text-red-300 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <Link
+                to="/login"
+                className="px-4 py-1.5 rounded-lg bg-[#1f1912] border border-[#4d3c26] hover:border-[#e0b354] text-xs font-semibold text-[#e6c27a] transition-colors flex items-center gap-1.5"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </Link>
+              <Link
+                to="/register"
+                className="hidden sm:inline-flex px-4 py-1.5 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] hover:from-[#f7d576] hover:to-[#e5b344] text-[#1a1209] font-bold text-xs shadow-sm transition-all"
+              >
+                Sign Up
+              </Link>
+            </div>
           )}
-          {isAdmin && (
-            <Link
-              to="/admin"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-left py-2 text-sm text-red-300 font-bold"
-            >
-              Admin Operations Console
-            </Link>
-          )}
+
+          {/* Mobile menu button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden text-[#c7b59d] hover:text-[#e6c27a] p-1 cursor-pointer"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
-      )}
-    </header>
+
+        {/* Mobile Dropdown */}
+        {mobileMenuOpen && (
+          <div className="absolute top-16 left-0 w-full bg-[#15100b] border-b border-[#362919] p-4 flex flex-col gap-3 md:hidden z-50">
+            {onSearchChange && (
+              <div className="relative w-full">
+                <Search className="w-4 h-4 text-[#8a765d] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="Search movies, genres..."
+                  className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-4 py-2 text-xs text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
+                />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => scrollToSection('movies-section')}
+              className="text-left py-2 text-sm text-[#e6c27a] font-medium border-b border-[#2e2316]"
+            >
+              Movies
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('quick-booking')}
+              className="text-left py-2 text-sm text-[#c7b59d] border-b border-[#2e2316]"
+            >
+              Quick Showtimes
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('vouchers-section')}
+              className="text-left py-2 text-sm text-[#c7b59d] border-b border-[#2e2316]"
+            >
+              Promo Vouchers
+            </button>
+            {token && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setProfileModalOpen(true);
+                  }}
+                  className="text-left py-2 text-sm text-[#f5ece0] font-semibold border-b border-[#2e2316] flex items-center gap-2"
+                >
+                  <User className="w-4 h-4 text-[#e0b354]" />
+                  <span>My Profile &amp; Account</span>
+                </button>
+                <Link
+                  to="/my-bookings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-left py-2 text-sm text-[#f3cb62] font-semibold border-b border-[#2e2316]"
+                >
+                  My Bookings &amp; Tickets
+                </Link>
+              </>
+            )}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-left py-2 text-sm text-red-300 font-bold"
+              >
+                Admin Operations Console
+              </Link>
+            )}
+          </div>
+        )}
+      </header>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        onLogout={handleLogout}
+      />
+    </>
   );
 }

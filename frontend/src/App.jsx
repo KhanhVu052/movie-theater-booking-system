@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -8,6 +8,7 @@ import Payment from './pages/Payment';
 import PaymentResult from './pages/PaymentResult';
 import MyBookings from './pages/MyBookings';
 import AdminDashboard from './pages/AdminDashboard';
+import NotFound from './pages/NotFound';
 
 export default function App() {
   return (
@@ -39,8 +40,8 @@ export default function App() {
         {/* Admin Management & Revenue Reporting Console */}
         <Route path="/admin" element={<AdminDashboard />} />
 
-        {/* Fallback wildcard */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Fallback 404 Route */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
