@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   TrendingUp,
   CreditCard,
@@ -12,18 +12,13 @@ import {
   CheckCircle2,
   DollarSign,
   Calendar,
-  Search,
   Plus,
   Trash2,
   RefreshCw,
   Eye,
-  EyeOff,
   ArrowLeft,
   X,
-  FileText,
   Clock,
-  Layers,
-  MapPin,
   Check,
 } from 'lucide-react';
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
@@ -31,49 +26,15 @@ import { adminApi } from '../api/adminApi';
 import { movieApi } from '../api/movieApi';
 import { useToast } from '../context/ToastContext';
 
-const formatCurrency = (amount) => {
-  return `${Number(amount || 0).toLocaleString('en-US')} VND`;
-};
-
-const formatDate = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return isoString;
-  }
-};
-
-const formatDateTime = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const d = new Date(isoString);
-    return d.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return isoString;
-  }
-};
+import { formatCurrency, formatDateTime } from '../utils/formatters';
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
   const { showToast, confirm } = useToast();
 
   // Active Tab: REVENUE | SHOWTIMES | PAYMENTS | MOVIES | VOUCHERS | REVIEWS
   const [activeTab, setActiveTab] = useState('REVENUE');
 
   // Auth check
-  const token = localStorage.getItem('token');
   const user = (() => {
     try {
       const stored = localStorage.getItem('user');
@@ -122,7 +83,7 @@ export default function AdminDashboard() {
 
   // 4. MOVIES STATE
   const [moviesList, setMoviesList] = useState([]);
-  const [loadingMovies, setLoadingMovies] = useState(false);
+  const [_loadingMovies, setLoadingMovies] = useState(false);
   const [showAddMovieModal, setShowAddMovieModal] = useState(false);
   const [newMovie, setNewMovie] = useState({
     title: '',
@@ -141,7 +102,7 @@ export default function AdminDashboard() {
 
   // 5. VOUCHERS STATE
   const [vouchersList, setVouchersList] = useState([]);
-  const [loadingVouchers, setLoadingVouchers] = useState(false);
+  const [_loadingVouchers, setLoadingVouchers] = useState(false);
   const [showAddVoucherModal, setShowAddVoucherModal] = useState(false);
   const [newVoucher, setNewVoucher] = useState({
     code: '',
@@ -152,12 +113,12 @@ export default function AdminDashboard() {
     usageLimit: 100,
     perUserLimit: 1,
     startAt: new Date().toISOString().slice(0, 16),
-    endAt: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 16),
+    endAt: () => new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 16),
   });
 
   // 6. REVIEWS STATE (FR-REV-01)
   const [reviewsList, setReviewsList] = useState([]);
-  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [_loadingReviews, setLoadingReviews] = useState(false);
 
   // Global notice / feedback
   const [notice, setNotice] = useState('');
