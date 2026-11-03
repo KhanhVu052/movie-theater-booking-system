@@ -7,6 +7,7 @@ import SeatSelection from './pages/SeatSelection';
 import Payment from './pages/Payment';
 import PaymentResult from './pages/PaymentResult';
 import MyBookings from './pages/MyBookings';
+import AdminDashboard from './pages/AdminDashboard';
 
 export default function App() {
   return (
@@ -34,6 +35,9 @@ export default function App() {
 
         {/* Customer Booking History & Reviews */}
         <Route path="/my-bookings" element={<MyBookings />} />
+
+        {/* Admin Management & Revenue Reporting Console */}
+        <Route path="/admin" element={<AdminDashboard />} />
 
         {/* Fallback wildcard */}
         <Route path="*" element={<Navigate to="/" replace />} />
