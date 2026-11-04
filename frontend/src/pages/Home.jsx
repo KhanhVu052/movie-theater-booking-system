@@ -676,38 +676,24 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('NOW_SHOWING')}
-                  className={`px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     activeTab === 'NOW_SHOWING'
                       ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] shadow-sm'
                       : 'text-[#ab9a84] hover:text-[#f2e8dc]'
                   }`}
                 >
-                  Now Showing (
-                  {movies.filter((m) => m.status === 'NOW_SHOWING').length})
+                  Now Showing
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('COMING_SOON')}
-                  className={`px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     activeTab === 'COMING_SOON'
                       ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] shadow-sm'
                       : 'text-[#ab9a84] hover:text-[#f2e8dc]'
                   }`}
                 >
-                  Coming Soon (
-                  {movies.filter((m) => m.status === 'COMING_SOON').length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('ENDED')}
-                  className={`px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                    activeTab === 'ENDED'
-                      ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] shadow-sm'
-                      : 'text-[#ab9a84] hover:text-[#f2e8dc]'
-                  }`}
-                >
-                  Ended (
-                  {movies.filter((m) => m.status === 'ENDED').length})
+                  Coming Soon
                 </button>
               </div>
             </div>
@@ -764,7 +750,7 @@ export default function Home() {
                               {movie.ageRating}
                             </span>
                           )}
-                          {(isSearching || activeTab === 'ENDED') && (
+                          {isSearching && (
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                               movie.status === 'NOW_SHOWING'
                                 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50'
