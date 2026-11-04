@@ -427,15 +427,18 @@ export default function AdminDashboard() {
     e.preventDefault();
     setVoucherError('');
 
+    const discountVal = Number(newVoucher.discountValue);
+    const minOrderVal = Number(newVoucher.minOrderValue || 0);
+
     if (!newVoucher.code.trim()) {
       setVoucherError('Voucher code cannot be empty.');
       return;
     }
-    if (newVoucher.discountType === 'PERCENTAGE' && (newVoucher.discountValue <= 0 || newVoucher.discountValue > 100)) {
+    if (newVoucher.discountType === 'PERCENTAGE' && (discountVal <= 0 || discountVal > 100)) {
       setVoucherError('Percentage discount must be between 1% and 100%.');
       return;
     }
-    if (newVoucher.discountType === 'FIXED_AMOUNT' && newVoucher.discountValue <= 0) {
+    if (newVoucher.discountType === 'FIXED_AMOUNT' && discountVal <= 0) {
       setVoucherError('Fixed discount amount must be greater than 0 VND.');
       return;
     }
@@ -1740,12 +1743,15 @@ export default function AdminDashboard() {
                     <input
                       type="number"
                       required
-                      min={1}
+                      min={newVoucher.discountType === 'PERCENTAGE' ? 1 : 1000}
                       max={newVoucher.discountType === 'PERCENTAGE' ? 100 : 10000000}
-                      step={newVoucher.discountType === 'PERCENTAGE' ? 1 : 1000}
-                      value={newVoucher.discountValue}
+                      step="any"
+                      value={newVoucher.discountValue ?? ''}
                       onChange={(e) =>
-                        setNewVoucher({ ...newVoucher, discountValue: Number(e.target.value) })
+                        setNewVoucher({
+                          ...newVoucher,
+                          discountValue: e.target.value === '' ? '' : Number(e.target.value),
+                        })
                       }
                       className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono pr-12 focus:border-[#e0b354] focus:outline-none"
                     />
@@ -1764,13 +1770,13 @@ export default function AdminDashboard() {
                       <input
                         type="number"
                         min={0}
-                        step={1000}
+                        step="any"
                         placeholder="e.g. 50000"
                         value={newVoucher.maxDiscountAmount || ''}
                         onChange={(e) =>
                           setNewVoucher({
                             ...newVoucher,
-                            maxDiscountAmount: e.target.value ? Number(e.target.value) : 0,
+                            maxDiscountAmount: e.target.value === '' ? '' : Number(e.target.value),
                           })
                         }
                         className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono pr-12 focus:border-[#e0b354] focus:outline-none"
@@ -1790,10 +1796,13 @@ export default function AdminDashboard() {
                         type="number"
                         required
                         min={0}
-                        step={1000}
-                        value={newVoucher.minOrderValue}
+                        step="any"
+                        value={newVoucher.minOrderValue ?? ''}
                         onChange={(e) =>
-                          setNewVoucher({ ...newVoucher, minOrderValue: Number(e.target.value) })
+                          setNewVoucher({
+                            ...newVoucher,
+                            minOrderValue: e.target.value === '' ? '' : Number(e.target.value),
+                          })
                         }
                         className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono pr-12 focus:border-[#e0b354] focus:outline-none"
                       />
@@ -1816,10 +1825,13 @@ export default function AdminDashboard() {
                       type="number"
                       required
                       min={0}
-                      step={1000}
-                      value={newVoucher.minOrderValue}
+                      step="any"
+                      value={newVoucher.minOrderValue ?? ''}
                       onChange={(e) =>
-                        setNewVoucher({ ...newVoucher, minOrderValue: Number(e.target.value) })
+                        setNewVoucher({
+                          ...newVoucher,
+                          minOrderValue: e.target.value === '' ? '' : Number(e.target.value),
+                        })
                       }
                       className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono pr-12 focus:border-[#e0b354] focus:outline-none"
                     />
@@ -1840,9 +1852,13 @@ export default function AdminDashboard() {
                     type="number"
                     required
                     min={1}
-                    value={newVoucher.usageLimit}
+                    step={1}
+                    value={newVoucher.usageLimit ?? ''}
                     onChange={(e) =>
-                      setNewVoucher({ ...newVoucher, usageLimit: Number(e.target.value) })
+                      setNewVoucher({
+                        ...newVoucher,
+                        usageLimit: e.target.value === '' ? '' : Number(e.target.value),
+                      })
                     }
                     className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono focus:border-[#e0b354] focus:outline-none"
                   />
@@ -1855,9 +1871,13 @@ export default function AdminDashboard() {
                     type="number"
                     required
                     min={1}
-                    value={newVoucher.perUserLimit}
+                    step={1}
+                    value={newVoucher.perUserLimit ?? ''}
                     onChange={(e) =>
-                      setNewVoucher({ ...newVoucher, perUserLimit: Number(e.target.value) })
+                      setNewVoucher({
+                        ...newVoucher,
+                        perUserLimit: e.target.value === '' ? '' : Number(e.target.value),
+                      })
                     }
                     className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono focus:border-[#e0b354] focus:outline-none"
                   />
