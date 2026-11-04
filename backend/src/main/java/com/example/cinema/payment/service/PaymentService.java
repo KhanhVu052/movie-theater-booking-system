@@ -403,7 +403,7 @@ public class PaymentService {
         }
 
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
-            List<Payment> existingPayments = paymentRepository.findByBookingId(booking.getId());
+            List<Payment> existingPayments = paymentRepository.findByBookingIdOrderByCreatedAtAsc(booking.getId());
             Payment successPayment = existingPayments.stream()
                     .filter(p -> p.getStatus() == PaymentStatus.SUCCESS)
                     .findFirst()
@@ -413,7 +413,7 @@ public class PaymentService {
             }
         }
 
-        List<BookingItem> items = bookingItemRepository.findByBookingId(booking.getId());
+        List<BookingItem> items = bookingItemRepository.findByBookingIdOrderByIdAsc(booking.getId());
         List<Long> seatIds = items.stream().map(i -> i.getShowtimeSeat().getId()).toList();
         List<ShowtimeSeat> lockedSeats = showtimeSeatRepository.findByIdsForUpdateOrderByIdAsc(seatIds);
 

@@ -11,5 +11,8 @@ import java.util.List;
 public interface BookingItemRepository extends JpaRepository<BookingItem, Long> {
 
     @EntityGraph(attributePaths = {"showtimeSeat", "showtimeSeat.seat"})
+    List<BookingItem> findByBookingId(Long bookingId);
+
+    @EntityGraph(attributePaths = {"showtimeSeat", "showtimeSeat.seat"})
     List<BookingItem> findByBookingIdOrderByIdAsc(Long bookingId);
 }
