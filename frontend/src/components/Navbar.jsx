@@ -135,8 +135,18 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Search movies, genres..."
-                className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-3.5 py-1.5 text-xs text-[#f5ece0] placeholder:text-[#6e5d49] focus:outline-none focus:border-[#e0b354] transition-colors"
+                className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-8 py-1.5 text-xs text-[#f5ece0] placeholder:text-[#6e5d49] focus:outline-none focus:border-[#e0b354] transition-colors"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a765d] hover:text-[#f3cb62] transition-colors cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           )}
 
@@ -222,8 +232,18 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
                   placeholder="Search movies, genres..."
-                  className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-4 py-2 text-xs text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
+                  className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-8 py-2 text-xs text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => onSearchChange('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8a765d] hover:text-[#f3cb62] transition-colors cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )}
             <button

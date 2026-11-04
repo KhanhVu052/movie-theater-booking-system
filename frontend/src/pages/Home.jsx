@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
+import MoviePoster from '../components/MoviePoster';
 
 // Normalize and extract data from Backend ApiResponse<T> or PageResponse<T>
 const extractPayload = (response) => {
@@ -142,7 +143,7 @@ export default function Home() {
       setError('');
       try {
         const [moviesRes, cinemasRes, vouchersRes] = await Promise.allSettled([
-          movieApi.getAllMovies(),
+          movieApi.getAllMovies({ page: 1, size: 1000 }),
           movieApi.getAllCinemas(),
           movieApi.getActiveVouchers(),
         ]);
@@ -281,26 +282,33 @@ export default function Home() {
   }, [movies]);
 
   // Filter movies by Tab, Genre, and Search Query
+  const isSearching = !!searchQuery.trim();
   const filteredMovies = useMemo(() => {
+    const keyword = searchQuery.trim().toLowerCase();
+
     return movies.filter((movie) => {
-      const matchesTab = movie.status === activeTab;
+      // If user is actively searching, search across all movies regardless of status
+      const matchesTab = isSearching || movie.status === activeTab;
+
       const genreStr = formatGenreText(movie).toLowerCase();
       const matchesGenre =
         selectedGenre === 'ALL' ||
         genreStr.includes(selectedGenre.toLowerCase());
 
-      const keyword = searchQuery.trim().toLowerCase();
       const actorStr = formatActorText(movie).toLowerCase();
+      const directorStr = (movie.director || '').toLowerCase();
+      const titleStr = (movie.title || '').toLowerCase();
+
       const matchesSearch =
         !keyword ||
-        (movie.title && movie.title.toLowerCase().includes(keyword)) ||
+        titleStr.includes(keyword) ||
         genreStr.includes(keyword) ||
-        (movie.director && movie.director.toLowerCase().includes(keyword)) ||
+        directorStr.includes(keyword) ||
         actorStr.includes(keyword);
 
       return matchesTab && matchesGenre && matchesSearch;
     });
-  }, [movies, activeTab, selectedGenre, searchQuery]);
+  }, [movies, activeTab, selectedGenre, searchQuery, isSearching]);
 
   const handleBookMovie = useCallback(
     (movieId) => {
@@ -469,9 +477,10 @@ export default function Home() {
 
                 <div className="hidden lg:flex lg:col-span-4 justify-end">
                   <div className="relative w-64 rounded-2xl overflow-hidden border-2 border-[#4d3c26] shadow-[0_24px_60px_rgba(0,0,0,0.9)] group">
-                    <img
+                    <MoviePoster
                       src={currentHero.posterUrl}
-                      alt={currentHero.title}
+                      title={currentHero.title}
+                      genre={formatGenreText(currentHero)}
                       className="w-full h-[360px] object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     {currentHero.trailerUrl && (
@@ -682,6 +691,18 @@ export default function Home() {
                   Coming Soon (
                   {movies.filter((m) => m.status === 'COMING_SOON').length})
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('ENDED')}
+                  className={`px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    activeTab === 'ENDED'
+                      ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] shadow-sm'
+                      : 'text-[#ab9a84] hover:text-[#f2e8dc]'
+                  }`}
+                >
+                  Ended (
+                  {movies.filter((m) => m.status === 'ENDED').length})
+                </button>
               </div>
             </div>
 
@@ -723,9 +744,10 @@ export default function Home() {
                   >
                     <div>
                       <div className="relative h-80 w-full overflow-hidden bg-[#100c08]">
-                        <img
+                        <MoviePoster
                           src={movie.posterUrl}
-                          alt={movie.title}
+                          title={movie.title}
+                          genre={formatGenreText(movie)}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#18120c] via-transparent to-black/30 pointer-events-none" />
@@ -734,6 +756,17 @@ export default function Home() {
                           {movie.ageRating && (
                             <span className="px-2 py-0.5 rounded bg-[#e0b354] text-[#140e08] text-[11px] font-black">
                               {movie.ageRating}
+                            </span>
+                          )}
+                          {(isSearching || activeTab === 'ENDED') && (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              movie.status === 'NOW_SHOWING'
+                                ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50'
+                                : movie.status === 'COMING_SOON'
+                                ? 'bg-blue-950/90 text-blue-300 border border-blue-600/50'
+                                : 'bg-zinc-800/90 text-zinc-300 border border-zinc-600/50'
+                            }`}>
+                              {movie.status === 'NOW_SHOWING' ? 'Now Showing' : movie.status === 'COMING_SOON' ? 'Coming Soon' : 'Ended'}
                             </span>
                           )}
                         </div>
@@ -794,6 +827,8 @@ export default function Home() {
                         <span>
                           {movie.status === 'NOW_SHOWING'
                             ? 'Book Tickets'
+                            : movie.status === 'COMING_SOON'
+                            ? 'Coming Soon'
                             : 'View Details'}
                         </span>
                       </button>
