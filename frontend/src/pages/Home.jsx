@@ -23,6 +23,7 @@ import {
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
 import MoviePoster from '../components/MoviePoster';
+import CustomDatePicker from '../components/CustomDatePicker';
 
 // Normalize and extract data from Backend ApiResponse<T> or PageResponse<T>
 const extractPayload = (response) => {
@@ -337,7 +338,16 @@ export default function Home() {
   return (
     <div className="min-h-screen w-full bg-[#0e0a07] text-[#f2e8dc] font-body flex flex-col select-none">
       {/* 1. Header & Navigation */}
-      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <Navbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        movies={movies}
+        onSearchSubmit={() => {
+          setTimeout(() => {
+            document.getElementById('movies-section')?.scrollIntoView({ behavior: 'smooth' });
+          }, 50);
+        }}
+      />
 
       {/* Loading State */}
       {loading && (
@@ -597,17 +607,12 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Show Date */}
+              {/* Show Date (Visual Click-to-Choose DatePicker) */}
               <div className="lg:col-span-2">
-                <label className="block text-xs font-semibold tracking-wider text-[#b89d72] mb-2 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  Show Date
-                </label>
-                <input
-                  type="date"
+                <CustomDatePicker
                   value={quickDate}
-                  onChange={(e) => setQuickDate(e.target.value)}
-                  className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg px-3.5 py-2.5 text-sm text-[#f5ece0] focus:outline-none focus:border-[#e0b354] transition-colors"
+                  onChange={(newDate) => setQuickDate(newDate)}
+                  label="Show Date"
                 />
               </div>
 

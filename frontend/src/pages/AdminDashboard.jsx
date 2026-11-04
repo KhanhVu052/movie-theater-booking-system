@@ -22,6 +22,7 @@ import {
   Check,
 } from 'lucide-react';
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
+import CustomDatePicker from '../components/CustomDatePicker';
 import { adminApi } from '../api/adminApi';
 import { movieApi } from '../api/movieApi';
 import { useToast } from '../context/ToastContext';
@@ -578,18 +579,18 @@ export default function AdminDashboard() {
                       <Calendar className="w-4 h-4 text-[#e0b354]" />
                       Date Window:
                     </span>
-                    <input
-                      type="date"
+                    <CustomDatePicker
                       value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
-                      className="bg-[#120d09] border border-[#3d2f1d] rounded-lg px-3 py-1.5 text-xs text-[#f5ece0]"
+                      onChange={setFromDate}
+                      label=""
+                      className="w-36"
                     />
                     <span className="text-xs text-[#8a765d]">to</span>
-                    <input
-                      type="date"
+                    <CustomDatePicker
                       value={toDate}
-                      onChange={(e) => setToDate(e.target.value)}
-                      className="bg-[#120d09] border border-[#3d2f1d] rounded-lg px-3 py-1.5 text-xs text-[#f5ece0]"
+                      onChange={setToDate}
+                      label=""
+                      className="w-36"
                     />
                   </div>
 
