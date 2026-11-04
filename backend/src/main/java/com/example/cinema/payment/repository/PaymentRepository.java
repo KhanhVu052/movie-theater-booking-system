@@ -35,6 +35,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByIdForUpdate(@Param("id") Long id);
 
     @EntityGraph(attributePaths = {"booking"})
+    List<Payment> findByBookingId(Long bookingId);
+
+    @EntityGraph(attributePaths = {"booking"})
     List<Payment> findByBookingIdOrderByCreatedAtAsc(Long bookingId);
 
     @EntityGraph(attributePaths = {"booking"})
@@ -82,7 +85,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             SELECT 
                 m.id AS movieId, 
                 m.title AS movieTitle, 
-                SUM(p.amount) AS totalRevenue,
+                SUM(p.amount) AS totalRevenue, 
                 COUNT(DISTINCT b.id) AS totalBookings
             FROM Payment p
             JOIN p.booking b

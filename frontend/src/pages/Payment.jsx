@@ -12,6 +12,7 @@ import {
   MapPin,
   Calendar,
   Film,
+  Zap,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { bookingApi } from '../api/bookingApi';
@@ -32,7 +33,10 @@ export default function Payment() {
   const [timeLeft, setTimeLeft] = useState(null);
   const [isExpired, setIsExpired] = useState(false);
 
-  // Payment creation state
+  // Payment gateway choice: 'SIMULATED_TEST' or 'VNPAY'
+  const [selectedGateway, setSelectedGateway] = useState('SIMULATED_TEST');
+
+  // Payment processing state
   const [initiatingPayment, setInitiatingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const [cancelling, setCancelling] = useState(false);
@@ -105,7 +109,7 @@ export default function Payment() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }, [timeLeft]);
 
-  // Handle Pay with VNPAY Sandbox
+  // Handle Payment Proceed (Direct simulation or VNPay Gateway)
   const handleProceedPayment = async () => {
     if (isExpired || !booking) return;
 
@@ -113,20 +117,29 @@ export default function Payment() {
     setPaymentError('');
 
     try {
-      const res = await paymentApi.createVnPayUrl({
-        bookingId: Number(bookingId),
-        bankCode: null, // Let customer select bank on VNPAY gateway
-      });
-
-      const paymentData = res?.data?.data ?? res?.data;
-      if (paymentData?.paymentUrl) {
-        // Redirect to VNPAY Sandbox gateway
-        window.location.href = paymentData.paymentUrl;
+      if (selectedGateway === 'SIMULATED_TEST') {
+        // Direct simulation for seamless, reliable testing
+        await paymentApi.simulateSuccess({
+          bookingId: Number(bookingId),
+        });
+        showToast('Payment successful! Your tickets have been confirmed.', 'success');
+        navigate(`/payment/result?bookingId=${booking.id}`);
       } else {
-        setPaymentError('Unable to generate payment checkout link. Please try again.');
+        // VNPay Sandbox gateway URL generation
+        const res = await paymentApi.createVnPayUrl({
+          bookingId: Number(bookingId),
+          bankCode: null,
+        });
+
+        const paymentData = res?.data?.data ?? res?.data;
+        if (paymentData?.paymentUrl) {
+          window.location.href = paymentData.paymentUrl;
+        } else {
+          setPaymentError('Unable to generate payment checkout link. Please try again.');
+        }
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Payment initiation failed. Please try again.';
+      const msg = err.response?.data?.message || 'Payment processing failed. Please try again.';
       setPaymentError(msg);
     } finally {
       setInitiatingPayment(false);
@@ -256,40 +269,86 @@ export default function Payment() {
                 </h2>
 
                 <div className="space-y-3">
-                  {/* VNPAY SANDBOX OPTION */}
-                  <label className="relative flex items-center justify-between p-4 rounded-xl border border-[#e0b354] bg-[#1c140c] cursor-pointer shadow-sm">
+                  {/* INSTANT TEST PAYMENT (RECOMMENDED FOR TEST SUITES & DEMOS) */}
+                  <div
+                    onClick={() => setSelectedGateway('SIMULATED_TEST')}
+                    className={`relative flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
+                      selectedGateway === 'SIMULATED_TEST'
+                        ? 'border-[#e0b354] bg-[#1c140c] shadow-[0_2px_15px_rgba(224,179,84,0.12)]'
+                        : 'border-[#2e2316] bg-[#120d09] hover:border-[#4d3c26]'
+                    }`}
+                  >
                     <div className="flex items-center gap-3">
                       <input
                         type="radio"
                         name="paymentMethod"
-                        checked={true}
-                        readOnly
-                        className="accent-[#e0b354] w-4 h-4"
+                        value="SIMULATED_TEST"
+                        checked={selectedGateway === 'SIMULATED_TEST'}
+                        onChange={() => setSelectedGateway('SIMULATED_TEST')}
+                        className="accent-[#e0b354] w-4 h-4 cursor-pointer"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-body font-bold text-sm text-[#f5ece0]">
+                            Instant Test Payment (Direct Simulation)
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-950 border border-amber-600 text-amber-300 flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-amber-300" />
+                            Recommended
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#8a765d] mt-0.5">
+                          1-Click instant test checkout. Bypasses external VNPay sandbox downtime to immediately issue your ticket with QR Code.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="hidden sm:flex items-center gap-1 font-mono text-[10px] text-[#e0b354] bg-[#120d09] px-2 py-1 rounded border border-[#3d2f1d]">
+                      <span>INSTANT</span>
+                    </div>
+                  </div>
+
+                  {/* VNPAY SANDBOX OPTION */}
+                  <div
+                    onClick={() => setSelectedGateway('VNPAY')}
+                    className={`relative flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
+                      selectedGateway === 'VNPAY'
+                        ? 'border-[#e0b354] bg-[#1c140c] shadow-[0_2px_15px_rgba(224,179,84,0.12)]'
+                        : 'border-[#2e2316] bg-[#120d09] hover:border-[#4d3c26]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="VNPAY"
+                        checked={selectedGateway === 'VNPAY'}
+                        onChange={() => setSelectedGateway('VNPAY')}
+                        className="accent-[#e0b354] w-4 h-4 cursor-pointer"
                       />
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-body font-bold text-sm text-[#f5ece0]">
                             VNPAY Sandbox Gateway
                           </span>
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-950 border border-emerald-700 text-emerald-300">
-                            Verified
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-950 border border-blue-700 text-blue-300">
+                            External Portal
                           </span>
                         </div>
                         <p className="text-xs text-[#8a765d] mt-0.5">
-                          Domestic ATM Cards, VNPay QR, Internet Banking &amp; Visa/Mastercard.
+                          Domestic ATM Cards, VNPay QR, Internet Banking &amp; Visa/Mastercard (subject to VNPay sandbox server status).
                         </p>
                       </div>
                     </div>
                     <div className="hidden sm:flex items-center gap-1 font-mono text-[10px] text-[#e0b354] bg-[#120d09] px-2 py-1 rounded border border-[#3d2f1d]">
                       <span>VNPAY</span>
                     </div>
-                  </label>
+                  </div>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-[#1c140c] border border-[#3d2f1d] text-xs text-[#ab9a84] flex items-start gap-2.5">
                   <ShieldCheck className="w-4 h-4 text-[#e0b354] shrink-0 mt-0.5" />
                   <span>
-                    Your transaction is encrypted end-to-end. Once you proceed, you will be redirected to the secure VNPay payment portal to finalize payment.
+                    Your transaction is encrypted end-to-end. Upon successful payment, your seats will be locked as Booked and an E-Ticket with QR code will be generated.
                   </span>
                 </div>
               </div>
@@ -313,12 +372,23 @@ export default function Payment() {
                   {initiatingPayment ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Opening VNPay Gateway...</span>
+                      <span>
+                        {selectedGateway === 'SIMULATED_TEST'
+                          ? 'Confirming Instant Payment...'
+                          : 'Opening VNPay Gateway...'}
+                      </span>
                     </>
                   ) : (
                     <>
-                      <span>Pay {formatCurrency(booking.finalAmount)}</span>
-                      <ExternalLink className="w-4 h-4" />
+                      <span>
+                        Pay {formatCurrency(booking.finalAmount)}{' '}
+                        {selectedGateway === 'SIMULATED_TEST' && '(Instant Test)'}
+                      </span>
+                      {selectedGateway === 'VNPAY' ? (
+                        <ExternalLink className="w-4 h-4" />
+                      ) : (
+                        <Zap className="w-4 h-4" />
+                      )}
                     </>
                   )}
                 </button>
@@ -398,7 +468,7 @@ export default function Payment() {
                 <div className="flex items-center justify-between text-[#ab9a84]">
                   <span>Subtotal</span>
                   <span className="font-mono text-[#f5ece0]">
-                    {formatCurrency(booking.totalAmount)}
+                    {formatCurrency(booking.subtotalAmount ?? booking.totalAmount ?? 0)}
                   </span>
                 </div>
 

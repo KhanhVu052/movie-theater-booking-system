@@ -391,6 +391,63 @@ public class PaymentService {
     }
 
     @Transactional
+    public PaymentResponse simulatePaymentSuccess(String userEmail, Long bookingId) {
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        if (!booking.getUser().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            List<Payment> existingPayments = paymentRepository.findByBookingIdOrderByCreatedAtAsc(booking.getId());
+            Payment successPayment = existingPayments.stream()
+                    .filter(p -> p.getStatus() == PaymentStatus.SUCCESS)
+                    .findFirst()
+                    .orElse(null);
+            if (successPayment != null) {
+                return paymentMapper.toResponse(successPayment);
+            }
+        }
+
+        List<BookingItem> items = bookingItemRepository.findByBookingIdOrderByIdAsc(booking.getId());
+        List<Long> seatIds = items.stream().map(i -> i.getShowtimeSeat().getId()).toList();
+        List<ShowtimeSeat> lockedSeats = showtimeSeatRepository.findByIdsForUpdateOrderByIdAsc(seatIds);
+
+        for (ShowtimeSeat seat : lockedSeats) {
+            seat.setStatus(ShowtimeSeatStatus.BOOKED);
+            seat.setHeldByBookingId(booking.getId());
+        }
+        showtimeSeatRepository.saveAll(lockedSeats);
+
+        voucherService.confirmVoucherIfPresent(booking);
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+
+        String transactionRef = "SIM-" + booking.getBookingCode() + "-" + System.currentTimeMillis();
+        Payment payment = Payment.builder()
+                .booking(booking)
+                .provider(PaymentProvider.VNPAY)
+                .transactionRef(transactionRef)
+                .transactionNo("SIMULATED_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .amount(booking.getFinalAmount())
+                .status(PaymentStatus.SUCCESS)
+                .refundStatus(PaymentRefundStatus.NONE)
+                .responseCode("00")
+                .transactionStatus("00")
+                .payDate(LocalDateTime.now())
+                .build();
+        Payment savedPayment = paymentRepository.save(payment);
+
+        log.info("[Payment Simulation] Booking {} successfully confirmed via Simulation", booking.getBookingCode());
+        return paymentMapper.toResponse(savedPayment);
+    }
+
+    @Transactional
     public PaymentResponse confirmManualRefund(Long paymentId) {
         Payment payment = paymentRepository.findByIdForUpdate(paymentId)
                 .orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));

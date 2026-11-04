@@ -64,6 +64,18 @@ public class PaymentController {
                 .body(ApiResponse.success("VNPay payment URL generated successfully", response));
     }
 
+    @PostMapping("/simulate-success")
+    public ResponseEntity<ApiResponse<PaymentResponse>> simulatePaymentSuccess(
+            Authentication authentication,
+            @Valid @RequestBody PaymentCreateRequest request
+    ) {
+        PaymentResponse response = deadlockRetryExecutor.executeWithRetry(
+                "SimulatePayment-" + request.bookingId(),
+                () -> paymentService.simulatePaymentSuccess(authentication.getName(), request.bookingId())
+        );
+        return ResponseEntity.ok(ApiResponse.success("Test payment simulated successfully", response));
+    }
+
     @GetMapping("/vnpay-return")
     public ResponseEntity<ApiResponse<VnPayReturnResponse>> handleVnPayReturn(
             @RequestParam Map<String, String> params
