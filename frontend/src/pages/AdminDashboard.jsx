@@ -831,7 +831,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="py-3 px-4">
                                 <span className="px-2 py-0.5 rounded bg-[#241a10] border border-[#4d3c26] text-[#f3cb62] font-mono text-[10px] font-bold">
-                                  {st.format} • {st.translationType}
+                                  {st.format} â€¢ {st.translationType}
                                 </span>
                               </td>
                               <td className="py-3 px-4 text-[#f5ece0]">
@@ -1008,7 +1008,7 @@ export default function AdminDashboard() {
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 font-mono text-[11px] text-[#ab9a84]">
-                                  {p.payDate ? formatDateTime(p.payDate) : '—'}
+                                  {p.payDate ? formatDateTime(p.payDate) : 'â€”'}
                                 </td>
                                 <td className="py-3 px-4 text-right">
                                   {isRefundNeeded ? (
@@ -1026,7 +1026,7 @@ export default function AdminDashboard() {
                                       <span>Confirm Refund</span>
                                     </button>
                                   ) : (
-                                    <span className="text-[11px] text-[#5e4e3d]">—</span>
+                                    <span className="text-[11px] text-[#5e4e3d]">â€”</span>
                                   )}
                                 </td>
                               </tr>
@@ -1079,7 +1079,7 @@ export default function AdminDashboard() {
                                 <span>{m.title}</span>
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-[#ab9a84]">{m.director || '—'}</td>
+                            <td className="py-3 px-4 text-[#ab9a84]">{m.director || 'â€”'}</td>
                             <td className="py-3 px-4 font-mono text-[#c7b59d]">
                               {m.durationMinutes} min
                             </td>
@@ -1222,9 +1222,9 @@ export default function AdminDashboard() {
                             <span className="text-xs font-bold text-[#e6c27a]">
                               {r.userFullName}
                             </span>
-                            <span className="text-[10px] text-[#8a765d]">•</span>
+                            <span className="text-[10px] text-[#8a765d]">â€¢</span>
                             <span className="text-xs text-[#f3cb62] font-bold">
-                              ★ {r.rating} / 5
+                              â˜… {r.rating} / 5
                             </span>
                             <span
                               className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
