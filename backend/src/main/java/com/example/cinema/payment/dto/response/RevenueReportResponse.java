@@ -8,9 +8,15 @@ import java.util.List;
 @Builder
 public record RevenueReportResponse(
         Long totalRevenue,
+        Long totalRealizedRevenue,
         Long totalSuccessfulTransactions,
+        Long totalSuccessPayments,
+        Long totalTicketsSold,
+        Long totalPendingRefunds,
         List<DailyRevenueItem> dailyBreakdown,
-        List<MovieRevenueItem> movieBreakdown
+        List<DailyRevenueItem> dailyBreakdowns,
+        List<MovieRevenueItem> movieBreakdown,
+        List<MovieRevenueItem> movieBreakdowns
 ) {
     @Builder
     public record DailyRevenueItem(
@@ -24,7 +30,7 @@ public record RevenueReportResponse(
             Long movieId,
             String movieTitle,
             Long revenue,
-            Long totalBookings
+            Long totalBookings,
+            Long ticketsSold
     ) {}
 }
-

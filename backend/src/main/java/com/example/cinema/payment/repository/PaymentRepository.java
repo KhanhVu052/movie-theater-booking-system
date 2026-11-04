@@ -26,6 +26,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     long countByBookingId(Long bookingId);
 
+    long countByRefundStatus(PaymentRefundStatus refundStatus);
+
     @EntityGraph(attributePaths = {"booking"})
     Optional<Payment> findByTransactionRef(String transactionRef);
 

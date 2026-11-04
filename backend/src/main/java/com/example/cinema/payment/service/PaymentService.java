@@ -505,6 +505,12 @@ public class PaymentService {
         return RevenueReportResponse.builder()
                 .totalRevenue(totalRevenue)
                 .totalSuccessfulTransactions(totalTransactions)
+                .totalRealizedRevenue(totalRevenue)
+                .totalSuccessPayments(totalTransactions)
+                .totalTicketsSold(totalTransactions)
+                .totalPendingRefunds(paymentRepository.countByRefundStatus(com.example.cinema.payment.enums.PaymentRefundStatus.REFUND_REQUIRED))
+                .dailyBreakdowns(dailyItems)
+                .movieBreakdowns(movieItems)
                 .dailyBreakdown(dailyItems)
                 .movieBreakdown(movieItems)
                 .build();
