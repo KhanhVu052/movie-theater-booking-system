@@ -60,7 +60,11 @@ export default function SeatSelection() {
 
       if (showtimeRes.status === 'fulfilled') {
         const rawShowtime = showtimeRes.value?.data?.data ?? showtimeRes.value?.data;
-        setShowtime(rawShowtime);
+        if (rawShowtime?.status === 'CANCELLED') {
+          setError('This showtime has been cancelled. Please choose another screening.');
+        } else {
+          setShowtime(rawShowtime);
+        }
       } else {
         setError('Showtime details not found.');
       }

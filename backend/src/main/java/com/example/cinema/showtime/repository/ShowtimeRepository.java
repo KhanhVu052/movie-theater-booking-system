@@ -50,4 +50,6 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             @Param("toTime") LocalDateTime toTime,
             Pageable pageable
     );
+
+    long countByMovieIdAndStartTimeBetween(Long movieId, LocalDateTime start, LocalDateTime end);
 }

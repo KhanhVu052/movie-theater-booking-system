@@ -27,6 +27,7 @@ import com.example.cinema.payment.enums.PaymentRefundStatus;
 import com.example.cinema.payment.enums.PaymentStatus;
 import com.example.cinema.payment.mapper.PaymentMapper;
 import com.example.cinema.payment.repository.PaymentRepository;
+import com.example.cinema.showtime.repository.ShowtimeRepository;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
 import com.example.cinema.showtime.enums.ShowtimeStatus;
@@ -67,6 +68,7 @@ public class PaymentService {
     BookingRepository bookingRepository;
     BookingItemRepository bookingItemRepository;
     ShowtimeSeatRepository showtimeSeatRepository;
+    ShowtimeRepository showtimeRepository;
     UserRepository userRepository;
     VoucherService voucherService;
     VnPayProperties vnPayProperties;
@@ -490,12 +492,26 @@ public class PaymentService {
 
         List<MovieRevenueProjection> movieProjections = paymentRepository.getRevenueByMovie(startDateTime, endDateTime);
         List<RevenueReportResponse.MovieRevenueItem> movieItems = movieProjections.stream()
-                .map(p -> RevenueReportResponse.MovieRevenueItem.builder()
-                        .movieId(p.getMovieId())
-                        .movieTitle(p.getMovieTitle())
-                        .revenue(p.getTotalRevenue())
-                        .totalBookings(p.getTotalBookings())
-                        .build())
+                .map(p -> {
+                    long movieId = p.getMovieId();
+                    long bookings = p.getTotalBookings() != null ? p.getTotalBookings() : 0L;
+                    long screenings = showtimeRepository.countByMovieIdAndStartTimeBetween(movieId, startDateTime, endDateTime);
+                    if (screenings == 0L && bookings > 0L) {
+                        screenings = 1L;
+                    }
+                    double occupancy = screenings > 0L
+                            ? Math.min(100.0, Math.round(((double) bookings / (screenings * 25.0) * 100.0) * 10.0) / 10.0)
+                            : 0.0;
+                    return RevenueReportResponse.MovieRevenueItem.builder()
+                            .movieId(movieId)
+                            .movieTitle(p.getMovieTitle())
+                            .revenue(p.getTotalRevenue())
+                            .totalBookings(bookings)
+                            .ticketsSold(bookings)
+                            .totalScreenings(screenings)
+                            .occupancyRate(occupancy)
+                            .build();
+                })
                 .toList();
 
         long totalTransactions = dailyProjections.stream()

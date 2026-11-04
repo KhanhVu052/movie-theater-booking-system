@@ -178,13 +178,13 @@ export default function MovieDetail() {
 
         if (!isMounted) return;
         const raw = res?.data?.data ?? res?.data;
-        const list = Array.isArray(raw)
+        const list = (Array.isArray(raw)
           ? raw
           : Array.isArray(raw?.items)
           ? raw.items
           : Array.isArray(raw?.content)
           ? raw.content
-          : [];
+          : []).filter((st) => st.status === 'SCHEDULED');
 
         setShowtimes(list);
       } catch {

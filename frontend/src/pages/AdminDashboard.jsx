@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  Search,
   TrendingUp,
   CreditCard,
   Film,
@@ -67,6 +68,7 @@ export default function AdminDashboard() {
   const [selectedCinemaId, setSelectedCinemaId] = useState('');
   const [filterShowtimeMovie, setFilterShowtimeMovie] = useState('');
   const [filterShowtimeRoom, setFilterShowtimeRoom] = useState('');
+  const [showtimeSearchText, setShowtimeSearchText] = useState('');
   const [showAddShowtimeModal, setShowAddShowtimeModal] = useState(false);
   const [schedulingError, setSchedulingError] = useState('');
   const [newShowtime, setNewShowtime] = useState({
@@ -152,14 +154,22 @@ export default function AdminDashboard() {
   const [actionError, setActionError] = useState('');
 
   // 1. Fetch Revenue Report
-  const fetchRevenue = useCallback(async () => {
+  const fetchRevenue = useCallback(async (customFrom, customTo) => {
     if (!isAdmin) return;
+    const start = customFrom !== undefined ? customFrom : fromDate;
+    const end = customTo !== undefined ? customTo : toDate;
+
+    if (start && end && start > end) {
+      showToast('Start date cannot be after end date.', 'error');
+      return;
+    }
+
     setLoadingRevenue(true);
     setActionError('');
     try {
       const res = await adminApi.getRevenueReport({
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
+        fromDate: start || undefined,
+        toDate: end || undefined,
       });
       const data = res?.data?.data ?? res?.data;
       setRevenueData(data);
@@ -168,7 +178,7 @@ export default function AdminDashboard() {
     } finally {
       setLoadingRevenue(false);
     }
-  }, [isAdmin, fromDate, toDate]);
+  }, [isAdmin, showToast]);
 
   // 2. Fetch Showtimes & Cinema/Room metadata
   const fetchShowtimes = useCallback(async () => {
@@ -290,7 +300,7 @@ export default function AdminDashboard() {
 
   // Initial Load based on tab
   useEffect(() => {
-    if (activeTab === 'REVENUE') fetchRevenue();
+    if (activeTab === 'REVENUE') fetchRevenue(fromDate, toDate);
     else if (activeTab === 'SHOWTIMES') {
       fetchShowtimes();
       fetchCinemasAndRooms();
@@ -381,10 +391,26 @@ export default function AdminDashboard() {
       fetchShowtimes();
       setTimeout(() => setNotice(''), 4000);
     } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        'Failed to schedule showtime. Please verify that there is no room overlap or conflict.';
-      setSchedulingError(msg);
+      const serverMsg = err.response?.data?.message || '';
+      const validationErrors = err.response?.data?.errors;
+      let detailedMsg = '';
+
+      if (serverMsg.includes('ENDED') || serverMsg.includes('AVAILABLE_FOR_SHOWTIME')) {
+        detailedMsg = 'Cannot schedule showtime: This movie has status ENDED. Please select a NOW_SHOWING or COMING_SOON movie, or update its status in the Movie Catalog tab.';
+      } else if (serverMsg.includes('conflict') || serverMsg.includes('overlaps') || serverMsg.includes('TIME_CONFLICT')) {
+        detailedMsg = 'Room collision detected: This auditorium room is already booked for another showtime during this window (including the 15-minute cleanup buffer). Please select a different room or time slot.';
+      } else if (serverMsg.includes('future') || serverMsg.includes('past')) {
+        detailedMsg = 'Invalid start time: Showtime start time must be in the future.';
+      } else if (validationErrors && typeof validationErrors === 'object') {
+        detailedMsg = Object.entries(validationErrors)
+          .map(([field, error]) => `${field}: ${error}`)
+          .join(' | ');
+      } else {
+        detailedMsg = serverMsg || 'Validation error: Please verify that start time is in the future, price is > 0, and the room is free.';
+      }
+
+      setSchedulingError(detailedMsg);
+      showToast(detailedMsg, 'error');
     }
   };
 
@@ -480,6 +506,19 @@ export default function AdminDashboard() {
     }
   };
 
+  const filteredShowtimes = useMemo(() => {
+    return showtimesList.filter((st) => {
+      if (!showtimeSearchText.trim()) return true;
+      const q = showtimeSearchText.toLowerCase();
+      return (
+        (st.movieTitle && st.movieTitle.toLowerCase().includes(q)) ||
+        (st.roomName && st.roomName.toLowerCase().includes(q)) ||
+        (st.cinemaName && st.cinemaName.toLowerCase().includes(q)) ||
+        (st.format && st.format.toLowerCase().includes(q))
+      );
+    });
+  }, [showtimesList, showtimeSearchText]);
+
   return (
     <div className="min-h-screen w-full bg-[#0e0a07] text-[#f2e8dc] font-body flex flex-col select-none">
       <Navbar />
@@ -525,9 +564,6 @@ export default function AdminDashboard() {
             <p className="text-xs text-[#ab9a84] leading-relaxed">
               You must be authenticated with an authorized System Administrator account to access operational metrics and catalog controls.
             </p>
-            <div className="p-3 rounded-lg bg-[#1c140c] text-[11px] font-mono text-[#e6c27a] border border-[#3d2f1d]">
-              Default Admin: admin@cinema.com
-            </div>
             <Link
               to="/login?redirect=/admin"
               className="inline-flex px-6 py-2.5 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] font-bold text-xs shadow-md"
@@ -661,7 +697,7 @@ export default function AdminDashboard() {
 
                   <button
                     type="button"
-                    onClick={fetchRevenue}
+                    onClick={() => fetchRevenue(fromDate, toDate)}
                     disabled={loadingRevenue}
                     className="px-4 py-2 rounded-lg bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#e6c27a] hover:border-[#e0b354] transition-all flex items-center gap-2 cursor-pointer"
                   >
@@ -759,7 +795,9 @@ export default function AdminDashboard() {
                             <thead className="bg-[#1c140c] text-[#ab9a84] uppercase text-[10px] tracking-wider">
                               <tr>
                                 <th className="py-3 px-4">Movie Title</th>
-                                <th className="py-3 px-4">Tickets Sold</th>
+                                <th className="py-3 px-4 text-center">Tickets Sold</th>
+                                <th className="py-3 px-4 text-center">Screenings</th>
+                                <th className="py-3 px-4 text-center">Avg Occupancy</th>
                                 <th className="py-3 px-4 text-right">Realized Revenue</th>
                               </tr>
                             </thead>
@@ -769,8 +807,16 @@ export default function AdminDashboard() {
                                   <td className="py-3 px-4 font-semibold text-[#f5ece0]">
                                     {m.movieTitle}
                                   </td>
-                                  <td className="py-3 px-4 text-[#ab9a84] font-mono">
-                                    {m.ticketsSold}
+                                  <td className="py-3 px-4 text-center text-[#ab9a84] font-mono">
+                                    {m.ticketsSold ?? m.totalBookings ?? 0}
+                                  </td>
+                                  <td className="py-3 px-4 text-center text-[#ab9a84] font-mono">
+                                    {m.totalScreenings ?? 0}
+                                  </td>
+                                  <td className="py-3 px-4 text-center font-mono">
+                                    <span className="px-2 py-0.5 rounded bg-[#241a10] border border-[#3d2f1d] text-[#e6c27a] text-[11px]">
+                                      {m.occupancyRate !== undefined && m.occupancyRate !== null ? `${Number(m.occupancyRate).toFixed(1)}%` : '0.0%'}
+                                    </span>
                                   </td>
                                   <td className="py-3 px-4 text-right font-mono font-bold text-[#f3cb62]">
                                     {formatCurrency(m.revenue)}
@@ -847,10 +893,21 @@ export default function AdminDashboard() {
                     </select>
                   </div>
 
+                  <div className="relative flex-1 min-w-[200px]">
+                    <input
+                      type="text"
+                      placeholder="Search showtime by movie, cinema, hall..."
+                      value={showtimeSearchText}
+                      onChange={(e) => setShowtimeSearchText(e.target.value)}
+                      className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg pl-8 pr-3 py-1.5 text-xs text-[#f5ece0] placeholder-[#5c4a35] focus:outline-none focus:border-[#e0b354] transition-colors"
+                    />
+                    <Search className="w-3.5 h-3.5 text-[#8a765d] absolute left-2.5 top-2.5" />
+                  </div>
+
                   <button
                     type="button"
                     onClick={fetchShowtimes}
-                    className="ml-auto px-3.5 py-1.5 rounded-lg bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#e6c27a] flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-lg bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#e6c27a] flex items-center gap-1.5 cursor-pointer shrink-0"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${loadingShowtimes ? 'animate-spin' : ''}`} />
                     <span>Refresh</span>
@@ -864,7 +921,7 @@ export default function AdminDashboard() {
                       <Loader2 className="w-5 h-5 animate-spin text-[#e0b354]" />
                       <span>Loading scheduled screenings...</span>
                     </div>
-                  ) : showtimesList.length === 0 ? (
+                  ) : filteredShowtimes.length === 0 ? (
                     <div className="p-12 text-center text-[#6e5d49]">
                       No scheduled showtimes found for the selected criteria.
                     </div>
@@ -884,7 +941,7 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#241a10]">
-                          {showtimesList.map((st) => (
+                          {filteredShowtimes.map((st) => (
                             <tr key={st.id} className="hover:bg-[#1f1710]/50 transition-colors">
                               <td className="py-3 px-4">
                                 <div className="font-bold text-[#f5ece0]">{st.movieTitle}</div>
@@ -896,7 +953,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="py-3 px-4">
                                 <span className="px-2 py-0.5 rounded bg-[#241a10] border border-[#4d3c26] text-[#f3cb62] font-mono text-[10px] font-bold">
-                                  {st.format} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ {st.translationType}
+                                  {st.format} • {st.translationType}
                                 </span>
                               </td>
                               <td className="py-3 px-4 text-[#f5ece0]">
@@ -1355,8 +1412,13 @@ export default function AdminDashboard() {
                 >
                   <option value="">-- Choose Movie --</option>
                   {moviesList.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title} ({m.durationMinutes} mins)
+                    <option
+                      key={m.id}
+                      value={m.id}
+                      disabled={m.status === 'ENDED'}
+                      className={m.status === 'ENDED' ? 'text-zinc-600' : ''}
+                    >
+                      {m.title} ({m.durationMinutes} mins){m.status === 'ENDED' ? ' — [ENDED: Unavailable]' : ''}
                     </option>
                   ))}
                 </select>

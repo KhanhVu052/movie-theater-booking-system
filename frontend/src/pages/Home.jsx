@@ -217,7 +217,7 @@ export default function Home() {
         });
 
         if (!isMounted) return;
-        const showtimeList = extractPayload(res);
+        const showtimeList = extractPayload(res).filter((st) => st.status === 'SCHEDULED');
 
         // Filter by cinema if selected
         const filtered = quickCinemaId

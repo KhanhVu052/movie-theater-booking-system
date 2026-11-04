@@ -179,7 +179,7 @@ public class ShowtimeService {
             throw new AppException(ErrorCode.SHOWTIME_HAS_ACTIVE_BOOKINGS);
         }
 
-        showtime.setStatus(ShowtimeStatus.CANCELLED);
-        showtimeRepository.save(showtime);
+        showtimeSeatRepository.deleteByShowtimeId(id);
+        showtimeRepository.delete(showtime);
     }
 }
