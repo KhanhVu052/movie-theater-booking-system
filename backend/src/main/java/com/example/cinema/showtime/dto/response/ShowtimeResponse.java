@@ -1,5 +1,6 @@
 package com.example.cinema.showtime.dto.response;
 
+import com.example.cinema.movie.enums.MovieStatus;
 import com.example.cinema.showtime.enums.ShowtimeFormat;
 import com.example.cinema.showtime.enums.ShowtimeStatus;
 import com.example.cinema.showtime.enums.TranslationType;
@@ -12,6 +13,7 @@ public record ShowtimeResponse(
         Long id,
         Long movieId,
         String movieTitle,
+        MovieStatus movieStatus,
         String posterUrl,
         Integer durationMinutes,
         Long roomId,

@@ -513,8 +513,8 @@ export default function AdminDashboard() {
     return showtimesList.filter((st) => {
       // Movie status filter: 'ALL' | 'NOW_SHOWING' | 'COMING_SOON' | 'ENDED'
       if (filterShowtimeMovieStatus !== 'ALL') {
-        const movie = movieMap.get(st.movieId);
-        if (movie && movie.status !== filterShowtimeMovieStatus) {
+        const status = st.movieStatus || movieMap.get(st.movieId)?.status;
+        if (!status || status !== filterShowtimeMovieStatus) {
           return false;
         }
       }
@@ -878,18 +878,18 @@ export default function AdminDashboard() {
                 <div className="flex flex-wrap items-center gap-2">
                   {[
                     { id: 'ALL', label: 'All Showtimes' },
-                    { id: 'NOW_SHOWING', label: '🎬 Now Showing' },
-                    { id: 'COMING_SOON', label: '⏳ Coming Soon' },
-                    { id: 'ENDED', label: '⛔ Ended Movies' },
+                    { id: 'NOW_SHOWING', label: 'Now Showing' },
+                    { id: 'COMING_SOON', label: 'Coming Soon' },
+                    { id: 'ENDED', label: 'Ended Movies' },
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       type="button"
                       onClick={() => setFilterShowtimeMovieStatus(tab.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
                         filterShowtimeMovieStatus === tab.id
-                          ? 'bg-[#e0b354] text-[#1a1209] font-bold shadow-md'
-                          : 'bg-[#18120c] border border-[#2e2316] text-[#ab9a84] hover:text-[#f5ece0]'
+                          ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] font-bold shadow-md'
+                          : 'bg-[#18120c] border border-[#2e2316] text-[#ab9a84] hover:text-[#f5ece0] hover:border-[#42321e]'
                       }`}
                     >
                       {tab.label}
@@ -901,15 +901,16 @@ export default function AdminDashboard() {
                 <div className="bg-[#140f0a] border border-[#2e2316] rounded-xl p-4 flex flex-wrap items-center gap-3">
                   {/* Date Filter */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#ab9a84] font-semibold flex items-center gap-1">
+                    <span className="text-xs text-[#ab9a84] font-semibold flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-[#e0b354]" />
                       Date:
                     </span>
-                    <input
-                      type="date"
+                    <CustomDatePicker
                       value={filterShowtimeDate}
-                      onChange={(e) => setFilterShowtimeDate(e.target.value)}
-                      className="bg-[#120d09] border border-[#3d2f1d] rounded-lg px-2.5 py-1.5 text-xs text-[#f5ece0] focus:border-[#e0b354] focus:outline-none"
+                      onChange={setFilterShowtimeDate}
+                      label=""
+                      placeholder="All Dates"
+                      className="w-36"
                     />
                     {filterShowtimeDate && (
                       <button
@@ -919,6 +920,7 @@ export default function AdminDashboard() {
                           fetchShowtimes({ showDate: '', page: 1 });
                         }}
                         className="text-[11px] text-[#8a765d] hover:text-[#f3cb62] underline cursor-pointer"
+                        title="Clear date filter"
                       >
                         Clear
                       </button>
@@ -1021,19 +1023,19 @@ export default function AdminDashboard() {
                               <td className="py-3 px-4">
                                 <div className="flex items-center gap-2">
                                   <span className="font-bold text-[#f5ece0]">{st.movieTitle}</span>
-                                  {movieMap.get(st.movieId)?.status && (
+                                  {(st.movieStatus || movieMap.get(st.movieId)?.status) && (
                                     <span
-                                      className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
-                                        movieMap.get(st.movieId)?.status === 'NOW_SHOWING'
+                                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                        (st.movieStatus || movieMap.get(st.movieId)?.status) === 'NOW_SHOWING'
                                           ? 'bg-emerald-950 border border-emerald-700 text-emerald-300'
-                                          : movieMap.get(st.movieId)?.status === 'COMING_SOON'
+                                          : (st.movieStatus || movieMap.get(st.movieId)?.status) === 'COMING_SOON'
                                           ? 'bg-amber-950 border border-amber-700 text-amber-300'
                                           : 'bg-zinc-900 border border-zinc-700 text-zinc-400'
                                       }`}
                                     >
-                                      {movieMap.get(st.movieId)?.status === 'NOW_SHOWING'
+                                      {(st.movieStatus || movieMap.get(st.movieId)?.status) === 'NOW_SHOWING'
                                         ? 'Now Showing'
-                                        : movieMap.get(st.movieId)?.status === 'COMING_SOON'
+                                        : (st.movieStatus || movieMap.get(st.movieId)?.status) === 'COMING_SOON'
                                         ? 'Coming Soon'
                                         : 'Ended'}
                                     </span>
@@ -1547,21 +1549,21 @@ export default function AdminDashboard() {
                   className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0]"
                 >
                   <option value="">-- Choose Movie --</option>
-                  <optgroup label="🎬 Now Showing (Ready to Schedule)">
+                  <optgroup label="Now Showing (Available)">
                     {moviesList.filter(m => m.status === 'NOW_SHOWING').map(m => (
                       <option key={m.id} value={m.id}>
                         {m.title} ({m.durationMinutes} mins)
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="⏳ Coming Soon">
+                  <optgroup label="Coming Soon">
                     {moviesList.filter(m => m.status === 'COMING_SOON').map(m => (
                       <option key={m.id} value={m.id}>
                         {m.title} ({m.durationMinutes} mins)
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="⛔ Ended (Unavailable for Scheduling)">
+                  <optgroup label="Ended (Unavailable)">
                     {moviesList.filter(m => m.status === 'ENDED').map(m => (
                       <option key={m.id} value={m.id} disabled className="text-zinc-600">
                         {m.title} ({m.durationMinutes} mins) — [ENDED: Unavailable]
