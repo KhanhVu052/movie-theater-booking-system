@@ -12,6 +12,9 @@ import {
   Loader2,
   ShieldCheck,
   Info,
+  Sparkles,
+  Lock,
+  X,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
@@ -34,6 +37,8 @@ export default function SeatSelection() {
   const [selectionNotice, setSelectionNotice] = useState('');
 
   // Voucher states
+  const [availableVouchers, setAvailableVouchers] = useState([]);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [voucherInput, setVoucherInput] = useState('');
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [voucherError, setVoucherError] = useState('');
@@ -77,6 +82,22 @@ export default function SeatSelection() {
     fetchSeatMap();
   }, [fetchSeatMap]);
 
+  // Fetch all active vouchers on mount
+  useEffect(() => {
+    const fetchVouchers = async () => {
+      try {
+        const res = await movieApi.getAllVouchers();
+        const raw = res?.data?.data ?? res?.data ?? [];
+        if (Array.isArray(raw)) {
+          setAvailableVouchers(raw.filter((v) => v.isActive));
+        }
+      } catch {
+        // Fallback silently if voucher list cannot be fetched
+      }
+    };
+    fetchVouchers();
+  }, []);
+
   // Group seats by rowName and sort by seatNumber
   const rowGroups = useMemo(() => {
     const map = new Map();
@@ -97,6 +118,15 @@ export default function SeatSelection() {
     return sortedRows;
   }, [seats]);
 
+  // Maximum seat count in any row for column number header
+  const maxSeatsInRow = useMemo(() => {
+    let max = 0;
+    rowGroups.forEach(([, seatList]) => {
+      if (seatList.length > max) max = seatList.length;
+    });
+    return max;
+  }, [rowGroups]);
+
   // Map of selected seat objects
   const selectedSeatObjects = useMemo(() => {
     const idSet = new Set(selectedSeatIds);
@@ -107,6 +137,26 @@ export default function SeatSelection() {
   const subtotal = useMemo(() => {
     return selectedSeatObjects.reduce((sum, s) => sum + (s.price || 0), 0);
   }, [selectedSeatObjects]);
+
+  // Breakdown of selected seats by type
+  const seatTypeBreakdown = useMemo(() => {
+    const counts = { NORMAL: 0, VIP: 0, COUPLE: 0 };
+    selectedSeatObjects.forEach((s) => {
+      const type = s.seatType || 'NORMAL';
+      counts[type] = (counts[type] || 0) + 1;
+    });
+    return counts;
+  }, [selectedSeatObjects]);
+
+  // Auto-unapply voucher if subtotal drops below required minOrderValue
+  useEffect(() => {
+    if (appliedVoucher && appliedVoucher.minOrderValue && subtotal < appliedVoucher.minOrderValue) {
+      setAppliedVoucher(null);
+      setSelectionNotice(
+        `Voucher ${appliedVoucher.code} unapplied: order subtotal (${formatCurrency(subtotal)}) is below min requirement (${formatCurrency(appliedVoucher.minOrderValue)}).`
+      );
+    }
+  }, [subtotal, appliedVoucher]);
 
   // Discount calculation
   const discountAmount = useMemo(() => {
@@ -142,7 +192,7 @@ export default function SeatSelection() {
     });
   };
 
-  // Voucher apply handler
+  // Voucher apply handler via manual form
   const handleApplyVoucher = async (e) => {
     e.preventDefault();
     const code = voucherInput.trim().toUpperCase();
@@ -309,18 +359,26 @@ export default function SeatSelection() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Column: Screen & Seat Matrix */}
             <div className="lg:col-span-8 bg-[#140f0a] border border-[#2e2316] rounded-2xl p-6 sm:p-8 flex flex-col items-center shadow-lg overflow-x-auto">
-              {/* Cinema Screen Arc Graphic */}
-              <div className="w-full max-w-lg flex flex-col items-center mb-10">
+              {/* Cinema Screen Projection Graphic - 100% Pure English */}
+              <div className="w-full max-w-xl flex flex-col items-center mb-8 relative">
+                {/* Projected Light Beam */}
                 <div
-                  className="w-full h-3 rounded-t-full"
+                  className="w-full h-10 mb-[-4px] pointer-events-none opacity-25"
                   style={{
                     background:
-                      'linear-gradient(90deg, transparent 0%, rgba(230,194,122,0.4) 30%, #e6c27a 50%, rgba(230,194,122,0.4) 70%, transparent 100%)',
-                    boxShadow: '0 6px 20px rgba(230,194,122,0.25)',
+                      'radial-gradient(ellipse 60% 100% at 50% 0%, #fce092 0%, rgba(220,164,62,0.3) 40%, transparent 100%)',
                   }}
                 />
-                <span className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#8a765d] mt-2">
-                  Cinema Screen
+                {/* Glowing Curved Screen Bar */}
+                <div
+                  className="w-full h-3.5 rounded-t-full border-t border-[#fce092]/70 shadow-[0_8px_30px_rgba(243,203,98,0.45)]"
+                  style={{
+                    background:
+                      'linear-gradient(90deg, rgba(30,20,12,0.2) 0%, rgba(252,224,146,0.6) 25%, #fce092 50%, rgba(252,224,146,0.6) 75%, rgba(30,20,12,0.2) 100%)',
+                  }}
+                />
+                <span className="text-[11px] uppercase tracking-[0.35em] font-extrabold text-[#dca43e] mt-2.5">
+                  CINEMA SCREEN
                 </span>
               </div>
 
@@ -332,8 +390,41 @@ export default function SeatSelection() {
                 </div>
               )}
 
+              {/* Empty Seats Notice */}
+              {seats.length === 0 && !loading && (
+                <div className="p-8 text-center text-[#ab9a84] flex flex-col items-center gap-3">
+                  <AlertCircle className="w-8 h-8 text-[#e0b354]" />
+                  <p className="text-sm font-semibold text-[#f5ece0]">No seat layout found for this room.</p>
+                  <button
+                    type="button"
+                    onClick={fetchSeatMap}
+                    className="px-4 py-1.5 rounded-lg bg-[#21170e] hover:bg-[#332415] border border-[#5e4727] text-xs font-bold text-[#f3cb62] transition-colors cursor-pointer"
+                  >
+                    Reload Seats
+                  </button>
+                </div>
+              )}
+
               {/* Matrix of Seats */}
               <div className="flex flex-col gap-2.5 items-center w-full min-w-[500px]">
+                {/* Column Numbers Header */}
+                {maxSeatsInRow > 0 && (
+                  <div className="flex items-center gap-2.5 mb-1.5 pointer-events-none">
+                    <span className="w-6 text-center" />
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: maxSeatsInRow }, (_, i) => (
+                        <span
+                          key={i}
+                          className="w-8 text-center text-[10px] font-bold text-[#8a765d]"
+                        >
+                          {i + 1}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="w-6 text-center" />
+                  </div>
+                )}
+
                 {rowGroups.map(([rowName, rowSeats]) => (
                   <div key={rowName} className="flex items-center gap-2.5">
                     {/* Row Label Left */}
@@ -349,21 +440,26 @@ export default function SeatSelection() {
                         const isBooked = seat.status === 'BOOKED';
                         const isAvailable = seat.status === 'AVAILABLE';
 
-                        // Seat color styling
-                        let seatBg = 'bg-[#1e1710] border-[#453422] text-[#c7b59d] hover:border-[#e0b354]';
+                        // Seat color styling by seat type
+                        let seatBg =
+                          'bg-[#1a140c] border-[#3d2b17] text-[#c7b59d] hover:border-[#e0b354] hover:bg-[#251c12]';
                         if (seat.seatType === 'VIP') {
-                          seatBg = 'bg-[#291b0f] border-[#785325] text-[#f7d576] hover:border-[#f3cb62]';
+                          seatBg =
+                            'bg-[#2b1b0b] border-[#966b28] text-[#fce092] hover:border-[#ffd700] hover:bg-[#38230e]';
                         } else if (seat.seatType === 'COUPLE') {
-                          seatBg = 'bg-[#2b161f] border-[#6b2c45] text-[#fca5a5] hover:border-[#f43f5e]';
+                          seatBg =
+                            'bg-[#2e131e] border-[#8a2449] text-[#fda4af] hover:border-[#f43f5e] hover:bg-[#3d1827]';
                         }
 
                         if (isSelected) {
                           seatBg =
-                            'bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#f3cb62] text-[#140e08] font-black shadow-[0_0_12px_rgba(230,194,122,0.5)]';
+                            'bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#fce092] text-[#140e08] font-black ring-2 ring-[#f3cb62]/40 shadow-[0_0_12px_rgba(243,203,98,0.6)]';
                         } else if (isHeld) {
-                          seatBg = 'bg-[#18181b]/80 border-[#27272a] text-[#52525b] cursor-not-allowed opacity-60';
+                          seatBg =
+                            'bg-[#18181b]/80 border-[#27272a] text-[#52525b] cursor-not-allowed opacity-60';
                         } else if (isBooked) {
-                          seatBg = 'bg-[#12100e] border-[#1f1a15] text-[#3f352a] cursor-not-allowed opacity-40';
+                          seatBg =
+                            'bg-[#12100e] border-[#1f1a15] text-[#3f352a] cursor-not-allowed opacity-40';
                         }
 
                         return (
@@ -373,9 +469,9 @@ export default function SeatSelection() {
                             disabled={!isAvailable}
                             onClick={() => handleToggleSeat(seat)}
                             title={`${seat.rowName}${seat.seatNumber} • ${seat.seatType} • ${formatCurrency(seat.price)}`}
-                            className={`w-8 h-8 rounded-t-lg rounded-b-sm border text-[11px] font-bold flex items-center justify-center transition-all cursor-pointer ${seatBg}`}
+                            className={`w-8 h-8 rounded-t-lg rounded-b-sm border text-[10px] font-bold flex items-center justify-center transition-all cursor-pointer ${seatBg}`}
                           >
-                            {seat.seatNumber}
+                            {seat.rowName}{seat.seatNumber}
                           </button>
                         );
                       })}
@@ -392,19 +488,19 @@ export default function SeatSelection() {
               {/* Seat Legend */}
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 mt-10 pt-6 border-t border-[#241a10] text-xs text-[#ab9a84]">
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-t border bg-[#1e1710] border-[#453422]" />
+                  <span className="w-4 h-4 rounded-t border bg-[#1a140c] border-[#3d2b17]" />
                   <span>Regular ({formatCurrency(showtime.basePrice)})</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-t border bg-[#291b0f] border-[#785325]" />
-                  <span>VIP (+20k)</span>
+                  <span className="w-4 h-4 rounded-t border bg-[#2b1b0b] border-[#966b28]" />
+                  <span className="text-[#fce092] font-semibold">VIP ({formatCurrency(showtime.basePrice + 20000)})</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-t border bg-[#2b161f] border-[#6b2c45]" />
-                  <span>Couple (+40k)</span>
+                  <span className="w-4 h-4 rounded-t border bg-[#2e131e] border-[#8a2449]" />
+                  <span className="text-[#fda4af] font-semibold">Couple ({formatCurrency(showtime.basePrice * 2)})</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-t border bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#f3cb62]" />
+                  <span className="w-4 h-4 rounded-t border bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#fce092]" />
                   <span className="font-semibold text-[#f3cb62]">Selected</span>
                 </div>
                 <div className="flex items-center gap-2 opacity-60">
@@ -428,78 +524,159 @@ export default function SeatSelection() {
 
                 {/* Selected Seats List */}
                 <div>
-                  <label className="block text-xs font-semibold text-[#ab9a84] mb-2">
-                    Selected Seats ({selectedSeatObjects.length} / 8)
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-[#ab9a84]">
+                      Selected Seats ({selectedSeatObjects.length} / 8)
+                    </label>
+                    {selectedSeatObjects.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSeatIds([])}
+                        className="text-[11px] text-[#8a765d] hover:text-[#f3cb62] transition-colors cursor-pointer"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+
                   {selectedSeatObjects.length === 0 ? (
                     <p className="text-xs text-[#6e5d49] italic">
                       Please click on available seats in the theater layout to make your selection.
                     </p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSeatObjects.map((s) => (
-                        <span
-                          key={s.id}
-                          className="px-2.5 py-1 rounded bg-[#241a10] border border-[#523d24] text-xs font-bold text-[#f3cb62] flex items-center gap-1.5"
-                        >
-                          <span>
-                            {s.rowName}
-                            {s.seatNumber}
-                          </span>
-                          <span className="text-[10px] text-[#ab9a84]">
-                            ({s.seatType})
-                          </span>
-                        </span>
-                      ))}
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {selectedSeatObjects.map((s) => {
+                          let badgeColor = 'bg-[#241a10] border-[#523d24] text-[#d4c3ad]';
+                          if (s.seatType === 'VIP') {
+                            badgeColor = 'bg-[#2f1f0d] border-[#b8862d] text-[#fce092]';
+                          } else if (s.seatType === 'COUPLE') {
+                            badgeColor = 'bg-[#331420] border-[#9f2b55] text-[#fda4af]';
+                          }
+                          return (
+                            <span
+                              key={s.id}
+                              className={`px-2.5 py-1 rounded border text-xs font-bold flex items-center gap-1.5 shadow-sm ${badgeColor}`}
+                            >
+                              <span>
+                                {s.rowName}
+                                {s.seatNumber}
+                              </span>
+                              <span className="text-[10px] opacity-75 uppercase">
+                                ({s.seatType})
+                              </span>
+                            </span>
+                          );
+                        })}
+                      </div>
+
+                      {/* Seat breakdown summary tags */}
+                      <div className="text-[11px] text-[#8a765d] pt-1 flex flex-wrap gap-x-3 gap-y-1">
+                        {seatTypeBreakdown.NORMAL > 0 && (
+                          <span>{seatTypeBreakdown.NORMAL}x Regular ({formatCurrency(showtime.basePrice)})</span>
+                        )}
+                        {seatTypeBreakdown.VIP > 0 && (
+                          <span className="text-[#fce092]">{seatTypeBreakdown.VIP}x VIP ({formatCurrency(showtime.basePrice + 20000)})</span>
+                        )}
+                        {seatTypeBreakdown.COUPLE > 0 && (
+                          <span className="text-[#fda4af]">{seatTypeBreakdown.COUPLE}x Couple ({formatCurrency(showtime.basePrice * 2)})</span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* Voucher Code Form */}
+                {/* Promotional Voucher Section */}
                 <div className="pt-2 border-t border-[#2e2316]">
-                  <label className="block text-xs font-semibold text-[#ab9a84] mb-2 flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-[#e0b354]" />
-                    <span>Promotional Voucher</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-[#ab9a84] flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-[#e0b354]" />
+                      <span>Promotional Voucher</span>
+                    </label>
+                    {availableVouchers.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsVoucherModalOpen(true)}
+                        className="text-[11px] font-semibold text-[#f3cb62] hover:text-[#fce092] flex items-center gap-1 hover:underline transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>Browse ({availableVouchers.length})</span>
+                      </button>
+                    )}
+                  </div>
 
                   {appliedVoucher ? (
-                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#241a10] border border-[#5e4727] text-xs">
-                      <div className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-[#291e12] to-[#1e150d] border border-[#b8862d] text-xs shadow-md">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-[#3d2b17] border border-[#785325] flex items-center justify-center text-[#fce092]">
+                          <Check className="w-4 h-4 text-emerald-400" />
+                        </div>
                         <div>
-                          <span className="font-mono font-bold text-[#f3cb62]">
-                            {appliedVoucher.code}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-extrabold text-[#fce092]">
+                              {appliedVoucher.code}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 font-bold uppercase">
+                              Applied
+                            </span>
+                          </div>
                           <p className="text-[11px] text-[#ab9a84]">
-                            -{formatCurrency(discountAmount)} applied
+                            -{formatCurrency(discountAmount)} discount applied
                           </p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleRemoveVoucher}
-                        className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
-                      >
-                        Remove
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsVoucherModalOpen(true)}
+                          className="text-xs text-[#f3cb62] hover:text-[#fce092] font-semibold cursor-pointer"
+                        >
+                          Change
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRemoveVoucher}
+                          className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <form onSubmit={handleApplyVoucher} className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="ENTER CODE"
-                        value={voucherInput}
-                        onChange={(e) => setVoucherInput(e.target.value)}
-                        className="flex-1 bg-[#120d09] border border-[#3d3020] rounded-lg px-3 py-2 text-xs font-mono uppercase text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
-                      />
+                    <div className="space-y-2">
+                      {/* Quick Browse Button */}
                       <button
-                        type="submit"
-                        disabled={checkingVoucher || !voucherInput.trim()}
-                        className="px-3.5 py-2 rounded-lg bg-[#261d14] hover:bg-[#382b1d] border border-[#4d3c26] text-xs font-semibold text-[#f2e8dc] transition-colors cursor-pointer disabled:opacity-50"
+                        type="button"
+                        onClick={() => setIsVoucherModalOpen(true)}
+                        className="w-full flex items-center justify-between p-2.5 rounded-lg bg-[#21170e] hover:bg-[#2c1f13] border border-[#4d3c26] hover:border-[#f3cb62] text-xs font-semibold text-[#f5ece0] transition-all cursor-pointer group"
                       >
-                        {checkingVoucher ? 'Checking...' : 'Apply'}
+                        <span className="flex items-center gap-2 text-[#f3cb62]">
+                          <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+                          <span>Select from Available Vouchers</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-[#382613] text-[10px] font-bold text-[#fce092]">
+                          {availableVouchers.length} Vouchers
+                        </span>
                       </button>
-                    </form>
+
+                      {/* Manual Code Input Form */}
+                      <form onSubmit={handleApplyVoucher} className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="OR ENTER CODE"
+                          value={voucherInput}
+                          onChange={(e) => setVoucherInput(e.target.value)}
+                          className="flex-1 bg-[#120d09] border border-[#3d3020] rounded-lg px-3 py-2 text-xs font-mono uppercase text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={checkingVoucher || !voucherInput.trim()}
+                          className="px-3.5 py-2 rounded-lg bg-[#261d14] hover:bg-[#382b1d] border border-[#4d3c26] text-xs font-semibold text-[#f2e8dc] transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {checkingVoucher ? 'Checking...' : 'Apply'}
+                        </button>
+                      </form>
+                    </div>
                   )}
 
                   {voucherError && (
@@ -568,6 +745,174 @@ export default function SeatSelection() {
                   Upon clicking, your seats will be locked exclusively for you for 10 minutes to complete payment via VNPAY.
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Voucher Selection Modal */}
+      {isVoucherModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#140e09] border border-[#3d2b17] rounded-2xl max-w-lg w-full p-6 shadow-2xl relative flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#2e2316]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#291e12] border border-[#785325] flex items-center justify-center text-[#fce092]">
+                  <Tag className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-body font-bold text-lg text-[#f7efe4]">
+                    Select Promotional Voucher
+                  </h3>
+                  <p className="text-xs text-[#ab9a84]">
+                    Eligible vouchers unlock automatically based on your order subtotal.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVoucherModalOpen(false)}
+                className="text-[#8a765d] hover:text-[#f7efe4] p-1.5 rounded-lg hover:bg-[#241a10] transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Cart Subtotal Snapshot Banner */}
+            <div className="my-4 p-3 rounded-xl bg-[#1f160e] border border-[#4a3620] flex items-center justify-between">
+              <span className="text-xs text-[#ab9a84]">Current Ticket Subtotal:</span>
+              <span className="font-body font-extrabold text-base text-[#f3cb62]">
+                {formatCurrency(subtotal)}
+              </span>
+            </div>
+
+            {/* Voucher List Scrollable Area */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {availableVouchers.length === 0 ? (
+                <p className="text-center text-xs text-[#8a765d] py-8">
+                  No promotional vouchers currently active.
+                </p>
+              ) : (
+                availableVouchers.map((voucher) => {
+                  const minOrder = voucher.minOrderValue || 0;
+                  const isEligible = subtotal >= minOrder && subtotal > 0;
+                  const isApplied = appliedVoucher?.code === voucher.code;
+                  const shortage = minOrder - subtotal;
+
+                  return (
+                    <div
+                      key={voucher.id}
+                      className={`p-4 rounded-xl border transition-all ${
+                        isApplied
+                          ? 'border-[#f3cb62] bg-[#291e12] ring-1 ring-[#f3cb62]/50 shadow-[0_0_15px_rgba(243,203,98,0.2)]'
+                          : isEligible
+                          ? 'border-[#785325] hover:border-[#f3cb62] bg-[#1f160e] hover:bg-[#241a10] shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
+                          : 'border-[#291e13] bg-[#120d09] opacity-55'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-mono font-black text-sm px-2 py-0.5 rounded ${
+                                isEligible
+                                  ? 'bg-[#382613] text-[#fce092] border border-[#785325]'
+                                  : 'bg-[#1a140d] text-[#8a765d] border border-[#2e2316]'
+                              }`}
+                            >
+                              {voucher.code}
+                            </span>
+                            {isApplied && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 font-bold uppercase">
+                                Active
+                              </span>
+                            )}
+                            {!isEligible && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#241a10] border border-[#3d2b17] text-[#8a765d] flex items-center gap-1">
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>Locked</span>
+                              </span>
+                            )}
+                          </div>
+                          <p
+                            className={`text-xs font-semibold ${
+                              isEligible ? 'text-[#f5ece0]' : 'text-[#8a765d]'
+                            }`}
+                          >
+                            {voucher.discountType === 'PERCENTAGE'
+                              ? `${voucher.discountValue}% OFF (up to ${formatCurrency(
+                                  voucher.maxDiscountAmount || 0
+                                )})`
+                              : `${formatCurrency(voucher.discountValue)} Flat Discount`}
+                          </p>
+                          <p className="text-[11px] text-[#8a765d]">
+                            Min. Order: {formatCurrency(minOrder)}
+                          </p>
+                        </div>
+
+                        {/* Action button */}
+                        <div>
+                          {isApplied ? (
+                            <button
+                              type="button"
+                              onClick={handleRemoveVoucher}
+                              className="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/50 border border-red-800/60 text-xs font-bold text-red-300 transition-colors cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          ) : isEligible ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAppliedVoucher(voucher);
+                                setVoucherInput(voucher.code);
+                                setVoucherError('');
+                                setIsVoucherModalOpen(false);
+                              }}
+                              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#f3cb62] to-[#dda938] hover:from-[#f7d576] hover:to-[#e5b344] text-[#140e08] text-xs font-extrabold shadow-[0_2px_8px_rgba(243,203,98,0.3)] hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                            >
+                              Apply
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled
+                              className="px-3 py-1.5 rounded-lg bg-[#1a140d] border border-[#2e2316] text-xs font-semibold text-[#5a4836] cursor-not-allowed"
+                            >
+                              Locked
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Subtotal shortage warning for locked vouchers */}
+                      {!isEligible && (
+                        <div className="mt-2.5 pt-2 border-t border-[#1f160e] text-[11px] text-amber-500/70 flex items-center gap-1.5">
+                          <Info className="w-3 h-3 shrink-0" />
+                          <span>
+                            {subtotal === 0
+                              ? 'Select seats in the auditorium to unlock this voucher.'
+                              : `Add ${formatCurrency(
+                                  shortage
+                                )} more to your ticket selection to qualify.`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-4 mt-4 border-t border-[#2e2316] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsVoucherModalOpen(false)}
+                className="px-4 py-2 rounded-lg bg-[#21170e] hover:bg-[#2c1f13] border border-[#4d3c26] text-xs font-semibold text-[#f5ece0] transition-colors cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

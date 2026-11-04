@@ -2,7 +2,7 @@
 -- Flyway Migration: V2__seed_movies_data.sql
 -- Description: Seed 1,000 modern movies dataset with Top 20 Best-Rated Blockbusters in NOW_SHOWING,
 --              real TMDB posters, real YouTube trailers, and active showtimes for all 20 movies.
--- Generated: 2026-11-04T01:15:00.803Z
+-- Generated: 2026-11-04T01:54:42.406Z
 -- ============================================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -12933,6 +12933,46 @@ ON DUPLICATE KEY UPDATE
   base_price = VALUES(base_price),
   status = VALUES(status),
   updated_at = CURRENT_TIMESTAMP;
+
+-- ----------------------------------------------------------------------------
+-- 7. Seed Active Promotional Vouchers
+-- ----------------------------------------------------------------------------
+INSERT INTO vouchers (id, code, discount_type, discount_value, max_discount_amount, min_order_value, usage_limit, reserved_count, used_count, per_user_limit, start_at, end_at, is_active, created_at, updated_at) VALUES
+(1, 'SALE2149', 'PERCENTAGE', 10, 30000, 100000, 100, 0, 0, 3, '2026-01-01 00:00:00', '2026-12-31 23:59:59', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(2, 'WELCOME10', 'PERCENTAGE', 10, 20000, 50000, 200, 0, 0, 1, '2026-01-01 00:00:00', '2026-12-31 23:59:59', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(3, 'GOLD50K', 'FIXED_AMOUNT', 50000, 50000, 180000, 150, 0, 0, 2, '2026-01-01 00:00:00', '2026-12-31 23:59:59', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(4, 'VIPMEGA', 'PERCENTAGE', 25, 100000, 300000, 100, 0, 0, 2, '2026-01-01 00:00:00', '2026-12-31 23:59:59', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE
+  discount_type = VALUES(discount_type),
+  discount_value = VALUES(discount_value),
+  max_discount_amount = VALUES(max_discount_amount),
+  min_order_value = VALUES(min_order_value),
+  is_active = 1,
+  end_at = '2026-12-31 23:59:59';
+
+-- ----------------------------------------------------------------------------
+-- 8. Standardize Room Layouts (Standard Rooms 2-7: 5x5 = 25 seats; IMAX: 5x8 = 40 seats)
+-- ----------------------------------------------------------------------------
+UPDATE rooms SET total_rows = 5, total_columns = 5 WHERE id >= 2 AND id <= 7;
+UPDATE rooms SET total_rows = 5, total_columns = 8 WHERE id = 1;
+
+-- ----------------------------------------------------------------------------
+-- 9. Initialize Showtime Seats for all active screenings with SeatType pricing
+-- ----------------------------------------------------------------------------
+INSERT IGNORE INTO showtime_seats (showtime_id, seat_id, price, status, held_by_booking_id, updated_at)
+SELECT 
+    st.id, 
+    s.id, 
+    CASE 
+        WHEN s.type = 'VIP' THEN st.base_price + 20000 
+        WHEN s.type = 'COUPLE' THEN st.base_price * 2 
+        ELSE st.base_price 
+    END, 
+    'AVAILABLE', 
+    NULL, 
+    CURRENT_TIMESTAMP 
+FROM showtimes st 
+JOIN seats s ON s.room_id = st.room_id;
 
 SET FOREIGN_KEY_CHECKS = 1;
 -- End of Migration
