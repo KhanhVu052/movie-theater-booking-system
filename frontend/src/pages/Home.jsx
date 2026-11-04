@@ -19,6 +19,7 @@ import {
   Loader2,
   AlertCircle,
   Tag,
+  Star,
 } from 'lucide-react';
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
@@ -775,6 +776,15 @@ export default function Home() {
                             </span>
                           )}
                         </div>
+
+                        {movie.status === 'NOW_SHOWING' && (
+                          <div className="absolute top-3 right-3 pointer-events-none">
+                            <span className="px-2 py-0.5 rounded-md bg-[#181109]/90 backdrop-blur-md border border-[#e0b354]/60 text-[#f3cb62] text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                              <Star className="w-3 h-3 fill-[#f3cb62]" />
+                              Top Rated
+                            </span>
+                          </div>
+                        )}
 
                         {movie.trailerUrl && (
                           <button
