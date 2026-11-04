@@ -15,7 +15,8 @@ export default function CustomDatePicker({
   value,
   onChange,
   label = 'Show Date',
-  minDate,
+  placeholder = 'Select date',
+  minDate: _minDate,
   className = '',
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -129,7 +130,7 @@ export default function CustomDatePicker({
 
   // Format display string DD/MM/YYYY
   const displayFormatted = (() => {
-    if (!value) return 'Select date';
+    if (!value) return placeholder;
     const [y, m, d] = value.split('-');
     return `${d}/${m}/${y}`;
   })();
@@ -156,7 +157,7 @@ export default function CustomDatePicker({
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full bg-[#120d09] border border-[#3d3020] hover:border-[#e0b354] rounded-lg px-3.5 py-2.5 text-sm text-[#f5ece0] flex items-center justify-between transition-colors cursor-pointer group text-left shadow-inner"
+        className="w-full bg-[#120d09] border border-[#3d3020] hover:border-[#e0b354] rounded-lg px-3 py-1.5 text-xs text-[#f5ece0] flex items-center justify-between transition-colors cursor-pointer group text-left shadow-inner"
         title="Click to choose Year, Month, Day"
       >
         <span className="font-semibold text-[#f5ece0] font-mono tracking-wide">

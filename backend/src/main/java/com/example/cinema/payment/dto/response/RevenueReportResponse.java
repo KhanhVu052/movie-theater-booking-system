@@ -31,6 +31,8 @@ public record RevenueReportResponse(
             String movieTitle,
             Long revenue,
             Long totalBookings,
-            Long ticketsSold
+            Long ticketsSold,
+            Long totalScreenings,
+            Double occupancyRate
     ) {}
 }

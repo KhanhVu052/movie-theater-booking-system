@@ -163,15 +163,7 @@ export default function Navbar({ searchQuery = '', onSearchChange, onSearchSubmi
                 My Bookings
               </Link>
             )}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className="text-red-300 hover:text-white font-bold transition-colors cursor-pointer flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-red-950/80 border border-red-700"
-              >
-                <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
-                <span>Admin Portal</span>
-              </Link>
-            )}
+
           </nav>
         </div>
 
@@ -282,8 +274,10 @@ export default function Navbar({ searchQuery = '', onSearchChange, onSearchSubmi
               {isAdmin && (
                 <Link
                   to="/admin"
-                  className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-700 text-xs font-bold text-red-300 hover:bg-red-900/60 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/80 border border-red-700 text-xs font-bold text-red-300 hover:bg-red-900/80 transition-colors cursor-pointer"
+                  title="Open Admin Operations Console"
                 >
+                  <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
                   <span>Admin Console</span>
                 </Link>
               )}

@@ -5,5 +5,5 @@ public interface MovieRevenueProjection {
     String getMovieTitle();
     Long getTotalRevenue();
     Long getTotalBookings();
+    Long getTotalScreenings();
 }
-

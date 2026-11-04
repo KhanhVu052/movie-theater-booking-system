@@ -88,7 +88,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
                 m.id AS movieId, 
                 m.title AS movieTitle, 
                 SUM(p.amount) AS totalRevenue, 
-                COUNT(DISTINCT b.id) AS totalBookings
+                COUNT(DISTINCT b.id) AS totalBookings,
+                COUNT(DISTINCT s.id) AS totalScreenings
             FROM Payment p
             JOIN p.booking b
             JOIN b.showtime s
