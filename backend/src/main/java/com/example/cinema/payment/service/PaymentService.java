@@ -495,10 +495,10 @@ public class PaymentService {
                 .map(p -> {
                     long movieId = p.getMovieId();
                     long bookings = p.getTotalBookings() != null ? p.getTotalBookings() : 0L;
-                    long screenings = showtimeRepository.countByMovieIdAndStartTimeBetween(movieId, startDateTime, endDateTime);
-                    if (screenings == 0L && bookings > 0L) {
-                        screenings = 1L;
-                    }
+                    Long projScreenings = p.getTotalScreenings();
+                    long screenings = (projScreenings != null && projScreenings > 0L)
+                            ? projScreenings
+                            : (bookings > 0L ? 1L : 0L);
                     double occupancy = screenings > 0L
                             ? Math.min(100.0, Math.round(((double) bookings / (screenings * 25.0) * 100.0) * 10.0) / 10.0)
                             : 0.0;

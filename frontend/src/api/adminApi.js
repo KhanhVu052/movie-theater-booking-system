@@ -53,7 +53,17 @@ export const adminApi = {
 
   // Showtime & Schedule management (FR-SHOW-01)
   getShowtimes: (params = {}) => {
-    return axiosClient.get('/showtimes', { params });
+    const queryParams = { ...params };
+    if (params.showDate) {
+      if (!queryParams.fromTime) {
+        queryParams.fromTime = `${params.showDate}T00:00:00`;
+      }
+      if (!queryParams.toTime) {
+        queryParams.toTime = `${params.showDate}T23:59:59`;
+      }
+      delete queryParams.showDate;
+    }
+    return axiosClient.get('/showtimes', { params: queryParams });
   },
 
   createShowtime: (data) => {

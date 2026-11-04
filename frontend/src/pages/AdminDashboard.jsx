@@ -68,6 +68,10 @@ export default function AdminDashboard() {
   const [selectedCinemaId, setSelectedCinemaId] = useState('');
   const [filterShowtimeMovie, setFilterShowtimeMovie] = useState('');
   const [filterShowtimeRoom, setFilterShowtimeRoom] = useState('');
+  const [filterShowtimeDate, setFilterShowtimeDate] = useState('');
+  const [filterShowtimeMovieStatus, setFilterShowtimeMovieStatus] = useState('ALL');
+  const [showtimePage, setShowtimePage] = useState(1);
+  const [showtimeTotalPages, setShowtimeTotalPages] = useState(1);
   const [showtimeSearchText, setShowtimeSearchText] = useState('');
   const [showAddShowtimeModal, setShowAddShowtimeModal] = useState(false);
   const [schedulingError, setSchedulingError] = useState('');
@@ -181,23 +185,26 @@ export default function AdminDashboard() {
   }, [isAdmin, showToast]);
 
   // 2. Fetch Showtimes & Cinema/Room metadata
-  const fetchShowtimes = useCallback(async () => {
+  const fetchShowtimes = useCallback(async (customOverrides = {}) => {
     setLoadingShowtimes(true);
     try {
+      const pageToUse = customOverrides.page !== undefined ? customOverrides.page : showtimePage;
       const res = await adminApi.getShowtimes({
-        movieId: filterShowtimeMovie || undefined,
-        roomId: filterShowtimeRoom || undefined,
-        page: 1,
-        size: 50,
+        movieId: customOverrides.movieId !== undefined ? customOverrides.movieId : (filterShowtimeMovie || undefined),
+        roomId: customOverrides.roomId !== undefined ? customOverrides.roomId : (filterShowtimeRoom || undefined),
+        showDate: customOverrides.showDate !== undefined ? customOverrides.showDate : (filterShowtimeDate || undefined),
+        page: pageToUse,
+        size: 100,
       });
       const raw = res?.data?.data ?? res?.data;
       setShowtimesList(Array.isArray(raw?.items) ? raw.items : Array.isArray(raw) ? raw : []);
+      setShowtimeTotalPages(raw?.totalPages || 1);
     } catch (err) {
       setActionError(err.response?.data?.message || 'Failed to fetch showtimes.');
     } finally {
       setLoadingShowtimes(false);
     }
-  }, [filterShowtimeMovie, filterShowtimeRoom]);
+  }, [filterShowtimeMovie, filterShowtimeRoom, filterShowtimeDate, showtimePage]);
 
   const fetchCinemasAndRooms = useCallback(async () => {
     try {
@@ -232,15 +239,15 @@ export default function AdminDashboard() {
   };
 
   // 3. Fetch Payments
-  const fetchPayments = useCallback(async () => {
+  const fetchPayments = useCallback(async (customOverrides = {}) => {
     if (!isAdmin) return;
     setLoadingPayments(true);
     try {
       const res = await adminApi.getAllPayments({
-        status: paymentFilterStatus || undefined,
-        refundStatus: paymentRefundFilter || undefined,
-        page: 1,
-        size: 50,
+        status: customOverrides.status !== undefined ? customOverrides.status : (paymentFilterStatus || undefined),
+        refundStatus: customOverrides.refundStatus !== undefined ? customOverrides.refundStatus : (paymentRefundFilter || undefined),
+        page: customOverrides.page || 1,
+        size: 100,
       });
       const raw = res?.data?.data ?? res?.data;
       setPayments(Array.isArray(raw?.items) ? raw.items : Array.isArray(raw) ? raw : []);
@@ -309,16 +316,8 @@ export default function AdminDashboard() {
     else if (activeTab === 'MOVIES') fetchMovies();
     else if (activeTab === 'VOUCHERS') fetchVouchers();
     else if (activeTab === 'REVIEWS') fetchReviews();
-  }, [
-    activeTab,
-    fetchRevenue,
-    fetchShowtimes,
-    fetchCinemasAndRooms,
-    fetchPayments,
-    fetchMovies,
-    fetchVouchers,
-    fetchReviews,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // Handle Manual Refund Confirmation
   const handleConfirmRefund = async (paymentId) => {
@@ -506,8 +505,20 @@ export default function AdminDashboard() {
     }
   };
 
+  const movieMap = useMemo(() => {
+    return new Map(moviesList.map((m) => [m.id, m]));
+  }, [moviesList]);
+
   const filteredShowtimes = useMemo(() => {
     return showtimesList.filter((st) => {
+      // Movie status filter: 'ALL' | 'NOW_SHOWING' | 'COMING_SOON' | 'ENDED'
+      if (filterShowtimeMovieStatus !== 'ALL') {
+        const movie = movieMap.get(st.movieId);
+        if (movie && movie.status !== filterShowtimeMovieStatus) {
+          return false;
+        }
+      }
+
       if (!showtimeSearchText.trim()) return true;
       const q = showtimeSearchText.toLowerCase();
       return (
@@ -517,7 +528,7 @@ export default function AdminDashboard() {
         (st.format && st.format.toLowerCase().includes(q))
       );
     });
-  }, [showtimesList, showtimeSearchText]);
+  }, [showtimesList, showtimeSearchText, filterShowtimeMovieStatus, movieMap]);
 
   return (
     <div className="min-h-screen w-full bg-[#0e0a07] text-[#f2e8dc] font-body flex flex-col select-none">
@@ -811,11 +822,15 @@ export default function AdminDashboard() {
                                     {m.ticketsSold ?? m.totalBookings ?? 0}
                                   </td>
                                   <td className="py-3 px-4 text-center text-[#ab9a84] font-mono">
-                                    {m.totalScreenings ?? 0}
+                                    {m.totalScreenings ?? ((m.ticketsSold || m.totalBookings || 0) > 0 ? 1 : 0)}
                                   </td>
                                   <td className="py-3 px-4 text-center font-mono">
                                     <span className="px-2 py-0.5 rounded bg-[#241a10] border border-[#3d2f1d] text-[#e6c27a] text-[11px]">
-                                      {m.occupancyRate !== undefined && m.occupancyRate !== null ? `${Number(m.occupancyRate).toFixed(1)}%` : '0.0%'}
+                                      {m.occupancyRate !== undefined && m.occupancyRate !== null
+                                        ? `${Number(m.occupancyRate).toFixed(1)}%`
+                                        : ((m.ticketsSold || m.totalBookings || 0) > 0
+                                          ? `${Math.min(100.0, Math.round(((m.ticketsSold || m.totalBookings || 0) / 25.0 * 100.0) * 10.0) / 10.0).toFixed(1)}%`
+                                          : '0.0%')}
                                     </span>
                                   </td>
                                   <td className="py-3 px-4 text-right font-mono font-bold text-[#f3cb62]">
@@ -859,8 +874,57 @@ export default function AdminDashboard() {
                   </button>
                 </div>
 
+                {/* Movie Status Segmentation Tabs */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { id: 'ALL', label: 'All Showtimes' },
+                    { id: 'NOW_SHOWING', label: '🎬 Now Showing' },
+                    { id: 'COMING_SOON', label: '⏳ Coming Soon' },
+                    { id: 'ENDED', label: '⛔ Ended Movies' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setFilterShowtimeMovieStatus(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        filterShowtimeMovieStatus === tab.id
+                          ? 'bg-[#e0b354] text-[#1a1209] font-bold shadow-md'
+                          : 'bg-[#18120c] border border-[#2e2316] text-[#ab9a84] hover:text-[#f5ece0]'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Filters */}
                 <div className="bg-[#140f0a] border border-[#2e2316] rounded-xl p-4 flex flex-wrap items-center gap-3">
+                  {/* Date Filter */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#ab9a84] font-semibold flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-[#e0b354]" />
+                      Date:
+                    </span>
+                    <input
+                      type="date"
+                      value={filterShowtimeDate}
+                      onChange={(e) => setFilterShowtimeDate(e.target.value)}
+                      className="bg-[#120d09] border border-[#3d2f1d] rounded-lg px-2.5 py-1.5 text-xs text-[#f5ece0] focus:border-[#e0b354] focus:outline-none"
+                    />
+                    {filterShowtimeDate && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilterShowtimeDate('');
+                          fetchShowtimes({ showDate: '', page: 1 });
+                        }}
+                        className="text-[11px] text-[#8a765d] hover:text-[#f3cb62] underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-[#ab9a84] font-semibold">Filter Movie:</span>
                     <select
@@ -906,8 +970,19 @@ export default function AdminDashboard() {
 
                   <button
                     type="button"
-                    onClick={fetchShowtimes}
-                    className="px-3.5 py-1.5 rounded-lg bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#e6c27a] flex items-center gap-1.5 cursor-pointer shrink-0"
+                    onClick={() => fetchShowtimes({ page: 1 })}
+                    disabled={loadingShowtimes}
+                    className="px-3.5 py-1.5 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                    <span>Apply Filter</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => fetchShowtimes({ page: 1 })}
+                    disabled={loadingShowtimes}
+                    className="px-3.5 py-1.5 rounded-lg bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#e6c27a] flex items-center gap-1.5 cursor-pointer shrink-0 hover:border-[#e0b354]"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${loadingShowtimes ? 'animate-spin' : ''}`} />
                     <span>Refresh</span>
@@ -944,7 +1019,26 @@ export default function AdminDashboard() {
                           {filteredShowtimes.map((st) => (
                             <tr key={st.id} className="hover:bg-[#1f1710]/50 transition-colors">
                               <td className="py-3 px-4">
-                                <div className="font-bold text-[#f5ece0]">{st.movieTitle}</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-[#f5ece0]">{st.movieTitle}</span>
+                                  {movieMap.get(st.movieId)?.status && (
+                                    <span
+                                      className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                        movieMap.get(st.movieId)?.status === 'NOW_SHOWING'
+                                          ? 'bg-emerald-950 border border-emerald-700 text-emerald-300'
+                                          : movieMap.get(st.movieId)?.status === 'COMING_SOON'
+                                          ? 'bg-amber-950 border border-amber-700 text-amber-300'
+                                          : 'bg-zinc-900 border border-zinc-700 text-zinc-400'
+                                      }`}
+                                    >
+                                      {movieMap.get(st.movieId)?.status === 'NOW_SHOWING'
+                                        ? 'Now Showing'
+                                        : movieMap.get(st.movieId)?.status === 'COMING_SOON'
+                                        ? 'Coming Soon'
+                                        : 'Ended'}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-[10px] text-[#8a765d]">ID #{st.id}</div>
                               </td>
                               <td className="py-3 px-4 text-[#ab9a84]">
@@ -997,6 +1091,38 @@ export default function AdminDashboard() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+
+                  {showtimeTotalPages > 1 && (
+                    <div className="p-3 bg-[#18120c] border-t border-[#2e2316] flex items-center justify-between text-xs text-[#ab9a84]">
+                      <span>Page {showtimePage} of {showtimeTotalPages}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={showtimePage <= 1 || loadingShowtimes}
+                          onClick={() => {
+                            const next = showtimePage - 1;
+                            setShowtimePage(next);
+                            fetchShowtimes({ page: next });
+                          }}
+                          className="px-3 py-1 rounded bg-[#241a10] border border-[#3d2f1d] disabled:opacity-40 cursor-pointer"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          type="button"
+                          disabled={showtimePage >= showtimeTotalPages || loadingShowtimes}
+                          onClick={() => {
+                            const next = showtimePage + 1;
+                            setShowtimePage(next);
+                            fetchShowtimes({ page: next });
+                          }}
+                          className="px-3 py-1 rounded bg-[#241a10] border border-[#3d2f1d] disabled:opacity-40 cursor-pointer"
+                        >
+                          Next
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1055,6 +1181,16 @@ export default function AdminDashboard() {
                       <option value="REFUNDED">REFUNDED</option>
                     </select>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => fetchPayments()}
+                    disabled={loadingPayments}
+                    className="px-3.5 py-1.5 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                    <span>Apply Filter</span>
+                  </button>
                 </div>
 
                 {/* Payments Table */}
@@ -1130,7 +1266,7 @@ export default function AdminDashboard() {
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 font-mono text-[11px] text-[#ab9a84]">
-                                  {p.payDate ? formatDateTime(p.payDate) : 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â'}
+                                  {p.payDate ? formatDateTime(p.payDate) : '-'}
                                 </td>
                                 <td className="py-3 px-4 text-right">
                                   {isRefundNeeded ? (
@@ -1148,7 +1284,7 @@ export default function AdminDashboard() {
                                       <span>Confirm Refund</span>
                                     </button>
                                   ) : (
-                                    <span className="text-[11px] text-[#5e4e3d]">ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â</span>
+                                    <span className="text-[11px] text-[#5e4e3d]">-</span>
                                   )}
                                 </td>
                               </tr>
@@ -1201,7 +1337,7 @@ export default function AdminDashboard() {
                                 <span>{m.title}</span>
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-[#ab9a84]">{m.director || 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â'}</td>
+                            <td className="py-3 px-4 text-[#ab9a84]">{m.director || '-'}</td>
                             <td className="py-3 px-4 font-mono text-[#c7b59d]">
                               {m.durationMinutes} min
                             </td>
@@ -1344,9 +1480,9 @@ export default function AdminDashboard() {
                             <span className="text-xs font-bold text-[#e6c27a]">
                               {r.userFullName}
                             </span>
-                            <span className="text-[10px] text-[#8a765d]">ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢</span>
+                            <span className="text-[10px] text-[#8a765d]">•</span>
                             <span className="text-xs text-[#f3cb62] font-bold">
-                              ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ {r.rating} / 5
+                              ★ {r.rating} / 5
                             </span>
                             <span
                               className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
@@ -1411,17 +1547,46 @@ export default function AdminDashboard() {
                   className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0]"
                 >
                   <option value="">-- Choose Movie --</option>
-                  {moviesList.map((m) => (
-                    <option
-                      key={m.id}
-                      value={m.id}
-                      disabled={m.status === 'ENDED'}
-                      className={m.status === 'ENDED' ? 'text-zinc-600' : ''}
-                    >
-                      {m.title} ({m.durationMinutes} mins){m.status === 'ENDED' ? ' — [ENDED: Unavailable]' : ''}
-                    </option>
-                  ))}
+                  <optgroup label="🎬 Now Showing (Ready to Schedule)">
+                    {moviesList.filter(m => m.status === 'NOW_SHOWING').map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.title} ({m.durationMinutes} mins)
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="⏳ Coming Soon">
+                    {moviesList.filter(m => m.status === 'COMING_SOON').map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.title} ({m.durationMinutes} mins)
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="⛔ Ended (Unavailable for Scheduling)">
+                    {moviesList.filter(m => m.status === 'ENDED').map(m => (
+                      <option key={m.id} value={m.id} disabled className="text-zinc-600">
+                        {m.title} ({m.durationMinutes} mins) — [ENDED: Unavailable]
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
+                {newShowtime.movieId && (() => {
+                  const sel = moviesList.find(m => String(m.id) === String(newShowtime.movieId));
+                  if (!sel) return null;
+                  return (
+                    <div className="mt-1.5 p-2 rounded-lg bg-[#241a10] border border-[#3d2f1d] flex items-center justify-between text-[11px]">
+                      <span className="text-[#f5ece0] font-semibold">{sel.title} ({sel.durationMinutes}m)</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        sel.status === 'NOW_SHOWING'
+                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
+                          : sel.status === 'COMING_SOON'
+                          ? 'bg-amber-950 text-amber-300 border border-amber-700'
+                          : 'bg-zinc-900 text-zinc-400 border border-zinc-700'
+                      }`}>
+                        {sel.status === 'NOW_SHOWING' ? 'Now Showing' : sel.status === 'COMING_SOON' ? 'Coming Soon' : 'Ended'}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
