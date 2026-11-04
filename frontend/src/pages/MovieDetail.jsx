@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
+import MoviePoster from '../components/MoviePoster';
 
 // Helpers
 const formatActorText = (movie) => {
@@ -283,9 +284,10 @@ export default function MovieDetail() {
             {/* Left: Poster Card */}
             <div className="lg:col-span-4 flex flex-col items-center sm:items-start">
               <div className="relative w-full max-w-[320px] rounded-2xl overflow-hidden border-2 border-[#4d3c26] shadow-[0_20px_50px_rgba(0,0,0,0.85)] group">
-                <img
+                <MoviePoster
                   src={movie.posterUrl}
-                  alt={movie.title}
+                  title={movie.title}
+                  genre={formatGenreText(movie)}
                   className="w-full h-[450px] object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
@@ -313,7 +315,7 @@ export default function MovieDetail() {
                   </span>
                 )}
                 <span className="px-3 py-1 rounded-md bg-[#1f1912] border border-[#5e4727] text-xs font-semibold text-[#e6c27a] uppercase">
-                  {movie.status === 'NOW_SHOWING' ? 'Now Showing' : 'Coming Soon'}
+                  {movie.status === 'NOW_SHOWING' ? 'Now Showing' : movie.status === 'COMING_SOON' ? 'Coming Soon' : 'Ended'}
                 </span>
                 {reviewSummary?.averageRating != null && (
                   <span className="px-3 py-1 rounded-md bg-[#18120c] border border-[#3d2f1d] text-xs font-bold text-[#f3cb62] flex items-center gap-1.5">
@@ -471,6 +473,15 @@ export default function MovieDetail() {
                 <p className="text-xs text-[#9c8b75] mt-1.5">
                   Please pick another date above or select a different cinema location.
                 </p>
+                {availableDates.length > 0 && selectedDate !== availableDates[0].dateStr && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate(availableDates[0].dateStr)}
+                    className="mt-4 px-4 py-2 rounded-lg bg-[#21170e] hover:bg-[#2b1f13] border border-[#e0b354]/40 text-[#f3cb62] text-xs font-bold transition-all cursor-pointer"
+                  >
+                    View Today's Showtimes
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-6">

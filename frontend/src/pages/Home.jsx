@@ -19,9 +19,12 @@ import {
   Loader2,
   AlertCircle,
   Tag,
+  Star,
 } from 'lucide-react';
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
+import MoviePoster from '../components/MoviePoster';
+import CustomDatePicker from '../components/CustomDatePicker';
 
 // Normalize and extract data from Backend ApiResponse<T> or PageResponse<T>
 const extractPayload = (response) => {
@@ -142,7 +145,7 @@ export default function Home() {
       setError('');
       try {
         const [moviesRes, cinemasRes, vouchersRes] = await Promise.allSettled([
-          movieApi.getAllMovies(),
+          movieApi.getAllMovies({ page: 1, size: 1000 }),
           movieApi.getAllCinemas(),
           movieApi.getActiveVouchers(),
         ]);
@@ -281,26 +284,33 @@ export default function Home() {
   }, [movies]);
 
   // Filter movies by Tab, Genre, and Search Query
+  const isSearching = !!searchQuery.trim();
   const filteredMovies = useMemo(() => {
+    const keyword = searchQuery.trim().toLowerCase();
+
     return movies.filter((movie) => {
-      const matchesTab = movie.status === activeTab;
+      // If user is actively searching, search across all movies regardless of status
+      const matchesTab = isSearching || movie.status === activeTab;
+
       const genreStr = formatGenreText(movie).toLowerCase();
       const matchesGenre =
         selectedGenre === 'ALL' ||
         genreStr.includes(selectedGenre.toLowerCase());
 
-      const keyword = searchQuery.trim().toLowerCase();
       const actorStr = formatActorText(movie).toLowerCase();
+      const directorStr = (movie.director || '').toLowerCase();
+      const titleStr = (movie.title || '').toLowerCase();
+
       const matchesSearch =
         !keyword ||
-        (movie.title && movie.title.toLowerCase().includes(keyword)) ||
+        titleStr.includes(keyword) ||
         genreStr.includes(keyword) ||
-        (movie.director && movie.director.toLowerCase().includes(keyword)) ||
+        directorStr.includes(keyword) ||
         actorStr.includes(keyword);
 
       return matchesTab && matchesGenre && matchesSearch;
     });
-  }, [movies, activeTab, selectedGenre, searchQuery]);
+  }, [movies, activeTab, selectedGenre, searchQuery, isSearching]);
 
   const handleBookMovie = useCallback(
     (movieId) => {
@@ -329,7 +339,16 @@ export default function Home() {
   return (
     <div className="min-h-screen w-full bg-[#0e0a07] text-[#f2e8dc] font-body flex flex-col select-none">
       {/* 1. Header & Navigation */}
-      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <Navbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        movies={movies}
+        onSearchSubmit={() => {
+          setTimeout(() => {
+            document.getElementById('movies-section')?.scrollIntoView({ behavior: 'smooth' });
+          }, 50);
+        }}
+      />
 
       {/* Loading State */}
       {loading && (
@@ -469,9 +488,10 @@ export default function Home() {
 
                 <div className="hidden lg:flex lg:col-span-4 justify-end">
                   <div className="relative w-64 rounded-2xl overflow-hidden border-2 border-[#4d3c26] shadow-[0_24px_60px_rgba(0,0,0,0.9)] group">
-                    <img
+                    <MoviePoster
                       src={currentHero.posterUrl}
-                      alt={currentHero.title}
+                      title={currentHero.title}
+                      genre={formatGenreText(currentHero)}
                       className="w-full h-[360px] object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     {currentHero.trailerUrl && (
@@ -588,17 +608,12 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Show Date */}
+              {/* Show Date (Visual Click-to-Choose DatePicker) */}
               <div className="lg:col-span-2">
-                <label className="block text-xs font-semibold tracking-wider text-[#b89d72] mb-2 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  Show Date
-                </label>
-                <input
-                  type="date"
+                <CustomDatePicker
                   value={quickDate}
-                  onChange={(e) => setQuickDate(e.target.value)}
-                  className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg px-3.5 py-2.5 text-sm text-[#f5ece0] focus:outline-none focus:border-[#e0b354] transition-colors"
+                  onChange={(newDate) => setQuickDate(newDate)}
+                  label="Show Date"
                 />
               </div>
 
@@ -661,26 +676,24 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('NOW_SHOWING')}
-                  className={`px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     activeTab === 'NOW_SHOWING'
                       ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] shadow-sm'
                       : 'text-[#ab9a84] hover:text-[#f2e8dc]'
                   }`}
                 >
-                  Now Showing (
-                  {movies.filter((m) => m.status === 'NOW_SHOWING').length})
+                  Now Showing
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('COMING_SOON')}
-                  className={`px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     activeTab === 'COMING_SOON'
                       ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] shadow-sm'
                       : 'text-[#ab9a84] hover:text-[#f2e8dc]'
                   }`}
                 >
-                  Coming Soon (
-                  {movies.filter((m) => m.status === 'COMING_SOON').length})
+                  Coming Soon
                 </button>
               </div>
             </div>
@@ -723,9 +736,10 @@ export default function Home() {
                   >
                     <div>
                       <div className="relative h-80 w-full overflow-hidden bg-[#100c08]">
-                        <img
+                        <MoviePoster
                           src={movie.posterUrl}
-                          alt={movie.title}
+                          title={movie.title}
+                          genre={formatGenreText(movie)}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#18120c] via-transparent to-black/30 pointer-events-none" />
@@ -736,7 +750,27 @@ export default function Home() {
                               {movie.ageRating}
                             </span>
                           )}
+                          {isSearching && (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              movie.status === 'NOW_SHOWING'
+                                ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50'
+                                : movie.status === 'COMING_SOON'
+                                ? 'bg-blue-950/90 text-blue-300 border border-blue-600/50'
+                                : 'bg-zinc-800/90 text-zinc-300 border border-zinc-600/50'
+                            }`}>
+                              {movie.status === 'NOW_SHOWING' ? 'Now Showing' : movie.status === 'COMING_SOON' ? 'Coming Soon' : 'Ended'}
+                            </span>
+                          )}
                         </div>
+
+                        {movie.status === 'NOW_SHOWING' && (
+                          <div className="absolute top-3 right-3 pointer-events-none">
+                            <span className="px-2 py-0.5 rounded-md bg-[#181109]/90 backdrop-blur-md border border-[#e0b354]/60 text-[#f3cb62] text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                              <Star className="w-3 h-3 fill-[#f3cb62]" />
+                              Top Rated
+                            </span>
+                          </div>
+                        )}
 
                         {movie.trailerUrl && (
                           <button
@@ -794,6 +828,8 @@ export default function Home() {
                         <span>
                           {movie.status === 'NOW_SHOWING'
                             ? 'Book Tickets'
+                            : movie.status === 'COMING_SOON'
+                            ? 'Coming Soon'
                             : 'View Details'}
                         </span>
                       </button>

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Ticket, LogOut, User, Menu, X, ShieldAlert } from 'lucide-react';
 import UserProfileModal from './UserProfileModal';
+import MoviePoster from './MoviePoster';
 
 export function CinemaBadgeIcon({ className = "w-9 h-9" }) {
   return (
@@ -30,11 +31,60 @@ export function CinemaBadgeIcon({ className = "w-9 h-9" }) {
   );
 }
 
-export default function Navbar({ searchQuery = '', onSearchChange }) {
+export default function Navbar({ searchQuery = '', onSearchChange, onSearchSubmit, movies = [] }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [internalQuery, setInternalQuery] = useState(searchQuery);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const searchContainerRef = useRef(null);
+
+  const currentSearch = onSearchChange ? searchQuery : internalQuery;
+
+  const handleQueryChange = (val) => {
+    if (onSearchChange) {
+      onSearchChange(val);
+    } else {
+      setInternalQuery(val);
+    }
+    setDropdownOpen(!!val.trim());
+  };
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchSubmit = (e) => {
+    if (e) e.preventDefault();
+    setDropdownOpen(false);
+    if (onSearchSubmit) {
+      onSearchSubmit(currentSearch);
+    } else {
+      navigate(`/?q=${encodeURIComponent(currentSearch)}#movies-section`);
+      setTimeout(() => {
+        document.getElementById('movies-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+    }
+  };
+
+  const liveMatches = useMemo(() => {
+    const q = currentSearch.trim().toLowerCase();
+    if (!q || !movies || movies.length === 0) return [];
+    return movies.filter((m) => {
+      const title = (m.title || '').toLowerCase();
+      const genre = (typeof m.genre === 'string' ? m.genre : Array.isArray(m.genres) ? m.genres.map(g => g.name || g).join(' ') : '').toLowerCase();
+      const director = (m.director || '').toLowerCase();
+      return title.includes(q) || genre.includes(q) || director.includes(q);
+    }).slice(0, 6);
+  }, [currentSearch, movies]);
 
   const token = localStorage.getItem('token');
   const user = (() => {
@@ -127,18 +177,89 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
 
         {/* Right: Search Bar & Auth Actions */}
         <div className="flex items-center gap-3 sm:gap-4">
-          {onSearchChange && (
-            <div className="relative hidden sm:block w-56 lg:w-64">
-              <Search className="w-4 h-4 text-[#8a765d] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <div ref={searchContainerRef} className="relative hidden sm:block w-64 lg:w-72">
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
+              <button
+                type="submit"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 p-1 text-[#8a765d] hover:text-[#e0b354] transition-colors cursor-pointer"
+                title="Click to search"
+              >
+                <Search className="w-4 h-4" />
+              </button>
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search movies, genres..."
-                className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-3.5 py-1.5 text-xs text-[#f5ece0] placeholder:text-[#6e5d49] focus:outline-none focus:border-[#e0b354] transition-colors"
+                value={currentSearch}
+                onFocus={() => { if (currentSearch.trim()) setDropdownOpen(true); }}
+                onChange={(e) => handleQueryChange(e.target.value)}
+                placeholder="Search movies, genres, cast..."
+                className="w-full bg-[#1a130d] border border-[#3d3020] focus:border-[#e0b354] rounded-lg pl-9 pr-8 py-1.5 text-xs text-[#f5ece0] placeholder:text-[#6e5d49] focus:outline-none transition-colors"
               />
-            </div>
-          )}
+              {currentSearch && (
+                <button
+                  type="button"
+                  onClick={() => { handleQueryChange(''); setDropdownOpen(false); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a765d] hover:text-[#f3cb62] transition-colors cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </form>
+
+            {/* Live Search Results Dropdown */}
+            {dropdownOpen && currentSearch.trim() && (
+              <div className="absolute top-full mt-2 left-0 right-0 w-80 lg:w-96 bg-[#16100b] border-2 border-[#5e4727] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden z-50 animate-in fade-in duration-150">
+                <div className="p-2.5 border-b border-[#2b2015] flex items-center justify-between text-[11px] text-[#ab9a84]">
+                  <span className="font-semibold">Matching Movies ({liveMatches.length})</span>
+                  <span className="text-[10px] text-[#8a765d]">Press Enter to view all</span>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-[#22180e]">
+                  {liveMatches.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-[#ab9a84]">
+                      No movies found for "<span className="text-[#f3cb62]">{currentSearch}</span>"
+                    </div>
+                  ) : (
+                    liveMatches.map((m) => (
+                      <div
+                        key={m.id}
+                        onClick={() => { setDropdownOpen(false); navigate('/movies/' + m.id); }}
+                        className="p-2.5 hover:bg-[#241a10] flex items-center gap-3 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-10 h-14 rounded overflow-hidden shrink-0 bg-[#0c0805]">
+                          <MoviePoster src={m.posterUrl} title={m.title} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-[#f5ece0] group-hover:text-[#f3cb62] transition-colors truncate">
+                            {m.title}
+                          </p>
+                          <p className="text-[10px] text-[#a8957c] truncate mt-0.5">
+                            {m.releaseDate ? m.releaseDate.split('-')[0] : ''} {m.durationMinutes ? '• ' + m.durationMinutes + 'm' : ''}
+                          </p>
+                        </div>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
+                          m.status === 'NOW_SHOWING' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/50' :
+                          m.status === 'COMING_SOON' ? 'bg-blue-950 text-blue-300 border border-blue-700/50' :
+                          'bg-zinc-800 text-zinc-400'
+                        }`}>
+                          {m.status === 'NOW_SHOWING' ? 'Showing' : m.status === 'COMING_SOON' ? 'Soon' : 'Ended'}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSearchSubmit}
+                  className="w-full py-2 bg-[#21170e] hover:bg-[#2c1f13] border-t border-[#3d2f1d] text-[11px] font-bold text-[#f3cb62] text-center transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Search className="w-3 h-3" />
+                  <span>View all results for "{currentSearch}"</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {token ? (
             <div className="flex items-center gap-2.5">
@@ -214,18 +335,38 @@ export default function Navbar({ searchQuery = '', onSearchChange }) {
         {/* Mobile Dropdown */}
         {mobileMenuOpen && (
           <div className="absolute top-16 left-0 w-full bg-[#15100b] border-b border-[#362919] p-4 flex flex-col gap-3 md:hidden z-50">
-            {onSearchChange && (
-              <div className="relative w-full">
-                <Search className="w-4 h-4 text-[#8a765d] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Search movies, genres..."
-                  className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-4 py-2 text-xs text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
-                />
-              </div>
-            )}
+            <form
+              onSubmit={(e) => {
+                handleSearchSubmit(e);
+                setMobileMenuOpen(false);
+              }}
+              className="relative w-full"
+            >
+              <button
+                type="submit"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 p-1 text-[#8a765d] hover:text-[#e0b354] transition-colors cursor-pointer"
+                title="Search"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+              <input
+                type="text"
+                value={currentSearch}
+                onChange={(e) => handleQueryChange(e.target.value)}
+                placeholder="Search movies, genres, cast..."
+                className="w-full bg-[#1a130d] border border-[#3d3020] rounded-lg pl-9 pr-8 py-2 text-xs text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
+              />
+              {currentSearch && (
+                <button
+                  type="button"
+                  onClick={() => handleQueryChange('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8a765d] hover:text-[#f3cb62] transition-colors cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </form>
             <button
               type="button"
               onClick={() => scrollToSection('movies-section')}
