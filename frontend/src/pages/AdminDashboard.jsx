@@ -20,6 +20,9 @@ import {
   X,
   Clock,
   Check,
+  Percent,
+  Banknote,
+  Sparkles,
 } from 'lucide-react';
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import CustomDatePicker from '../components/CustomDatePicker';
@@ -102,20 +105,43 @@ export default function AdminDashboard() {
   });
 
   // 5. VOUCHERS STATE
+  const getInitialVoucherState = () => {
+    const now = new Date();
+    const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const toInputString = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${mins}`;
+    };
+
+    return {
+      code: '',
+      discountType: 'PERCENTAGE',
+      discountValue: 20,
+      maxDiscountAmount: 50000,
+      minOrderValue: 100000,
+      usageLimit: 100,
+      perUserLimit: 1,
+      startAt: toInputString(now),
+      endAt: toInputString(future),
+    };
+  };
+
   const [vouchersList, setVouchersList] = useState([]);
   const [_loadingVouchers, setLoadingVouchers] = useState(false);
   const [showAddVoucherModal, setShowAddVoucherModal] = useState(false);
-  const [newVoucher, setNewVoucher] = useState({
-    code: '',
-    discountType: 'PERCENTAGE',
-    discountValue: 20,
-    maxDiscountAmount: 50000,
-    minOrderValue: 100000,
-    usageLimit: 100,
-    perUserLimit: 1,
-    startAt: new Date().toISOString().slice(0, 16),
-    endAt: () => new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 16),
-  });
+  const [newVoucher, setNewVoucher] = useState(getInitialVoucherState);
+  const [voucherError, setVoucherError] = useState('');
+  const [voucherSubmitting, setVoucherSubmitting] = useState(false);
+
+  const generateRandomVoucherCode = (type) => {
+    const prefix = type === 'PERCENTAGE' ? 'SALE' : 'SAVE';
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    setNewVoucher((prev) => ({ ...prev, code: `${prefix}${rand}` }));
+  };
 
   // 6. REVIEWS STATE (FR-REV-01)
   const [reviewsList, setReviewsList] = useState([]);
@@ -396,22 +422,61 @@ export default function AdminDashboard() {
     }
   };
 
-  // Create Voucher Form Submit
+   // Create Voucher Form Submit
   const handleCreateVoucherSubmit = async (e) => {
     e.preventDefault();
+    setVoucherError('');
+
+    const discountVal = Number(newVoucher.discountValue);
+    const minOrderVal = Number(newVoucher.minOrderValue || 0);
+
+    if (!newVoucher.code.trim()) {
+      setVoucherError('Voucher code cannot be empty.');
+      return;
+    }
+    if (newVoucher.discountType === 'PERCENTAGE' && (discountVal <= 0 || discountVal > 100)) {
+      setVoucherError('Percentage discount must be between 1% and 100%.');
+      return;
+    }
+    if (newVoucher.discountType === 'FIXED_AMOUNT' && discountVal <= 0) {
+      setVoucherError('Fixed discount amount must be greater than 0 VND.');
+      return;
+    }
+    if (newVoucher.startAt && newVoucher.endAt && newVoucher.startAt >= newVoucher.endAt) {
+      setVoucherError('Expiration date must be after the start date.');
+      return;
+    }
+
+    setVoucherSubmitting(true);
     try {
       const payload = {
-        ...newVoucher,
+        code: newVoucher.code.trim().toUpperCase(),
+        discountType: newVoucher.discountType,
+        discountValue: Number(newVoucher.discountValue),
+        minOrderValue: Number(newVoucher.minOrderValue || 0),
+        maxDiscountAmount:
+          newVoucher.discountType === 'PERCENTAGE' && newVoucher.maxDiscountAmount
+            ? Number(newVoucher.maxDiscountAmount)
+            : newVoucher.discountType === 'FIXED_AMOUNT'
+            ? Number(newVoucher.discountValue)
+            : null,
+        usageLimit: Number(newVoucher.usageLimit || 1),
+        perUserLimit: Number(newVoucher.perUserLimit || 1),
         startAt: newVoucher.startAt.length === 16 ? `${newVoucher.startAt}:00` : newVoucher.startAt,
         endAt: newVoucher.endAt.length === 16 ? `${newVoucher.endAt}:00` : newVoucher.endAt,
       };
+
       await adminApi.createVoucher(payload);
+      showToast('Voucher campaign activated successfully!', 'success');
       setShowAddVoucherModal(false);
-      setNotice('Voucher campaign activated successfully.');
+      setNewVoucher(getInitialVoucherState());
       fetchVouchers();
-      setTimeout(() => setNotice(''), 3000);
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to create voucher campaign.', 'error');
+      const msg = err.response?.data?.message || err.message || 'Failed to create voucher campaign.';
+      setVoucherError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setVoucherSubmitting(false);
     }
   };
 
@@ -831,7 +896,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="py-3 px-4">
                                 <span className="px-2 py-0.5 rounded bg-[#241a10] border border-[#4d3c26] text-[#f3cb62] font-mono text-[10px] font-bold">
-                                  {st.format} â€¢ {st.translationType}
+                                  {st.format} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ {st.translationType}
                                 </span>
                               </td>
                               <td className="py-3 px-4 text-[#f5ece0]">
@@ -1008,7 +1073,7 @@ export default function AdminDashboard() {
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 font-mono text-[11px] text-[#ab9a84]">
-                                  {p.payDate ? formatDateTime(p.payDate) : 'â€”'}
+                                  {p.payDate ? formatDateTime(p.payDate) : 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â'}
                                 </td>
                                 <td className="py-3 px-4 text-right">
                                   {isRefundNeeded ? (
@@ -1026,7 +1091,7 @@ export default function AdminDashboard() {
                                       <span>Confirm Refund</span>
                                     </button>
                                   ) : (
-                                    <span className="text-[11px] text-[#5e4e3d]">â€”</span>
+                                    <span className="text-[11px] text-[#5e4e3d]">ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â</span>
                                   )}
                                 </td>
                               </tr>
@@ -1079,7 +1144,7 @@ export default function AdminDashboard() {
                                 <span>{m.title}</span>
                               </div>
                             </td>
-                            <td className="py-3 px-4 text-[#ab9a84]">{m.director || 'â€”'}</td>
+                            <td className="py-3 px-4 text-[#ab9a84]">{m.director || 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â'}</td>
                             <td className="py-3 px-4 font-mono text-[#c7b59d]">
                               {m.durationMinutes} min
                             </td>
@@ -1126,7 +1191,7 @@ export default function AdminDashboard() {
                   </h2>
                   <button
                     type="button"
-                    onClick={() => setShowAddVoucherModal(true)}
+                    onClick={() => { setVoucherError(''); setNewVoucher(getInitialVoucherState()); setShowAddVoucherModal(true); }}
                     className="px-4 py-2 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer self-start sm:self-auto"
                   >
                     <Plus className="w-4 h-4" />
@@ -1222,9 +1287,9 @@ export default function AdminDashboard() {
                             <span className="text-xs font-bold text-[#e6c27a]">
                               {r.userFullName}
                             </span>
-                            <span className="text-[10px] text-[#8a765d]">â€¢</span>
+                            <span className="text-[10px] text-[#8a765d]">ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢</span>
                             <span className="text-xs text-[#f3cb62] font-bold">
-                              â˜… {r.rating} / 5
+                              ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ {r.rating} / 5
                             </span>
                             <span
                               className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
@@ -1535,108 +1600,376 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* CREATE VOUCHER MODAL */}
+            {/* CREATE VOUCHER MODAL */}
       {showAddVoucherModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#18120c] border border-[#4d3c26] rounded-2xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-xl bg-[#18120c] border border-[#4d3c26] rounded-2xl p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#2e2316] pb-3">
-              <h2 className="font-body font-bold text-base text-[#f7efe4]">
-                Create Promotional Voucher
-              </h2>
+              <div>
+                <h2 className="font-body font-bold text-lg text-[#f7efe4] flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-[#e0b354]" />
+                  <span>Create Promotional Voucher</span>
+                </h2>
+                <p className="text-xs text-[#ab9a84] mt-0.5">
+                  Choose between percentage-based or direct fixed deduction discounts.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowAddVoucherModal(false)}
-                className="text-[#ab9a84] hover:text-[#f3cb62]"
+                className="text-[#ab9a84] hover:text-[#f3cb62] p-1 rounded-lg hover:bg-[#241a10] transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateVoucherSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateVoucherSubmit} className="space-y-4 text-xs">
+              {/* Discount Type Selector (Segmented buttons) */}
               <div>
-                <label className="block text-[#ab9a84] mb-1 font-semibold">Voucher Code</label>
+                <label className="block text-xs font-bold text-[#ab9a84] uppercase tracking-wider mb-2">
+                  Discount Mechanism
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setNewVoucher((prev) => ({
+                        ...prev,
+                        discountType: 'PERCENTAGE',
+                        discountValue: prev.discountType === 'PERCENTAGE' ? prev.discountValue : 20,
+                        maxDiscountAmount: 50000,
+                      }))
+                    }
+                    className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all cursor-pointer text-left ${
+                      newVoucher.discountType === 'PERCENTAGE'
+                        ? 'border-[#e0b354] bg-[#241a10] shadow-[0_2px_15px_rgba(224,179,84,0.15)]'
+                        : 'border-[#2e2316] bg-[#120d09] hover:border-[#4d3c26] text-[#8a765d]'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm ${
+                        newVoucher.discountType === 'PERCENTAGE'
+                          ? 'bg-[#e0b354] text-[#1a1209]'
+                          : 'bg-[#1c140c] text-[#ab9a84]'
+                      }`}
+                    >
+                      <Percent className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-body font-bold text-sm text-[#f5ece0]">
+                        Percentage (%)
+                      </div>
+                      <div className="text-[11px] text-[#8a765d] mt-0.5">
+                        e.g. 10%, 20%, 50% discount
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setNewVoucher((prev) => ({
+                        ...prev,
+                        discountType: 'FIXED_AMOUNT',
+                        discountValue: prev.discountType === 'FIXED_AMOUNT' ? prev.discountValue : 30000,
+                        maxDiscountAmount: 30000,
+                      }))
+                    }
+                    className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all cursor-pointer text-left ${
+                      newVoucher.discountType === 'FIXED_AMOUNT'
+                        ? 'border-[#e0b354] bg-[#241a10] shadow-[0_2px_15px_rgba(224,179,84,0.15)]'
+                        : 'border-[#2e2316] bg-[#120d09] hover:border-[#4d3c26] text-[#8a765d]'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm ${
+                        newVoucher.discountType === 'FIXED_AMOUNT'
+                          ? 'bg-[#e0b354] text-[#1a1209]'
+                          : 'bg-[#1c140c] text-[#ab9a84]'
+                      }`}
+                    >
+                      <Banknote className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-body font-bold text-sm text-[#f5ece0]">
+                        Fixed Amount (VND)
+                      </div>
+                      <div className="text-[11px] text-[#8a765d] mt-0.5">
+                        e.g. 30,000 VND direct cut
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Voucher Code */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-[#ab9a84]">
+                    Voucher Code <span className="text-amber-400">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => generateRandomVoucherCode(newVoucher.discountType)}
+                    className="text-[11px] text-[#e0b354] hover:text-[#f7d576] flex items-center gap-1 font-semibold cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Generate Random Code</span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. CINEMA20"
+                  placeholder="e.g. SUMMER2026, FLASH50K"
                   value={newVoucher.code}
                   onChange={(e) =>
                     setNewVoucher({ ...newVoucher, code: e.target.value.toUpperCase() })
                   }
-                  className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0] uppercase font-mono"
+                  className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] uppercase font-mono font-bold tracking-wider placeholder-[#5c4a35] focus:border-[#e0b354] focus:outline-none transition-colors"
                 />
               </div>
 
+              {/* Discount Value & Max Discount Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#ab9a84] mb-1.5">
+                    {newVoucher.discountType === 'PERCENTAGE'
+                      ? 'Discount Rate (%)'
+                      : 'Direct Discount Amount (VND)'}{' '}
+                    <span className="text-amber-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      required
+                      min={newVoucher.discountType === 'PERCENTAGE' ? 1 : 1000}
+                      max={newVoucher.discountType === 'PERCENTAGE' ? 100 : 10000000}
+                      step="any"
+                      value={newVoucher.discountValue ?? ''}
+                      onChange={(e) =>
+                        setNewVoucher({
+                          ...newVoucher,
+                          discountValue: e.target.value === '' ? '' : Number(e.target.value),
+                        })
+                      }
+                      className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono pr-12 focus:border-[#e0b354] focus:outline-none"
+                    />
+                    <span className="absolute right-3.5 top-2.5 text-xs font-mono font-bold text-[#e0b354]">
+                      {newVoucher.discountType === 'PERCENTAGE' ? '%' : 'VND'}
+                    </span>
+                  </div>
+                </div>
+
+                {newVoucher.discountType === 'PERCENTAGE' ? (
+                  <div>
+                    <label className="block text-xs font-semibold text-[#ab9a84] mb-1.5">
+                      Max Discount Cap (VND)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        placeholder="e.g. 50000"
+                        value={newVoucher.maxDiscountAmount || ''}
+                        onChange={(e) =>
+                          setNewVoucher({
+                            ...newVoucher,
+                            maxDiscountAmount: e.target.value === '' ? '' : Number(e.target.value),
+                          })
+                        }
+                        className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono pr-12 focus:border-[#e0b354] focus:outline-none"
+                      />
+                      <span className="absolute right-3.5 top-2.5 text-xs font-mono font-bold text-[#8a765d]">
+                        VND
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold text-[#ab9a84] mb-1.5">
+                      Minimum Order Value (VND) <span className="text-amber-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        required
+                        min={0}
+                        step="any"
+                        value={newVoucher.minOrderValue ?? ''}
+                        onChange={(e) =>
+                          setNewVoucher({
+                            ...newVoucher,
+                            minOrderValue: e.target.value === '' ? '' : Number(e.target.value),
+                          })
+                        }
+                        className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono pr-12 focus:border-[#e0b354] focus:outline-none"
+                      />
+                      <span className="absolute right-3.5 top-2.5 text-xs font-mono font-bold text-[#8a765d]">
+                        VND
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* If percentage, show Min Order Value in separate row */}
+              {newVoucher.discountType === 'PERCENTAGE' && (
+                <div>
+                  <label className="block text-xs font-semibold text-[#ab9a84] mb-1.5">
+                    Minimum Order Value (VND) <span className="text-amber-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      step="any"
+                      value={newVoucher.minOrderValue ?? ''}
+                      onChange={(e) =>
+                        setNewVoucher({
+                          ...newVoucher,
+                          minOrderValue: e.target.value === '' ? '' : Number(e.target.value),
+                        })
+                      }
+                      className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono pr-12 focus:border-[#e0b354] focus:outline-none"
+                    />
+                    <span className="absolute right-3.5 top-2.5 text-xs font-mono font-bold text-[#8a765d]">
+                      VND
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Usage Limits */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#ab9a84] mb-1 font-semibold">Discount Value</label>
+                  <label className="block text-xs font-semibold text-[#ab9a84] mb-1.5">
+                    Total Campaign Usage Limit <span className="text-amber-400">*</span>
+                  </label>
                   <input
                     type="number"
                     required
                     min={1}
-                    value={newVoucher.discountValue}
+                    step={1}
+                    value={newVoucher.usageLimit ?? ''}
                     onChange={(e) =>
-                      setNewVoucher({ ...newVoucher, discountValue: Number(e.target.value) })
+                      setNewVoucher({
+                        ...newVoucher,
+                        usageLimit: e.target.value === '' ? '' : Number(e.target.value),
+                      })
                     }
-                    className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0]"
+                    className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono focus:border-[#e0b354] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#ab9a84] mb-1 font-semibold">Min Order Value</label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    value={newVoucher.minOrderValue}
-                    onChange={(e) =>
-                      setNewVoucher({ ...newVoucher, minOrderValue: Number(e.target.value) })
-                    }
-                    className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[#ab9a84] mb-1 font-semibold">Usage Limit</label>
+                  <label className="block text-xs font-semibold text-[#ab9a84] mb-1.5">
+                    Per-Customer Limit <span className="text-amber-400">*</span>
+                  </label>
                   <input
                     type="number"
                     required
                     min={1}
-                    value={newVoucher.usageLimit}
+                    step={1}
+                    value={newVoucher.perUserLimit ?? ''}
                     onChange={(e) =>
-                      setNewVoucher({ ...newVoucher, usageLimit: Number(e.target.value) })
+                      setNewVoucher({
+                        ...newVoucher,
+                        perUserLimit: e.target.value === '' ? '' : Number(e.target.value),
+                      })
                     }
-                    className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[#ab9a84] mb-1 font-semibold">Max Discount</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={newVoucher.maxDiscountAmount}
-                    onChange={(e) =>
-                      setNewVoucher({ ...newVoucher, maxDiscountAmount: Number(e.target.value) })
-                    }
-                    className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0]"
+                    className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] font-mono focus:border-[#e0b354] focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3">
+              {/* Validity Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#ab9a84] mb-1.5">
+                    Valid From (Start Date &amp; Time) <span className="text-amber-400">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={newVoucher.startAt}
+                    onChange={(e) => setNewVoucher({ ...newVoucher, startAt: e.target.value })}
+                    className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] focus:border-[#e0b354] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#ab9a84] mb-1.5">
+                    Valid Until (Expiration Date) <span className="text-amber-400">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={typeof newVoucher.endAt === 'string' ? newVoucher.endAt : ''}
+                    onChange={(e) => setNewVoucher({ ...newVoucher, endAt: e.target.value })}
+                    className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] focus:border-[#e0b354] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Live Preview Banner */}
+              <div className="p-3.5 rounded-xl bg-[#140e08] border border-[#3d2f1d] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#241a10] border border-[#e0b354] flex items-center justify-center text-[#f3cb62] font-black text-sm">
+                    {newVoucher.discountType === 'PERCENTAGE'
+                      ? `${newVoucher.discountValue || 0}%`
+                      : '₫'}
+                  </div>
+                  <div>
+                    <div className="font-mono font-bold text-sm text-[#f3cb62]">
+                      {newVoucher.code || 'YOUR_CODE'}
+                    </div>
+                    <div className="text-[11px] text-[#ab9a84]">
+                      {newVoucher.discountType === 'PERCENTAGE'
+                        ? `${newVoucher.discountValue || 0}% OFF (Capped at ${formatCurrency(newVoucher.maxDiscountAmount || 0)})`
+                        : `${formatCurrency(newVoucher.discountValue || 0)} OFF direct deduction`}
+                      {' • '}Min order: {formatCurrency(newVoucher.minOrderValue || 0)}
+                    </div>
+                  </div>
+                </div>
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950 border border-amber-700 text-amber-300">
+                  Preview
+                </span>
+              </div>
+
+              {/* Error Notice */}
+              {voucherError && (
+                <div className="p-3 rounded-xl bg-red-950/40 border border-red-800 text-xs text-red-200 flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{voucherError}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddVoucherModal(false)}
-                  className="px-4 py-2 rounded-lg bg-[#241a10] text-[#ab9a84]"
+                  className="px-4 py-2.5 rounded-xl bg-[#241a10] border border-[#3d2f1d] text-[#ab9a84] hover:text-[#f7efe4] font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] font-bold"
+                  disabled={voucherSubmitting}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-b from-[#f3cb62] to-[#dda938] hover:from-[#f7d576] hover:to-[#e5b344] text-[#1a1209] font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  Activate Campaign
+                  {voucherSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Activating Campaign...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 stroke-[2.5]" />
+                      <span>Activate Campaign</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
