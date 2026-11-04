@@ -97,6 +97,15 @@ export default function SeatSelection() {
     return sortedRows;
   }, [seats]);
 
+  // Maximum seat count in any row for column number header
+  const maxSeatsInRow = useMemo(() => {
+    let max = 0;
+    rowGroups.forEach(([, seatList]) => {
+      if (seatList.length > max) max = seatList.length;
+    });
+    return max;
+  }, [rowGroups]);
+
   // Map of selected seat objects
   const selectedSeatObjects = useMemo(() => {
     const idSet = new Set(selectedSeatIds);
@@ -309,18 +318,28 @@ export default function SeatSelection() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Column: Screen & Seat Matrix */}
             <div className="lg:col-span-8 bg-[#140f0a] border border-[#2e2316] rounded-2xl p-6 sm:p-8 flex flex-col items-center shadow-lg overflow-x-auto">
-              {/* Cinema Screen Arc Graphic */}
-              <div className="w-full max-w-lg flex flex-col items-center mb-10">
+              {/* Cinema Screen Projection Graphic */}
+              <div className="w-full max-w-xl flex flex-col items-center mb-8 relative">
+                {/* Projected Light Beam */}
                 <div
-                  className="w-full h-3 rounded-t-full"
+                  className="w-full h-10 mb-[-4px] pointer-events-none opacity-25"
                   style={{
                     background:
-                      'linear-gradient(90deg, transparent 0%, rgba(230,194,122,0.4) 30%, #e6c27a 50%, rgba(230,194,122,0.4) 70%, transparent 100%)',
-                    boxShadow: '0 6px 20px rgba(230,194,122,0.25)',
+                      'radial-gradient(ellipse 60% 100% at 50% 0%, #fce092 0%, rgba(220,164,62,0.3) 40%, transparent 100%)',
                   }}
                 />
-                <span className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#8a765d] mt-2">
-                  Cinema Screen
+                {/* Glowing Curved Screen Bar */}
+                <div
+                  className="w-full h-3.5 rounded-t-full border-t border-[#fce092]/70 shadow-[0_8px_30px_rgba(243,203,98,0.45)]"
+                  style={{
+                    background:
+                      'linear-gradient(90deg, rgba(30,20,12,0.2) 0%, rgba(252,224,146,0.6) 25%, #fce092 50%, rgba(252,224,146,0.6) 75%, rgba(30,20,12,0.2) 100%)',
+                  }}
+                />
+                <span className="text-[11px] uppercase tracking-[0.35em] font-extrabold text-[#dca43e] mt-2.5 flex items-center gap-2">
+                  <span>SCREEN</span>
+                  <span className="opacity-40">•</span>
+                  <span>MÀN HÌNH CHÍNH</span>
                 </span>
               </div>
 
@@ -332,8 +351,41 @@ export default function SeatSelection() {
                 </div>
               )}
 
+              {/* Empty Seats Notice */}
+              {seats.length === 0 && !loading && (
+                <div className="p-8 text-center text-[#ab9a84] flex flex-col items-center gap-3">
+                  <AlertCircle className="w-8 h-8 text-[#e0b354]" />
+                  <p className="text-sm font-semibold text-[#f5ece0]">No seat layout found for this room.</p>
+                  <button
+                    type="button"
+                    onClick={fetchSeatMap}
+                    className="px-4 py-1.5 rounded-lg bg-[#21170e] hover:bg-[#332415] border border-[#5e4727] text-xs font-bold text-[#f3cb62] transition-colors"
+                  >
+                    Reload Seats
+                  </button>
+                </div>
+              )}
+
               {/* Matrix of Seats */}
               <div className="flex flex-col gap-2.5 items-center w-full min-w-[500px]">
+                {/* Column Numbers Header */}
+                {maxSeatsInRow > 0 && (
+                  <div className="flex items-center gap-2.5 mb-1.5 pointer-events-none">
+                    <span className="w-6 text-center" />
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: maxSeatsInRow }, (_, i) => (
+                        <span
+                          key={i}
+                          className="w-8 text-center text-[10px] font-bold text-[#8a765d]"
+                        >
+                          {i + 1}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="w-6 text-center" />
+                  </div>
+                )}
+
                 {rowGroups.map(([rowName, rowSeats]) => (
                   <div key={rowName} className="flex items-center gap-2.5">
                     {/* Row Label Left */}
@@ -373,9 +425,9 @@ export default function SeatSelection() {
                             disabled={!isAvailable}
                             onClick={() => handleToggleSeat(seat)}
                             title={`${seat.rowName}${seat.seatNumber} • ${seat.seatType} • ${formatCurrency(seat.price)}`}
-                            className={`w-8 h-8 rounded-t-lg rounded-b-sm border text-[11px] font-bold flex items-center justify-center transition-all cursor-pointer ${seatBg}`}
+                            className={`w-8 h-8 rounded-t-lg rounded-b-sm border text-[10px] font-bold flex items-center justify-center transition-all cursor-pointer ${seatBg}`}
                           >
-                            {seat.seatNumber}
+                            {seat.rowName}{seat.seatNumber}
                           </button>
                         );
                       })}

@@ -122,14 +122,32 @@ public class ShowtimeService {
         return showtimeMapper.toResponse(showtime);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ShowtimeSeatResponse> getShowtimeSeats(Long showtimeId) {
-        if (!showtimeRepository.existsById(showtimeId)) {
-            throw new AppException(ErrorCode.SHOWTIME_NOT_FOUND);
-        }
+        Showtime showtime = showtimeRepository.findById(showtimeId)
+                .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
 
         List<ShowtimeSeat> seats = showtimeSeatRepository
                 .findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtimeId);
+
+        // Defensive safeguard: Auto-initialize seats from room if showtime_seats are missing
+        if (seats.isEmpty()) {
+            Room room = showtime.getRoom();
+            List<Seat> activeSeats = seatRepository.findByRoomIdAndIsActiveTrueOrderByRowNameAscSeatNumberAsc(room.getId());
+            if (!activeSeats.isEmpty()) {
+                List<ShowtimeSeat> newSeats = activeSeats.stream()
+                        .map(seat -> ShowtimeSeat.builder()
+                                .showtime(showtime)
+                                .seat(seat)
+                                .price(seat.getType().calculatePrice(showtime.getBasePrice()))
+                                .status(ShowtimeSeatStatus.AVAILABLE)
+                                .heldByBookingId(null)
+                                .build())
+                        .toList();
+                seats = showtimeSeatRepository.saveAll(newSeats);
+            }
+        }
+
         java.util.Set<Long> expiredHeldSeatIds = showtimeSeatRepository
                 .findExpiredHeldSeatIdsByShowtime(showtimeId, LocalDateTime.now());
 

@@ -2,7 +2,7 @@
 -- Flyway Migration: V2__seed_movies_data.sql
 -- Description: Seed 1,000 modern movies dataset with Top 20 Best-Rated Blockbusters in NOW_SHOWING,
 --              real TMDB posters, real YouTube trailers, and active showtimes for all 20 movies.
--- Generated: 2026-11-04T01:15:00.803Z
+-- Generated: 2026-11-04T01:54:42.406Z
 -- ============================================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -12933,6 +12933,24 @@ ON DUPLICATE KEY UPDATE
   base_price = VALUES(base_price),
   status = VALUES(status),
   updated_at = CURRENT_TIMESTAMP;
+
+-- ----------------------------------------------------------------------------
+-- 7. Initialize Showtime Seats for all active screenings
+-- ----------------------------------------------------------------------------
+INSERT IGNORE INTO showtime_seats (showtime_id, seat_id, price, status, held_by_booking_id, updated_at)
+SELECT 
+    st.id, 
+    s.id, 
+    CASE 
+        WHEN s.type = 'VIP' THEN ROUND(st.base_price * 1.2) 
+        WHEN s.type = 'COUPLE' THEN ROUND(st.base_price * 1.5) 
+        ELSE st.base_price 
+    END, 
+    'AVAILABLE', 
+    NULL, 
+    CURRENT_TIMESTAMP 
+FROM showtimes st 
+JOIN seats s ON s.room_id = st.room_id;
 
 SET FOREIGN_KEY_CHECKS = 1;
 -- End of Migration
