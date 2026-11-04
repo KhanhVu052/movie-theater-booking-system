@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
+  Filter,
   TrendingUp,
   CreditCard,
   Film,
@@ -392,7 +393,7 @@ export default function AdminDashboard() {
     } catch (err) {
       const serverMsg = err.response?.data?.message || '';
       const validationErrors = err.response?.data?.errors;
-      let detailedMsg = '';
+      let detailedMsg;
 
       if (serverMsg.includes('ENDED') || serverMsg.includes('AVAILABLE_FOR_SHOWTIME')) {
         detailedMsg = 'Cannot schedule showtime: This movie has status ENDED. Please select a NOW_SHOWING or COMING_SOON movie, or update its status in the Movie Catalog tab.';
@@ -453,7 +454,6 @@ export default function AdminDashboard() {
     setVoucherError('');
 
     const discountVal = Number(newVoucher.discountValue);
-    const minOrderVal = Number(newVoucher.minOrderValue || 0);
 
     if (!newVoucher.code.trim()) {
       setVoucherError('Voucher code cannot be empty.');

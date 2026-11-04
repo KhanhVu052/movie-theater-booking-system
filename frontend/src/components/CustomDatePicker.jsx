@@ -15,7 +15,7 @@ export default function CustomDatePicker({
   value,
   onChange,
   label = 'Show Date',
-  minDate,
+  minDate: _minDate,
   className = '',
 }) {
   const [isOpen, setIsOpen] = useState(false);
