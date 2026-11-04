@@ -105,20 +105,43 @@ export default function AdminDashboard() {
   });
 
   // 5. VOUCHERS STATE
+  const getInitialVoucherState = () => {
+    const now = new Date();
+    const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const toInputString = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${mins}`;
+    };
+
+    return {
+      code: '',
+      discountType: 'PERCENTAGE',
+      discountValue: 20,
+      maxDiscountAmount: 50000,
+      minOrderValue: 100000,
+      usageLimit: 100,
+      perUserLimit: 1,
+      startAt: toInputString(now),
+      endAt: toInputString(future),
+    };
+  };
+
   const [vouchersList, setVouchersList] = useState([]);
   const [_loadingVouchers, setLoadingVouchers] = useState(false);
   const [showAddVoucherModal, setShowAddVoucherModal] = useState(false);
-  const [newVoucher, setNewVoucher] = useState({
-    code: '',
-    discountType: 'PERCENTAGE',
-    discountValue: 20,
-    maxDiscountAmount: 50000,
-    minOrderValue: 100000,
-    usageLimit: 100,
-    perUserLimit: 1,
-    startAt: new Date().toISOString().slice(0, 16),
-    endAt: () => new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 16),
-  });
+  const [newVoucher, setNewVoucher] = useState(getInitialVoucherState);
+  const [voucherError, setVoucherError] = useState('');
+  const [voucherSubmitting, setVoucherSubmitting] = useState(false);
+
+  const generateRandomVoucherCode = (type) => {
+    const prefix = type === 'PERCENTAGE' ? 'SALE' : 'SAVE';
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    setNewVoucher((prev) => ({ ...prev, code: `${prefix}${rand}` }));
+  };
 
   // 6. REVIEWS STATE (FR-REV-01)
   const [reviewsList, setReviewsList] = useState([]);
@@ -399,22 +422,58 @@ export default function AdminDashboard() {
     }
   };
 
-  // Create Voucher Form Submit
+   // Create Voucher Form Submit
   const handleCreateVoucherSubmit = async (e) => {
     e.preventDefault();
+    setVoucherError('');
+
+    if (!newVoucher.code.trim()) {
+      setVoucherError('Voucher code cannot be empty.');
+      return;
+    }
+    if (newVoucher.discountType === 'PERCENTAGE' && (newVoucher.discountValue <= 0 || newVoucher.discountValue > 100)) {
+      setVoucherError('Percentage discount must be between 1% and 100%.');
+      return;
+    }
+    if (newVoucher.discountType === 'FIXED_AMOUNT' && newVoucher.discountValue <= 0) {
+      setVoucherError('Fixed discount amount must be greater than 0 VND.');
+      return;
+    }
+    if (newVoucher.startAt && newVoucher.endAt && newVoucher.startAt >= newVoucher.endAt) {
+      setVoucherError('Expiration date must be after the start date.');
+      return;
+    }
+
+    setVoucherSubmitting(true);
     try {
       const payload = {
-        ...newVoucher,
+        code: newVoucher.code.trim().toUpperCase(),
+        discountType: newVoucher.discountType,
+        discountValue: Number(newVoucher.discountValue),
+        minOrderValue: Number(newVoucher.minOrderValue || 0),
+        maxDiscountAmount:
+          newVoucher.discountType === 'PERCENTAGE' && newVoucher.maxDiscountAmount
+            ? Number(newVoucher.maxDiscountAmount)
+            : newVoucher.discountType === 'FIXED_AMOUNT'
+            ? Number(newVoucher.discountValue)
+            : null,
+        usageLimit: Number(newVoucher.usageLimit || 1),
+        perUserLimit: Number(newVoucher.perUserLimit || 1),
         startAt: newVoucher.startAt.length === 16 ? `${newVoucher.startAt}:00` : newVoucher.startAt,
         endAt: newVoucher.endAt.length === 16 ? `${newVoucher.endAt}:00` : newVoucher.endAt,
       };
+
       await adminApi.createVoucher(payload);
+      showToast('Voucher campaign activated successfully!', 'success');
       setShowAddVoucherModal(false);
-      setNotice('Voucher campaign activated successfully.');
+      setNewVoucher(getInitialVoucherState());
       fetchVouchers();
-      setTimeout(() => setNotice(''), 3000);
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to create voucher campaign.', 'error');
+      const msg = err.response?.data?.message || err.message || 'Failed to create voucher campaign.';
+      setVoucherError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setVoucherSubmitting(false);
     }
   };
 
@@ -1129,7 +1188,7 @@ export default function AdminDashboard() {
                   </h2>
                   <button
                     type="button"
-                    onClick={() => setShowAddVoucherModal(true)}
+                    onClick={() => { setVoucherError(''); setNewVoucher(getInitialVoucherState()); setShowAddVoucherModal(true); }}
                     className="px-4 py-2 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer self-start sm:self-auto"
                   >
                     <Plus className="w-4 h-4" />
@@ -1826,7 +1885,7 @@ export default function AdminDashboard() {
                   <input
                     type="datetime-local"
                     required
-                    value={newVoucher.endAt}
+                    value={typeof newVoucher.endAt === 'string' ? newVoucher.endAt : ''}
                     onChange={(e) => setNewVoucher({ ...newVoucher, endAt: e.target.value })}
                     className="w-full bg-[#120d09] border border-[#3d3020] rounded-xl px-3.5 py-2.5 text-[#f5ece0] focus:border-[#e0b354] focus:outline-none"
                   />
