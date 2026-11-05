@@ -59,7 +59,7 @@ movie-theater-booking-system/
 │   │   ├── utils/            # formatters, voucherUtils, bookingUtils
 │   │   └── test/             # Vitest automated business rule test suite
 └── docs/
-    └── SRS.md                # Software Requirements Specification (v2.2)
+    └── SRS.md                # Software Requirements Specification (v2.3)
 ```
 
 ---
@@ -89,21 +89,42 @@ To prevent Deadlocks under high concurrency (e.g. 50 users simultaneously reques
 ---
 
 ### 1. Database Setup
-Create the MySQL database:
-```sql
-CREATE DATABASE cinema_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+The easiest way is Docker Compose, which creates the `cinema_booking_db` database for you:
+```bash
+docker compose up -d mysql
 ```
 
-Configure connection parameters in `backend/src/main/resources/application.properties`:
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/cinema_booking?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh
-spring.datasource.username=root
-spring.datasource.password=your_password
+Using your own MySQL instead? Create the database and point the app at it with environment variables (see step 2):
+```sql
+CREATE DATABASE cinema_booking_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+Defaults match `docker-compose.yml` (`root` / `root` on `localhost:3306`). Override with `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`.
+
+---
+
+### 2. Configure Secrets (environment variables)
+Secrets are **not** stored in the repository. Copy `.env.example` to `.env` and fill it in:
+```bash
+cp .env.example .env
+# JWT secret (required): paste the output into JWT_SECRET in .env
+openssl rand -base64 48
+```
+| Variable | Required | Purpose |
+|---|---|---|
+| `JWT_SECRET` | yes | Base64 signing key for JWT, at least 32 bytes. The app refuses to start without it. |
+| `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` | for first run | Creates the first `ADMIN` account when the database has none (password min 8 chars). |
+| `DEV_TOOLS_ENABLED` | no (default `false`) | `true` enables the demo-only "simulate payment" endpoint (SRS FR-DEV-01). |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | no | Database connection overrides. |
+| `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` | no | VNPay sandbox credentials. |
+
+Load the file into your shell before starting the backend:
+```bash
+set -a; source .env; set +a
 ```
 
 ---
 
-### 2. Run the Backend
+### 3. Run the Backend
 ```bash
 cd backend
 # Linux / macOS
@@ -114,13 +135,16 @@ mvnw.cmd spring-boot:run
 ```
 The REST API will launch at `http://localhost:8080`.
 
-#### Default Credentials
-* **Administrator**: `admin@cinema.com` / `Admin123@` (Role: `ADMIN`)
+#### Accounts
+* **Administrator**: created on first start from `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` (Role: `ADMIN`). There is no built-in default password.
 * **Customer**: Self-register via the UI or `POST /api/v1/auth/register`
+
+#### Demo without a public VNPay callback
+VNPay confirms payments by calling the IPN URL (server-to-server), which cannot reach `localhost`. For a local demo, set `DEV_TOOLS_ENABLED=true` and run the frontend with `npm run dev`: the payment page then offers an extra "Instant Test Payment" option. It follows the same rules as a real in-time IPN (booking must be `PENDING_PAYMENT`, not expired, seats still held) and is never shown in production builds.
 
 ---
 
-### 3. Run the Frontend
+### 4. Run the Frontend
 ```bash
 cd frontend
 npm install
@@ -154,6 +178,7 @@ npm run lint
 cd backend
 ./mvnw test
 ```
+> `JWT_SECRET` must be set (and MySQL running) for the Spring context test to start.
 
 ---
 
@@ -168,6 +193,10 @@ This project strictly implements and fulfills the software specification outline
 * **FR-PAY-02**: Server-to-Server IPN verification and `REFUND_REQUIRED` handling.
 * **FR-REV-01**: Post-screening verified customer review policy.
 * **FR-REP-01**: Realized revenue calculation excluding refund-required payments.
+* **FR-DEV-01**: Demo-only payment simulation and showtime fast-forward, off by default (`DEV_TOOLS_ENABLED`).
+* **NFR-SEC-02**: No secrets in the repository; JWT secret and first-admin credentials come from environment variables.
+
+For the parts of the SRS roadmap that are not built yet (Notification/RabbitMQ, Redis caching, Swagger, backend integration tests) see SRS section 7.3.
 
 ---
 

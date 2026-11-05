@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -10,11 +11,32 @@ import PaymentResult from './pages/PaymentResult';
 import MyBookings from './pages/MyBookings';
 import AdminDashboard from './pages/AdminDashboard';
 import NotFound from './pages/NotFound';
+import { isProtectedPath } from './utils/navigation';
+
+// axiosClient clears the token and fires `auth:unauthorized` on a 401. On pages that need a
+// signed-in user, send the visitor to the login page and bring them back afterwards.
+function AuthWatcher() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      if (!isProtectedPath(location.pathname)) return;
+      const back = encodeURIComponent(`${location.pathname}${location.search}`);
+      navigate(`/login?redirect=${back}`, { replace: true });
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, [navigate, location.pathname, location.search]);
+
+  return null;
+}
 
 export default function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
+        <AuthWatcher />
         <Routes>
           {/* GoToro Cinema Landing Page */}
           <Route path="/" element={<Home />} />

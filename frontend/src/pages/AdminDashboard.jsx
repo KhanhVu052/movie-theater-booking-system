@@ -33,6 +33,7 @@ import { movieApi } from '../api/movieApi';
 import { useToast } from '../context/ToastContext';
 
 import { formatCurrency, formatDateTime } from '../utils/formatters';
+import { toLocalDateStr, localDateStrFromToday } from '../utils/dates';
 
 export default function AdminDashboard() {
   const { showToast, confirm } = useToast();
@@ -53,12 +54,8 @@ export default function AdminDashboard() {
 
   // 1. REVENUE REPORT STATE (FR-REP-01)
   const [revenueData, setRevenueData] = useState(null);
-  const [fromDate, setFromDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  });
-  const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [fromDate, setFromDate] = useState(() => localDateStrFromToday(-30));
+  const [toDate, setToDate] = useState(() => toLocalDateStr());
   const [loadingRevenue, setLoadingRevenue] = useState(false);
 
   // 2. SHOWTIMES STATE (FR-SHOW-01)
@@ -101,7 +98,7 @@ export default function AdminDashboard() {
     description: '',
     director: '',
     durationMinutes: 120,
-    releaseDate: new Date().toISOString().split('T')[0],
+    releaseDate: toLocalDateStr(),
     ageRating: 'P',
     originalLanguage: 'English',
     posterUrl: '',

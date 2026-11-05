@@ -292,6 +292,8 @@ export default function MyBookings() {
               <div className="space-y-4">
                 {filteredBookings.map((b) => {
                   const isConfirmed = b.status === 'CONFIRMED';
+                  // SRS FR-REV-01: a review is allowed only after the showtime has ended.
+                  const canReview = isConfirmed && !!b.endTime && new Date(b.endTime) < new Date();
                   const isPending = b.status === 'PENDING_PAYMENT';
                   const isExpired = b.status === 'EXPIRED';
                   const isCancelled = b.status === 'CANCELLED';
@@ -415,20 +417,22 @@ export default function MyBookings() {
                                 <span>View E-Ticket</span>
                               </button>
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setReviewModalData({
-                                    movieId: b.showtimeId, // fallback or showtime's movie
-                                    bookingId: b.id,
-                                    movieTitle: b.movieTitle,
-                                  })
-                                }
-                                className="px-3.5 py-2 rounded-lg bg-[#241a10] hover:bg-[#332416] border border-[#5e4727] text-xs font-semibold text-[#e6c27a] flex items-center gap-1.5 cursor-pointer"
-                              >
-                                <Star className="w-3.5 h-3.5 text-[#f3cb62]" />
-                                <span>Review</span>
-                              </button>
+                              {canReview && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setReviewModalData({
+                                      movieId: b.movieId,
+                                      bookingId: b.id,
+                                      movieTitle: b.movieTitle,
+                                    })
+                                  }
+                                  className="px-3.5 py-2 rounded-lg bg-[#241a10] hover:bg-[#332416] border border-[#5e4727] text-xs font-semibold text-[#e6c27a] flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Star className="w-3.5 h-3.5 text-[#f3cb62]" />
+                                  <span>Review</span>
+                                </button>
+                              )}
                             </>
                           )}
 

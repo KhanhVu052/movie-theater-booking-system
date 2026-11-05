@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,6 +24,21 @@ public class JwtService {
     @Getter
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpiration;
+
+    @PostConstruct
+    void validateSecret() {
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretKey);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException(
+                    "app.jwt.secret (JWT_SECRET) must be a Base64 string. Generate one with: openssl rand -base64 48", e);
+        }
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                    "app.jwt.secret (JWT_SECRET) must decode to at least 32 bytes. Generate one with: openssl rand -base64 48");
+        }
+    }
 
     public String generateToken(User user) {
         long now = System.currentTimeMillis();

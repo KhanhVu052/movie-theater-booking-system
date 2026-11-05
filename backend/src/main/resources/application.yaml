@@ -6,9 +6,9 @@ spring:
     name: movie-theater-booking-system
 
   datasource:
-    url: jdbc:mysql://localhost:3306/cinema_booking_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
-    username: root
-    password: root
+    url: ${DB_URL:jdbc:mysql://localhost:3306/cinema_booking_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -27,13 +27,21 @@ spring:
 
 app:
   jwt:
-    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    # Required, no default on purpose. Generate one with: openssl rand -base64 48
+    secret: ${JWT_SECRET}
     expiration-ms: 86400000
+  bootstrap-admin:
+    # Used only when the database has no ADMIN yet. Leave empty to skip.
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  dev-tools:
+    # Test-only endpoints (payment simulation, fast-forward showtime). Keep false outside local demos.
+    enabled: ${DEV_TOOLS_ENABLED:false}
   vnpay:
     tmn-code: ${VNPAY_TMN_CODE:DEMOV210}
     hash-secret: ${VNPAY_HASH_SECRET:RAOEXHYVSDDIIENYWSLDIIZTANXUXZFJ}
     pay-url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-    return-url: http://localhost:8080/api/v1/payments/vnpay-return
+    return-url: ${VNPAY_RETURN_URL:http://localhost:8080/api/v1/payments/vnpay-return}
     version: 2.1.0
     command: pay
     curr-code: VND
