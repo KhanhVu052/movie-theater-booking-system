@@ -34,6 +34,7 @@ import { useToast } from '../context/ToastContext';
 
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { toLocalDateStr, localDateStrFromToday } from '../utils/dates';
+import { filterShowtimes, getScreeningPhase } from '../utils/showtimeFilters';
 
 export default function AdminDashboard() {
   const { showToast, confirm } = useToast();
@@ -180,7 +181,7 @@ export default function AdminDashboard() {
     } finally {
       setLoadingRevenue(false);
     }
-  }, [isAdmin, showToast]);
+  }, [isAdmin, showToast, fromDate, toDate]);
 
   // 2. Fetch Showtimes & Cinema/Room metadata
   const fetchShowtimes = useCallback(async (customOverrides = {}) => {
@@ -507,33 +508,11 @@ export default function AdminDashboard() {
   }, [moviesList]);
 
   const filteredShowtimes = useMemo(() => {
-    const now = new Date();
-    return showtimesList.filter((st) => {
-      // 1. Time / Movie status segmentation tabs
-      if (filterShowtimeMovieStatus === 'UPCOMING') {
-        if (st.status === 'CANCELLED' || new Date(st.endTime) < now) return false;
-      } else if (filterShowtimeMovieStatus === 'PAST') {
-        if (st.status !== 'CANCELLED' && new Date(st.endTime) >= now) return false;
-      } else if (filterShowtimeMovieStatus === 'NOW_SHOWING') {
-        const status = st.movieStatus || movieMap.get(st.movieId)?.status;
-        if (status !== 'NOW_SHOWING') return false;
-      } else if (filterShowtimeMovieStatus === 'COMING_SOON') {
-        const status = st.movieStatus || movieMap.get(st.movieId)?.status;
-        if (status !== 'COMING_SOON') return false;
-      } else if (filterShowtimeMovieStatus === 'ENDED') {
-        const status = st.movieStatus || movieMap.get(st.movieId)?.status;
-        if (status !== 'ENDED') return false;
-      }
-
-      // 2. Global search text filter
-      if (!showtimeSearchText.trim()) return true;
-      const q = showtimeSearchText.toLowerCase();
-      return (
-        (st.movieTitle && st.movieTitle.toLowerCase().includes(q)) ||
-        (st.roomName && st.roomName.toLowerCase().includes(q)) ||
-        (st.cinemaName && st.cinemaName.toLowerCase().includes(q)) ||
-        (st.format && st.format.toLowerCase().includes(q))
-      );
+    return filterShowtimes({
+      showtimesList,
+      filterTab: filterShowtimeMovieStatus,
+      searchText: showtimeSearchText,
+      movieMap,
     });
   }, [showtimesList, showtimeSearchText, filterShowtimeMovieStatus, movieMap]);
 
@@ -1036,7 +1015,7 @@ export default function AdminDashboard() {
                             No Showtimes for Ended Movies
                           </div>
                           <p className="text-xs text-[#8a765d] leading-relaxed">
-                            Titles with status <strong className="text-[#c7b59d]">ENDED</strong> have completed their theatrical run and license window. In compliance with cinema distribution regulations, ended movies cannot have active or future showtimes scheduled.
+                            Titles with status <strong className="text-[#c7b59d]">ENDED</strong> have completed their theatrical run and license window. Ended movies cannot have active or future showtimes scheduled.
                           </p>
                           <div className="pt-2">
                             <button
@@ -1071,10 +1050,7 @@ export default function AdminDashboard() {
                         </thead>
                         <tbody className="divide-y divide-[#241a10]">
                           {filteredShowtimes.map((st) => {
-                            const now = new Date();
-                            const isCancelled = st.status === 'CANCELLED';
-                            const isCompleted = !isCancelled && new Date(st.endTime) < now;
-                            const isLive = !isCancelled && !isCompleted && new Date(st.startTime) <= now && new Date(st.endTime) >= now;
+                            const phase = getScreeningPhase(st);
                             const movieStatus = st.movieStatus || movieMap.get(st.movieId)?.status;
 
                             return (
@@ -1106,15 +1082,15 @@ export default function AdminDashboard() {
                                     Ends: {formatDateTime(st.endTime)}
                                   </div>
                                   <div className="mt-1">
-                                    {isCancelled ? (
+                                    {phase === 'CANCELLED' ? (
                                       <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-950/80 text-red-400 border border-red-800">
                                         CANCELLED
                                       </span>
-                                    ) : isCompleted ? (
+                                    ) : phase === 'COMPLETED' ? (
                                       <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-800/80 text-zinc-400 border border-zinc-700">
                                         COMPLETED
                                       </span>
-                                    ) : isLive ? (
+                                    ) : phase === 'LIVE NOW' ? (
                                       <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-950/90 text-blue-300 border border-blue-700 animate-pulse">
                                         LIVE NOW
                                       </span>

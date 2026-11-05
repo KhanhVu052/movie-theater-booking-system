@@ -174,23 +174,25 @@ public class ShowtimeService {
 
     @Transactional
     public void cancelShowtime(Long id) {
-        Showtime showtime = showtimeRepository.findById(id)
+        Showtime showtime = showtimeRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
 
         if (showtime.getStatus() == ShowtimeStatus.CANCELLED) {
             throw new AppException(ErrorCode.SHOWTIME_ALREADY_CANCELLED);
         }
 
-        List<Booking> bookings = bookingRepository.findByShowtimeId(id);
+        List<Long> bookingIds = bookingRepository.findIdsByShowtimeId(id);
 
-        if (bookings.isEmpty()) {
+        if (bookingIds.isEmpty()) {
             showtimeSeatRepository.deleteByShowtimeId(id);
             showtimeRepository.delete(showtime);
         } else {
             showtime.setStatus(ShowtimeStatus.CANCELLED);
             showtimeRepository.save(showtime);
 
-            List<ShowtimeSeat> seats = showtimeSeatRepository.findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(id);
+            List<Booking> bookings = bookingRepository.findByIdsForUpdateOrderByIdAsc(bookingIds);
+            List<ShowtimeSeat> seats = showtimeSeatRepository.findByShowtimeIdForUpdate(id);
+
             for (ShowtimeSeat seat : seats) {
                 seat.setStatus(ShowtimeSeatStatus.AVAILABLE);
                 seat.setHeldByBookingId(null);
@@ -209,6 +211,7 @@ public class ShowtimeService {
                             paymentRepository.save(payment);
                         }
                     }
+                    voucherService.releaseVoucherIfPresent(booking);
                 } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
                     booking.setStatus(BookingStatus.CANCELLED);
                     bookingRepository.save(booking);

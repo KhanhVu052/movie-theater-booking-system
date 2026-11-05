@@ -137,6 +137,14 @@ public class VoucherService {
                     lockedVoucher.setReservedCount(lockedVoucher.getReservedCount() - 1);
                     voucherRepository.save(lockedVoucher);
                 }
+            } else if (redemption.getStatus() == VoucherRedemptionStatus.USED) {
+                redemption.setStatus(VoucherRedemptionStatus.RELEASED);
+                voucherRedemptionRepository.save(redemption);
+
+                if (lockedVoucher != null && lockedVoucher.getUsedCount() > 0) {
+                    lockedVoucher.setUsedCount(lockedVoucher.getUsedCount() - 1);
+                    voucherRepository.save(lockedVoucher);
+                }
             }
         });
     }

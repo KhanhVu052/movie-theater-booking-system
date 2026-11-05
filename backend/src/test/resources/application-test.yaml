@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/cinema_booking_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:dGVzdC1qd3Qtc2VjcmV0LWtleS1mb3ItY2luZW1hLXRlc3RpbmctcHVycG9zZXMtb25seQ==}
+    expiration-ms: 86400000
+  bootstrap-admin:
+    email: ${BOOTSTRAP_ADMIN_EMAIL:admin@cinema.com}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:Admin123@Password}
+  dev-tools:
+    enabled: true
+  vnpay:
+    tmn-code: ${VNPAY_TMN_CODE:DEMOV210}
+    hash-secret: ${VNPAY_HASH_SECRET:TEST_VNPAY_HASH_SECRET_FOR_UNIT_TESTS}
+    pay-url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+    return-url: http://localhost:8080/api/v1/payments/vnpay-return
+    version: 2.1.0
+    command: pay
+    curr-code: VND
+

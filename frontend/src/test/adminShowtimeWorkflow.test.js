@@ -1,87 +1,10 @@
 import { describe, it, expect } from 'vitest';
-
-/**
- * Business Logic simulation for Showtime Scheduling, Status Segmentation,
- * Smart Search Sync, and Cancellation Pipeline.
- */
-
-// Helper to determine the real-time screening phase badge
-export function getScreeningPhase(showtime, currentTime = new Date()) {
-  if (showtime.status === 'CANCELLED') {
-    return 'CANCELLED';
-  }
-  const endTime = new Date(showtime.endTime);
-  const startTime = new Date(showtime.startTime);
-
-  if (endTime < currentTime) {
-    return 'COMPLETED';
-  }
-  if (startTime <= currentTime && endTime >= currentTime) {
-    return 'LIVE NOW';
-  }
-  return 'UPCOMING';
-}
-
-// Helper to filter showtimes by segmentation tab and search text
-export function filterShowtimes({
-  showtimesList,
-  filterTab,
-  searchText,
-  selectedMovieId,
-  currentTime = new Date(),
-}) {
-  return showtimesList.filter((st) => {
-    // 1. Movie filter if explicitly selected
-    if (selectedMovieId && String(st.movieId) !== String(selectedMovieId)) {
-      return false;
-    }
-
-    // 2. Segmentation tab filter
-    const now = currentTime;
-    if (filterTab === 'UPCOMING') {
-      if (st.status === 'CANCELLED' || new Date(st.endTime) < now) return false;
-    } else if (filterTab === 'PAST') {
-      if (st.status !== 'CANCELLED' && new Date(st.endTime) >= now) return false;
-    } else if (filterTab === 'NOW_SHOWING') {
-      if (st.movieStatus !== 'NOW_SHOWING') return false;
-    } else if (filterTab === 'COMING_SOON') {
-      if (st.movieStatus !== 'COMING_SOON') return false;
-    } else if (filterTab === 'ENDED') {
-      if (st.movieStatus !== 'ENDED') return false;
-    }
-
-    // 3. Search text
-    if (!searchText || !searchText.trim()) return true;
-    const q = searchText.toLowerCase().trim();
-    return (
-      (st.movieTitle && st.movieTitle.toLowerCase().includes(q)) ||
-      (st.roomName && st.roomName.toLowerCase().includes(q)) ||
-      (st.cinemaName && st.cinemaName.toLowerCase().includes(q)) ||
-      (st.format && st.format.toLowerCase().includes(q))
-    );
-  });
-}
-
-// Smart Bi-directional Filter Synchronization
-export function onSearchTextChange(newSearchText, currentMovieFilter) {
-  let updatedMovieFilter = currentMovieFilter;
-  if (newSearchText && newSearchText.trim() && currentMovieFilter) {
-    // Auto reset movie filter to "All Movies" so search runs globally
-    updatedMovieFilter = '';
-  }
-  return {
-    searchText: newSearchText,
-    movieFilter: updatedMovieFilter,
-  };
-}
-
-export function onMovieFilterChange(newMovieFilter) {
-  // Selecting a specific movie clears the global search input
-  return {
-    movieFilter: newMovieFilter,
-    searchText: '',
-  };
-}
+import {
+  getScreeningPhase,
+  filterShowtimes,
+  onSearchTextChange,
+  onMovieFilterChange,
+} from '../utils/showtimeFilters';
 
 describe('Admin Showtime Workflow & Status Segmentation (TC-SHOW-01 to TC-SHOW-05)', () => {
   const referenceTime = new Date('2026-11-05T10:00:00Z');

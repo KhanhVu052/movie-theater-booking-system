@@ -156,6 +156,17 @@ The development server will launch at `http://localhost:5173`.
 
 ## 🧪 Testing & Code Quality
 
+### Comprehensive Test Suite (Frontend + API QA)
+To execute all frontend unit/integration tests and backend QA API checks in one go:
+```bash
+# On Windows command prompt:
+run-all-tests.bat
+
+# Or via npm inside frontend directory:
+cd frontend
+npm run test:all
+```
+
 ### Frontend Automated Testing (Vitest)
 ```bash
 cd frontend
@@ -178,13 +189,14 @@ npm run lint
 cd backend
 ./mvnw test
 ```
-> `JWT_SECRET` must be set (and MySQL running) for the Spring context test to start.
+> MySQL must be running for integration tests to verify database constraints. Use `-DDB_URL=...` if running on a custom port.
 
 ---
 
 ## 📜 Specification Compliance
 This project strictly implements and fulfills the software specification outlined in `docs/SRS.md`:
 * **FR-SHOW-01**: Showtime scheduling with room collision prevention and 15m cleaning end time.
+* **FR-SHOW-02**: Showtime cancellation with automated refund pipeline (`REFUND_REQUIRED`), voucher restoration, and strict deadlock-free locking order.
 * **FR-BOOK-01**: Real-time seat inventory projection based on hold expiration state.
 * **FR-BOOK-02**: Concurrency-safe seat holding for up to 8 seats per order.
 * **FR-BOOK-03**: Background hold reclamation scheduler every 30 seconds.

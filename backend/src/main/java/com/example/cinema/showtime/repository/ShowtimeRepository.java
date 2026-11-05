@@ -2,10 +2,12 @@ package com.example.cinema.showtime.repository;
 
 import com.example.cinema.showtime.entity.Showtime;
 import com.example.cinema.showtime.enums.ShowtimeStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -15,6 +17,15 @@ import java.util.Optional;
 
 @Repository
 public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Showtime s WHERE s.id = :id")
+    Optional<Showtime> findByIdForUpdate(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @EntityGraph(attributePaths = {"movie", "room", "room.cinema"})
+    @Query("SELECT s FROM Showtime s WHERE s.id = :id")
+    Optional<Showtime> findByIdForReadLock(@Param("id") Long id);
 
     @Query("""
             SELECT COUNT(s) > 0 FROM Showtime s

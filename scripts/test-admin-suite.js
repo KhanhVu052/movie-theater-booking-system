@@ -8,6 +8,8 @@
  */
 
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080/api/v1';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@cinema.com';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123@Password';
 
 let authToken = '';
 const results = [];
@@ -17,9 +19,14 @@ function pass(tc, name, durationMs) {
   console.log(`\x1b[32m✔ [PASSED]\x1b[0m \x1b[1m${tc}\x1b[0m: ${name} (${durationMs}ms)`);
 }
 
+function skip(tc, name, reason) {
+  results.push({ tc, name, status: 'SKIPPED', reason, durationMs: 0 });
+  console.log(`\x1b[33m⚠ [SKIPPED]\x1b[0m \x1b[1m${tc}\x1b[0m: ${name} (Reason: ${reason})`);
+}
+
 function fail(tc, name, error, durationMs) {
   results.push({ tc, name, status: 'FAILED', error: error.message || String(error), durationMs });
-  console.error(`\x1b[31m✖ [FAILED]\x1b[0m \x1b[1m${tc}\x1b[0m: ${name} - ${error.message} (${durationMs}ms)`);
+  console.error(`\x1b[31m✖ [FAILED]\x1b[0m \x1b[1m${tc}\x1b[0m: ${name} - ${error.message || error} (${durationMs}ms)`);
 }
 
 async function apiRequest(endpoint, options = {}) {
@@ -57,7 +64,11 @@ async function runTest(tc, name, fn) {
     await fn();
     pass(tc, name, Date.now() - start);
   } catch (err) {
-    fail(tc, name, err, Date.now() - start);
+    if (err && err.isSkip) {
+      skip(tc, name, err.reason);
+    } else {
+      fail(tc, name, err, Date.now() - start);
+    }
   }
 }
 
@@ -71,21 +82,27 @@ async function main() {
     const res = await apiRequest('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'admin@cinema.com',
-        password: 'Admin123@',
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
       }),
     });
 
     const token = res.data?.accessToken || res.data?.token;
     if (res.status !== 200 || !token) {
-      throw new Error(`Authentication failed: status ${res.status}`);
+      throw new Error(`Authentication failed: status ${res.status} (${JSON.stringify(res.data)})`);
     }
     authToken = token;
   });
 
   // TC-REP-01: Revenue Reports
   await runTest('TC-REP-01', 'Fetch Realized Revenue Reports & Metrics (FR-REP-01)', async () => {
-    const res = await apiRequest('/payments/reports/revenue?startDate=2026-10-01T00:00:00&endDate=2026-11-10T23:59:59');
+    const now = new Date();
+    const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const future7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const startDate = `${past30.toISOString().slice(0, 10)}T00:00:00`;
+    const endDate = `${future7.toISOString().slice(0, 10)}T23:59:59`;
+
+    const res = await apiRequest(`/payments/reports/revenue?startDate=${startDate}&endDate=${endDate}`);
     if (!res.ok) throw new Error(`Revenue fetch failed: ${res.status}`);
 
     const report = res.data;
@@ -117,14 +134,15 @@ async function main() {
 
   // TC-SHOW-02: Date Window Filtering
   await runTest('TC-SHOW-02', 'Filter showtimes by date window (Sync with customer calendar)', async () => {
-    const res = await apiRequest('/showtimes?fromTime=2026-11-05T00:00:00&toTime=2026-11-05T23:59:59&size=100');
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const res = await apiRequest(`/showtimes?fromTime=${todayStr}T00:00:00&toTime=${todayStr}T23:59:59&size=100`);
     if (!res.ok) throw new Error(`Showtimes date filter failed: ${res.status}`);
 
     const items = res.data?.items || res.data || [];
     for (const st of items) {
       const showDate = st.startTime.split('T')[0];
-      if (showDate !== '2026-11-05') {
-        throw new Error(`Showtime date mismatch: expected 2026-11-05, got ${showDate}`);
+      if (showDate !== todayStr) {
+        throw new Error(`Showtime date mismatch: expected ${todayStr}, got ${showDate}`);
       }
     }
   });
@@ -134,20 +152,27 @@ async function main() {
     // 1. Find an ended movie
     const moviesRes = await apiRequest('/movies?status=ENDED&size=5');
     const endedList = moviesRes.data?.items || moviesRes.data || [];
-    if (endedList.length === 0) return;
+    if (endedList.length === 0) {
+      throw { isSkip: true, reason: 'No ended movie found in database seed to test' };
+    }
     const endedMovieId = endedList[0].id;
 
     // 2. Fetch active room
     const cinemasRes = await apiRequest('/cinemas');
     const cinemas = cinemasRes.data || [];
-    if (cinemas.length === 0) return;
+    if (cinemas.length === 0) {
+      throw { isSkip: true, reason: 'No cinemas found in database seed to test' };
+    }
 
     const roomsRes = await apiRequest(`/rooms?cinemaId=${cinemas[0].id}`);
     const rooms = roomsRes.data || [];
-    if (rooms.length === 0) return;
+    if (rooms.length === 0) {
+      throw { isSkip: true, reason: 'No rooms found in cinema to test' };
+    }
     const roomId = rooms[0].id;
 
     // 3. Attempt to schedule showtime for ended movie
+    const futureDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19);
     const createRes = await apiRequest('/showtimes', {
       method: 'POST',
       body: JSON.stringify({
@@ -155,7 +180,7 @@ async function main() {
         roomId: roomId,
         format: '2D',
         translationType: 'SUBTITLE',
-        startTime: '2026-12-01T10:00:00',
+        startTime: futureDate,
         basePrice: 80000,
       }),
     });
@@ -216,11 +241,12 @@ async function main() {
 
   // Print Summary
   const passed = results.filter((r) => r.status === 'PASSED').length;
+  const skipped = results.filter((r) => r.status === 'SKIPPED').length;
   const failed = results.filter((r) => r.status === 'FAILED').length;
   const totalDuration = results.reduce((sum, r) => sum + r.durationMs, 0);
 
   console.log('\n\x1b[33m---------------------------------------------------------------');
-  console.log(`  QA SUMMARY: ${passed}/${results.length} PASSED  |  ${failed} FAILED  (${totalDuration}ms)`);
+  console.log(`  QA SUMMARY: ${passed} PASSED  |  ${skipped} SKIPPED  |  ${failed} FAILED  (${totalDuration}ms)`);
   console.log('---------------------------------------------------------------\x1b[0m\n');
 
   if (failed > 0) {

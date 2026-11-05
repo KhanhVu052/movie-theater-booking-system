@@ -115,6 +115,21 @@ Do InnoDB vẫn có thể phát sinh Deadlock trên các index phụ hoặc gap 
    • Lỗi: Trùng khung giờ hoặc phòng không hoạt động  409 Conflict.
 
 • Nghiệm thu: 2 Admin gửi request đồng thời xếp 2 suất chiếu giao giờ nhau trong cùng 1 phòng  Chỉ 1 request thành công.
+FR-SHOW-02
+Hủy suất chiếu & Điều phối hoàn tiền tự động (Showtime Cancellation & Refund Pipeline)
+Admin thực hiện hủy một suất chiếu đang SCHEDULED. Hệ thống tuân thủ nghiêm ngặt thứ tự khóa tài nguyên chống Deadlock (SRS mục 4.4):
+1. Khóa suất chiếu (showtimes) bằng PESSIMISTIC_WRITE (đồng thời phía createBooking sử dụng PESSIMISTIC_READ để ngăn chặn chèn booking đồng thời trong khi đang hủy).
+2. Lấy danh sách ID các booking thuộc suất chiếu và khóa FOR UPDATE theo thứ tự booking_id ASC.
+3. Nếu không có booking nào: xóa toàn bộ showtime_seats và xóa cứng bản ghi showtimes.
+4. Nếu đã có booking (CONFIRMED, PENDING_PAYMENT, EXPIRED, CANCELLED):
+   - Chuyển trạng thái suất chiếu sang CANCELLED (Soft Cancellation để bảo đảm toàn vẹn khóa ngoại dữ liệu lịch sử).
+   - Khóa và cập nhật toàn bộ showtime_seats thuộc suất chiếu về AVAILABLE, đặt held_by_booking_id = null.
+   - Với đơn CONFIRMED: chuyển booking sang CANCELLED, tìm các giao dịch thanh toán SUCCESS có refund_status = NONE để chuyển sang REFUND_REQUIRED, đồng thời giải phóng và hoàn lại voucher đã sử dụng (USED -> RELEASED, giảm used_count).
+   - Với đơn PENDING_PAYMENT: chuyển booking sang CANCELLED, giải phóng voucher đang giữ (RESERVED -> RELEASED, giảm reserved_count).
+Lưu ý: Mã lỗi SHOWTIME_HAS_ACTIVE_BOOKINGS không còn được sử dụng để chặn hủy; toàn bộ đơn đặt vé được điều phối vào luồng hoàn tiền và giải phóng tự động.
+• Lỗi: Suất chiếu không tồn tại -> 404 Not Found. Suất chiếu đã CANCELLED -> 409 Conflict.
+
+• Nghiệm thu: Hủy suất chiếu có đơn CONFIRMED đã thanh toán -> Đơn chuyển CANCELLED, giao dịch chuyển REFUND_REQUIRED, ghế được trả về trống, voucher được hoàn lại.
 FR-BOOK-01
 Hiển thị sơ đồ ghế theo suất chiếu
 Trả về danh sách ghế của suất chiếu (showtime_seats) kèm vị trí hàng/cột, hạng ghế (NORMAL, VIP, COUPLE), giá vé và trạng thái hiển thị. Nếu ghế có status = 'HELD' nhưng đơn đang giữ ghế đó đã quá hạn (bookings.expires_at < NOW()), hệ thống trả về trạng thái hiển thị là AVAILABLE.

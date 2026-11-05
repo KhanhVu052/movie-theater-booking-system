@@ -43,6 +43,8 @@ public enum ErrorCode {
     SHOWTIME_TIME_CONFLICT(1308, "Showtime overlaps with an existing scheduled showtime in the same room", HttpStatus.CONFLICT),
     MOVIE_NOT_AVAILABLE_FOR_SHOWTIME(1309, "Cannot schedule showtime for a movie that has already ENDED", HttpStatus.CONFLICT),
     SHOWTIME_ALREADY_CANCELLED(1310, "Showtime is already cancelled", HttpStatus.CONFLICT),
+    /** @deprecated Replaced by FR-SHOW-02 automated refund & cancellation pipeline */
+    @Deprecated
     SHOWTIME_HAS_ACTIVE_BOOKINGS(1311, "Cannot cancel showtime because seats are currently held or booked", HttpStatus.CONFLICT),
 
     // --- Voucher Errors (1400 - 1499) ---

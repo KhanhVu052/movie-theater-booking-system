@@ -72,7 +72,7 @@ public class BookingService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        Showtime showtime = showtimeRepository.findDetailById(request.showtimeId())
+        Showtime showtime = showtimeRepository.findByIdForReadLock(request.showtimeId())
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
 
         if (showtime.getStatus() != ShowtimeStatus.SCHEDULED || !showtime.getStartTime().isAfter(now)) {

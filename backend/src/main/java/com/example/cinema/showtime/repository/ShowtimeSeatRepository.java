@@ -64,6 +64,11 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
             """)
     List<ShowtimeSeat> findByHeldByBookingIdForUpdate(@Param("bookingId") Long bookingId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")})
+    @Query("SELECT ss FROM ShowtimeSeat ss WHERE ss.showtime.id = :id ORDER BY ss.id ASC")
+    List<ShowtimeSeat> findByShowtimeIdForUpdate(@Param("id") Long id);
+
     boolean existsByShowtimeIdAndStatusIn(Long showtimeId, List<ShowtimeSeatStatus> statuses);
 
     void deleteByShowtimeId(Long showtimeId);
