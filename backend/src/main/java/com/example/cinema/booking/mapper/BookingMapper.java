@@ -29,6 +29,7 @@ public class BookingMapper {
                 .userId(booking.getUser().getId())
                 .userEmail(booking.getUser().getEmail())
                 .showtimeId(booking.getShowtime().getId())
+                .showtimeStatus(booking.getShowtime() != null ? booking.getShowtime().getStatus() : null)
                 .movieTitle(booking.getShowtime().getMovie().getTitle())
                 .roomName(booking.getShowtime().getRoom().getName())
                 .cinemaName(booking.getShowtime().getRoom().getCinema().getName())

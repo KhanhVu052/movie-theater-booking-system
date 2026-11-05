@@ -1,6 +1,7 @@
 package com.example.cinema.booking.dto.response;
 
 import com.example.cinema.booking.enums.BookingStatus;
+import com.example.cinema.showtime.enums.ShowtimeStatus;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ public record BookingResponse(
         Long userId,
         String userEmail,
         Long showtimeId,
+        ShowtimeStatus showtimeStatus,
         String movieTitle,
         String roomName,
         String cinemaName,

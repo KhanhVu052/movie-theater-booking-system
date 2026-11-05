@@ -122,9 +122,15 @@ export default function ETicketModal({ booking, isOpen, onClose }) {
                 {booking.format || 'IMAX 2D'}
               </span>
               <span className="text-xs text-[#8a765d]">•</span>
-              <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider">
-                Confirmed
-              </span>
+              {booking.status === 'CANCELLED' || booking.showtimeStatus === 'CANCELLED' ? (
+                <span className="text-xs text-red-400 font-bold uppercase tracking-wider">
+                  Cancelled / Void
+                </span>
+              ) : (
+                <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider">
+                  Confirmed
+                </span>
+              )}
             </div>
 
             <h2 className="font-body font-black text-2xl text-[#f7efe4] tracking-tight">
@@ -176,8 +182,28 @@ export default function ETicketModal({ booking, isOpen, onClose }) {
           </div>
 
           {/* Ticket QR & Reference Bar */}
+          {(booking.status === 'CANCELLED' || booking.showtimeStatus === 'CANCELLED') && (
+            <div className="bg-red-950/40 border border-red-800/80 rounded-2xl p-4 text-xs text-red-300 space-y-1">
+              <strong className="block font-bold uppercase tracking-wider text-red-400">
+                Ticket Void - Screening Cancelled
+              </strong>
+              <span>
+                {booking.showtimeStatus === 'CANCELLED'
+                  ? 'This showtime was cancelled by cinema administration. This admission pass is void and cannot be scanned for entry. Your payment refund has been scheduled.'
+                  : 'This reservation has been cancelled and is no longer valid for cinema admission.'}
+              </span>
+            </div>
+          )}
+
           <div className="bg-[#120d09] border border-[#3d2f1d] rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-5">
-            <TicketQRCode code={ticketCode} />
+            {booking.status === 'CANCELLED' || booking.showtimeStatus === 'CANCELLED' ? (
+              <div className="w-28 h-28 bg-[#1a120b] border-2 border-dashed border-red-800/80 rounded-lg flex flex-col items-center justify-center p-2 text-center text-red-400">
+                <span className="text-xl font-black font-mono">VOID</span>
+                <span className="text-[9px] uppercase tracking-wider mt-1 text-red-500 font-bold">Pass Inactive</span>
+              </div>
+            ) : (
+              <TicketQRCode code={ticketCode} />
+            )}
 
             <div className="space-y-2 text-center sm:text-left flex-1">
               <span className="text-[10px] uppercase font-bold text-[#8a765d] tracking-wider block">

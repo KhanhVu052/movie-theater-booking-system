@@ -1,5 +1,13 @@
 package com.example.cinema.showtime.service;
 
+import com.example.cinema.booking.entity.Booking;
+import com.example.cinema.booking.enums.BookingStatus;
+import com.example.cinema.booking.repository.BookingRepository;
+import com.example.cinema.payment.entity.Payment;
+import com.example.cinema.payment.enums.PaymentRefundStatus;
+import com.example.cinema.payment.enums.PaymentStatus;
+import com.example.cinema.payment.repository.PaymentRepository;
+import com.example.cinema.voucher.service.VoucherService;
 import com.example.cinema.common.dto.PageResponse;
 import com.example.cinema.common.exception.AppException;
 import com.example.cinema.common.exception.ErrorCode;
@@ -44,6 +52,9 @@ public class ShowtimeService {
     SeatRepository seatRepository;
     MovieRepository movieRepository;
     ShowtimeMapper showtimeMapper;
+    BookingRepository bookingRepository;
+    PaymentRepository paymentRepository;
+    VoucherService voucherService;
 
     @Transactional
     public ShowtimeResponse createShowtime(ShowtimeRequest request) {
@@ -170,16 +181,40 @@ public class ShowtimeService {
             throw new AppException(ErrorCode.SHOWTIME_ALREADY_CANCELLED);
         }
 
-        boolean hasActiveBookings = showtimeSeatRepository.existsByShowtimeIdAndStatusIn(
-                id,
-                List.of(ShowtimeSeatStatus.HELD, ShowtimeSeatStatus.BOOKED)
-        );
+        List<Booking> bookings = bookingRepository.findByShowtimeId(id);
 
-        if (hasActiveBookings) {
-            throw new AppException(ErrorCode.SHOWTIME_HAS_ACTIVE_BOOKINGS);
+        if (bookings.isEmpty()) {
+            showtimeSeatRepository.deleteByShowtimeId(id);
+            showtimeRepository.delete(showtime);
+        } else {
+            showtime.setStatus(ShowtimeStatus.CANCELLED);
+            showtimeRepository.save(showtime);
+
+            List<ShowtimeSeat> seats = showtimeSeatRepository.findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(id);
+            for (ShowtimeSeat seat : seats) {
+                seat.setStatus(ShowtimeSeatStatus.AVAILABLE);
+                seat.setHeldByBookingId(null);
+            }
+            showtimeSeatRepository.saveAll(seats);
+
+            for (Booking booking : bookings) {
+                if (booking.getStatus() == BookingStatus.CONFIRMED) {
+                    booking.setStatus(BookingStatus.CANCELLED);
+                    bookingRepository.save(booking);
+
+                    List<Payment> payments = paymentRepository.findByBookingId(booking.getId());
+                    for (Payment payment : payments) {
+                        if (payment.getStatus() == PaymentStatus.SUCCESS && payment.getRefundStatus() == PaymentRefundStatus.NONE) {
+                            payment.setRefundStatus(PaymentRefundStatus.REFUND_REQUIRED);
+                            paymentRepository.save(payment);
+                        }
+                    }
+                } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+                    booking.setStatus(BookingStatus.CANCELLED);
+                    bookingRepository.save(booking);
+                    voucherService.releaseVoucherIfPresent(booking);
+                }
+            }
         }
-
-        showtimeSeatRepository.deleteByShowtimeId(id);
-        showtimeRepository.delete(showtime);
     }
 }
