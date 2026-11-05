@@ -25,6 +25,7 @@ import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
 import MoviePoster from '../components/MoviePoster';
 import CustomDatePicker from '../components/CustomDatePicker';
+import { toLocalDateStr } from '../utils/dates';
 
 // Normalize and extract data from Backend ApiResponse<T> or PageResponse<T>
 const extractPayload = (response) => {
@@ -128,7 +129,7 @@ export default function Home() {
   const [quickMovieId, setQuickMovieId] = useState('');
   const [quickCinemaId, setQuickCinemaId] = useState('');
   const [quickDate, setQuickDate] = useState(
-    () => new Date().toISOString().split('T')[0]
+    () => toLocalDateStr()
   );
   const [selectedShowtimeId, setSelectedShowtimeId] = useState('');
 

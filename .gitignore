@@ -32,10 +32,20 @@ build/
 ### VS Code ###
 .vscode/
 
-# Ignore sensitive application configurations
-src/main/resources/application.yaml
+# Local secrets and overrides (application.yaml itself only holds  placeholders and stays tracked)
+.env
+.env.*
+!.env.example
+backend/src/main/resources/application-local.yaml
+backend/src/main/resources/application-secret*.yaml
+
+# Antigravity agent internal artifacts
+.antigravityrules
+.reference/
 
 
 # Data seeds raw dumps
 *.jsonl
 data-seed/*.jsonl
+
+repomix-output.xml

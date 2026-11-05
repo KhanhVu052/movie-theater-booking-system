@@ -4,6 +4,7 @@ import com.example.cinema.auth.entity.User;
 import com.example.cinema.auth.repository.UserRepository;
 import com.example.cinema.booking.entity.Booking;
 import com.example.cinema.common.dto.PageResponse;
+import com.example.cinema.common.config.DevToolsProperties;
 import com.example.cinema.common.exception.AppException;
 import com.example.cinema.common.exception.ErrorCode;
 import com.example.cinema.movie.entity.Movie;
@@ -40,6 +41,7 @@ public class ReviewService {
     UserRepository userRepository;
     ShowtimeRepository showtimeRepository;
     ReviewMapper reviewMapper;
+    DevToolsProperties devToolsProperties;
 
     @Transactional
     public ReviewResponse createReview(String userEmail, ReviewRequest request) {
@@ -133,6 +135,10 @@ public class ReviewService {
 
     @Transactional
     public void simulateShowtimeEnded(Long showtimeId) {
+        if (!devToolsProperties.isEnabled()) {
+            throw new AppException(ErrorCode.DEV_TOOLS_DISABLED);
+        }
+
         Showtime showtime = showtimeRepository.findById(showtimeId)
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
 

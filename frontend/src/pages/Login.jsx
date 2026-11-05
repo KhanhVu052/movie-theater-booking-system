@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Menu, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { authApi } from '../api/authApi';
+import { getSafeRedirect } from '../utils/navigation';
 
 // Biểu tượng chiếc vé vàng nằm cạnh chữ GoToro
 function GoldenTicketIcon({ className = "w-11 h-8" }) {
@@ -138,6 +139,7 @@ function CinemaCenterpiece({ className = "w-56 h-56" }) {
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -168,7 +170,7 @@ export default function Login() {
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
         }
-        navigate('/');
+        navigate(getSafeRedirect(searchParams.get('redirect')), { replace: true });
       }
     } catch (err) {
       const resData = err.response?.data;

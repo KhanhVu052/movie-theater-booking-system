@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.2)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.3)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -183,11 +183,17 @@ FR-REP-01
 Báo cáo doanh thu thực tế
 Admin truy vấn thống kê doanh thu theo ngày/tháng hoặc theo phim dựa trên cột payments.pay_date. Doanh thu thực nhận chỉ tính tổng payments.amount của các giao dịch có status = 'SUCCESS' và refund_status = 'NONE'.
 • Nghiệm thu: Các đơn PENDING_PAYMENT, EXPIRED hoặc giao dịch cần hoàn tiền (REFUND_REQUIRED / REFUNDED) không làm sai lệch doanh thu.
+FR-DEV-01
+Công cụ giả lập chỉ dành cho môi trường phát triển (bổ sung v2.3)
+Hai endpoint phục vụ demo/kiểm thử cục bộ: giả lập thanh toán thành công (POST /api/v1/payments/simulate-success) và tua nhanh suất chiếu để thử đánh giá phim (PATCH /api/v1/reviews/showtime/{showtimeId}/simulate-ended, chỉ Admin). Mặc định TẮT; chỉ hoạt động khi cấu hình app.dev-tools.enabled = true (biến môi trường DEV_TOOLS_ENABLED=true). Khi bật, giả lập thanh toán phải tuân thủ đúng điều kiện của nhánh IPN TH1 trong FR-PAY-02: booking đang PENDING_PAYMENT, còn hạn (expires_at > NOW()) và mọi ghế vẫn HELD bởi chính booking đó; sau đó mới chuyển booking = CONFIRMED, ghế = BOOKED, voucher = USED. Giao dịch giả lập mang transaction_ref bắt đầu bằng "SIM-". Giao diện chỉ hiển thị lựa chọn này ở bản chạy chế độ phát triển (npm run dev), không có trong bản build production.
+• Lỗi: Tính năng đang tắt → 403 Forbidden (mã 1606); booking không còn PENDING_PAYMENT → 409 Conflict; booking đã hết hạn giữ ghế → 409 Conflict; ghế không còn thuộc đơn → 409 Conflict.
+• Nghiệm thu: Khi DEV_TOOLS_ENABLED=false, mọi lời gọi simulate-success đều bị từ chối và không thay đổi dữ liệu; khi bật, không thể "xác nhận" một booking đã EXPIRED hoặc CANCELLED và không ghi đè ghế đã thuộc về khách khác.
 
 5.2. Yêu cầu Phi chức năng (Non-Functional Requirements)
 NFR-CONC-01 (Kiểm soát đồng thời): Sử dụng Database Transaction kết hợp Pessimistic Write Lock (SELECT ... FOR UPDATE) và thứ tự khóa chuẩn hóa để đảm bảo không bao giờ xảy ra tình trạng đặt trùng ghế hoặc vượt hạn mức voucher[cite: 2, 3].
 NFR-REL-01 (Độ tin cậy & Idempotency): Luồng xử lý thanh toán IPN đảm bảo tính Idempotent, hoạt động chính xác ngay cả khi callback bị gửi lặp hoặc mất kết nối phía trình duyệt của khách hàng.
 NFR-SEC-01 (Bảo mật): Mật khẩu băm bằng BCrypt; xác thực và phân quyền bằng Spring Security + JWT (CUSTOMER, ADMIN); mọi phép tính giá vé và giảm giá voucher thực hiện hoàn toàn ở Backend[cite: 2, 5].
+NFR-SEC-02 (Quản lý bí mật & tài khoản quản trị đầu tiên – bổ sung v2.3): Không lưu bí mật trong mã nguồn. JWT secret (JWT_SECRET, Base64, tối thiểu 32 byte) bắt buộc cấu hình qua biến môi trường và ứng dụng từ chối khởi động nếu thiếu hoặc quá yếu. Tài khoản ADMIN đầu tiên chỉ được tạo khi CSDL chưa có ADMIN và có cấu hình BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD (tối thiểu 8 ký tự); mật khẩu không được ghi cứng và không được ghi vào log.
 NFR-DATA-01 (Bảo toàn lịch sử giao dịch): Không sử dụng xóa dây chuyền (ON DELETE CASCADE) đối với dữ liệu đặt vé và thanh toán; lưu cố định giá vé tại thời điểm mua trong booking_items.price.
 6. Thiết kế Cơ sở Dữ liệu Chi tiết – Từ điển Dữ liệu 17 Bảng (Database Schema & Data Dictionary)
    Lưu ý kỹ thuật khi khởi tạo bảng (Migration Order): Giữa bảng showtime_seats (có cột held_by_booking_id) và bảng bookings (được tham chiếu bởi booking_items) có mối quan hệ tham chiếu qua lại. Khi viết script SQL tạo bảng, bảng showtime_seats được tạo trước mà chưa khai báo khóa ngoại trên cột held_by_booking_id; sau khi tạo xong bảng bookings mới sử dụng lệnh ALTER TABLE showtime_seats ADD CONSTRAINT fk_ss_booking ... để nối khóa ngoại.
@@ -894,5 +900,9 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    IT-02 (Thu hồi ghế quá hạn an toàn): Đơn A hết hạn lúc 12:10:00 nhưng Scheduler chưa chạy; lúc 12:10:01 Khách B bấm giữ ghế đó  Đơn A tự động chuyển sang EXPIRED và Khách B giữ ghế thành công.
    IT-03 (VNPay IPN gọi lặp - Idempotency): Gửi cùng một bản tin IPN thành công 5 lần liên tiếp cho 1 giao dịch  Hệ thống chỉ xác nhận lần đầu, 4 lần sau không phát sinh lỗi hay thay đổi dữ liệu.
    IT-04 (Thanh toán muộn mất ghế & Thanh toán trùng 2 lần): Khi IPN báo thành công nhưng ghế đã thuộc về khách hàng khác (hoặc đơn đã được xác nhận bởi attempt trước đó)  Bản ghi payments chuyển sang SUCCESS kèm refund_status = 'REFUND_REQUIRED', không ghi đè quyền sở hữu ghế.
+   7.3. Trạng thái Triển khai so với Kế hoạch (cập nhật v2.3)
+   Mục này ghi lại phần nào của kế hoạch ở trên đã làm và chưa làm, để tài liệu khớp với mã nguồn hiện tại.
+   Đã triển khai: Auth/JWT, Movie, Showtime (chống trùng lịch + 15 phút dọn phòng), Booking (giữ ghế 10 phút bằng Pessimistic Lock, scheduler thu hồi mỗi 30 giây), Payment (VNPay Sandbox, IPN idempotent, TH1/TH2/TH3, hoàn tiền thủ công), Voucher, Review, Báo cáo doanh thu, Docker Compose (MySQL).
+   Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test IT-01 → IT-04 (phía backend mới có test khởi động ngữ cảnh Spring; phía frontend có test Vitest cho các quy tắc nghiệp vụ phía giao diện).
 
 

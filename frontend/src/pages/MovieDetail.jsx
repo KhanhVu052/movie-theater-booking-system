@@ -17,6 +17,7 @@ import {
 import Navbar from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
 import MoviePoster from '../components/MoviePoster';
+import { toLocalDateStr } from '../utils/dates';
 
 // Helpers
 const formatActorText = (movie) => {
@@ -89,7 +90,7 @@ const getUpcomingDates = () => {
   for (let i = 0; i < 7; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(d);
     const label =
       i === 0
         ? 'Today'

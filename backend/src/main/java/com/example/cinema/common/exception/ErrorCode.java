@@ -70,6 +70,7 @@ public enum ErrorCode {
     PAYMENT_MAX_ATTEMPTS_EXCEEDED(1603, "Maximum of 3 payment attempts allowed per booking has been reached", HttpStatus.CONFLICT),
     PAYMENT_INVALID_SIGNATURE(1604, "Invalid VNPay digital signature (checksum failed)", HttpStatus.BAD_REQUEST),
     PAYMENT_REFUND_NOT_REQUIRED(1605, "Only payments with REFUND_REQUIRED status can be marked as REFUNDED", HttpStatus.CONFLICT),
+    DEV_TOOLS_DISABLED(1606, "This test-only feature is disabled in this environment", HttpStatus.FORBIDDEN),
 
     REVIEW_NOT_FOUND(1701, "Review not found", HttpStatus.NOT_FOUND),
     REVIEW_ALREADY_EXISTS(1702, "You have already reviewed this movie", HttpStatus.CONFLICT),

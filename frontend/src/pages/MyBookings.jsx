@@ -292,6 +292,8 @@ export default function MyBookings() {
               <div className="space-y-4">
                 {filteredBookings.map((b) => {
                   const isConfirmed = b.status === 'CONFIRMED';
+                  // SRS FR-REV-01: a review is allowed only after the showtime has ended.
+                  const canReview = isConfirmed && !!b.endTime && new Date(b.endTime) < new Date();
                   const isPending = b.status === 'PENDING_PAYMENT';
                   const isExpired = b.status === 'EXPIRED';
                   const isCancelled = b.status === 'CANCELLED';
@@ -324,7 +326,7 @@ export default function MyBookings() {
                           {isCancelled && (
                             <span className="px-2.5 py-0.5 rounded bg-red-950/80 border border-red-700 text-red-400 text-[11px] font-bold uppercase flex items-center gap-1">
                               <XCircle className="w-3 h-3" />
-                              Cancelled
+                              {b.showtimeStatus === 'CANCELLED' ? 'Showtime Cancelled' : 'Cancelled'}
                             </span>
                           )}
 
@@ -380,6 +382,16 @@ export default function MyBookings() {
                             </span>
                           ))}
                         </div>
+
+                        {isCancelled && b.showtimeStatus === 'CANCELLED' && (
+                          <div className="bg-red-950/40 border border-red-800/60 rounded-lg p-2.5 text-xs text-red-300 flex items-start gap-2 mt-2">
+                            <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                            <div>
+                              <strong className="block font-semibold">Screening Cancelled by Theater Operations</strong>
+                              <span>This showtime schedule was cancelled by the cinema. If you completed payment, your full refund has been requested and is currently being processed by administration.</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Right: Price & Action CTAs */}
@@ -405,20 +417,22 @@ export default function MyBookings() {
                                 <span>View E-Ticket</span>
                               </button>
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setReviewModalData({
-                                    movieId: b.showtimeId, // fallback or showtime's movie
-                                    bookingId: b.id,
-                                    movieTitle: b.movieTitle,
-                                  })
-                                }
-                                className="px-3.5 py-2 rounded-lg bg-[#241a10] hover:bg-[#332416] border border-[#5e4727] text-xs font-semibold text-[#e6c27a] flex items-center gap-1.5 cursor-pointer"
-                              >
-                                <Star className="w-3.5 h-3.5 text-[#f3cb62]" />
-                                <span>Review</span>
-                              </button>
+                              {canReview && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setReviewModalData({
+                                      movieId: b.movieId,
+                                      bookingId: b.id,
+                                      movieTitle: b.movieTitle,
+                                    })
+                                  }
+                                  className="px-3.5 py-2 rounded-lg bg-[#241a10] hover:bg-[#332416] border border-[#5e4727] text-xs font-semibold text-[#e6c27a] flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Star className="w-3.5 h-3.5 text-[#f3cb62]" />
+                                  <span>Review</span>
+                                </button>
+                              )}
                             </>
                           )}
 
@@ -441,6 +455,17 @@ export default function MyBookings() {
                                 {cancellingId === b.id ? 'Cancelling...' : 'Cancel'}
                               </button>
                             </>
+                          )}
+
+                          {isCancelled && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTicketBooking(b)}
+                              className="px-3.5 py-1.5 rounded-lg bg-[#241a10] border border-[#3d2f1d] hover:border-[#5e4727] text-xs font-semibold text-[#ab9a84] hover:text-[#f2e8dc] flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Ticket className="w-3.5 h-3.5" />
+                              <span>Ticket Details</span>
+                            </button>
                           )}
                         </div>
                       </div>

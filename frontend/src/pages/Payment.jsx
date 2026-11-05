@@ -20,6 +20,9 @@ import { paymentApi } from '../api/paymentApi';
 import { useToast } from '../context/ToastContext';
 import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
 
+// Simulated payment is a local-demo shortcut: only shown by `npm run dev`, never in a production build.
+const SIM_ENABLED = import.meta.env.DEV;
+
 export default function Payment() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
@@ -34,7 +37,7 @@ export default function Payment() {
   const [isExpired, setIsExpired] = useState(false);
 
   // Payment gateway choice: 'SIMULATED_TEST' or 'VNPAY'
-  const [selectedGateway, setSelectedGateway] = useState('SIMULATED_TEST');
+  const [selectedGateway, setSelectedGateway] = useState(SIM_ENABLED ? 'SIMULATED_TEST' : 'VNPAY');
 
   // Payment processing state
   const [initiatingPayment, setInitiatingPayment] = useState(false);
@@ -57,10 +60,13 @@ export default function Payment() {
           return;
         }
 
-        // Calculate initial remaining seconds
-        if (data.expiresAt) {
-          const diffMs = new Date(data.expiresAt).getTime() - Date.now();
-          const diffSec = Math.floor(diffMs / 1000);
+        // Remaining seconds: prefer the server-computed value so the countdown does not depend on
+        // the browser clock/timezone; fall back to expiresAt for older responses.
+        if (typeof data.secondsRemaining === 'number' || data.expiresAt) {
+          const diffSec =
+            typeof data.secondsRemaining === 'number'
+              ? data.secondsRemaining
+              : Math.floor((new Date(data.expiresAt).getTime() - Date.now()) / 1000);
           if (diffSec <= 0 || data.status === 'EXPIRED') {
             setIsExpired(true);
             setTimeLeft(0);
@@ -269,7 +275,8 @@ export default function Payment() {
                 </h2>
 
                 <div className="space-y-3">
-                  {/* INSTANT TEST PAYMENT (RECOMMENDED FOR TEST SUITES & DEMOS) */}
+                  {/* DEV-ONLY SIMULATED PAYMENT: hidden in production builds (SRS FR-DEV-01) */}
+                  {SIM_ENABLED && (
                   <div
                     onClick={() => setSelectedGateway('SIMULATED_TEST')}
                     className={`relative flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
@@ -294,11 +301,11 @@ export default function Payment() {
                           </span>
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-950 border border-amber-600 text-amber-300 flex items-center gap-1">
                             <Zap className="w-3 h-3 text-amber-300" />
-                            Recommended
+                            Dev only
                           </span>
                         </div>
                         <p className="text-xs text-[#8a765d] mt-0.5">
-                          1-Click instant test checkout. Bypasses external VNPay sandbox downtime to immediately issue your ticket with QR Code.
+                          Local demo shortcut: confirms the booking without VNPay (needs DEV_TOOLS_ENABLED=true on the backend). Not available in production builds.
                         </p>
                       </div>
                     </div>
@@ -306,6 +313,7 @@ export default function Payment() {
                       <span>INSTANT</span>
                     </div>
                   </div>
+                  )}
 
                   {/* VNPAY SANDBOX OPTION */}
                   <div

@@ -33,6 +33,7 @@ import { movieApi } from '../api/movieApi';
 import { useToast } from '../context/ToastContext';
 
 import { formatCurrency, formatDateTime } from '../utils/formatters';
+import { toLocalDateStr, localDateStrFromToday } from '../utils/dates';
 
 export default function AdminDashboard() {
   const { showToast, confirm } = useToast();
@@ -53,12 +54,8 @@ export default function AdminDashboard() {
 
   // 1. REVENUE REPORT STATE (FR-REP-01)
   const [revenueData, setRevenueData] = useState(null);
-  const [fromDate, setFromDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  });
-  const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [fromDate, setFromDate] = useState(() => localDateStrFromToday(-30));
+  const [toDate, setToDate] = useState(() => toLocalDateStr());
   const [loadingRevenue, setLoadingRevenue] = useState(false);
 
   // 2. SHOWTIMES STATE (FR-SHOW-01)
@@ -101,7 +98,7 @@ export default function AdminDashboard() {
     description: '',
     director: '',
     durationMinutes: 120,
-    releaseDate: new Date().toISOString().split('T')[0],
+    releaseDate: toLocalDateStr(),
     ageRating: 'P',
     originalLanguage: 'English',
     posterUrl: '',
@@ -418,7 +415,7 @@ export default function AdminDashboard() {
   const handleCancelShowtime = async (id) => {
     const confirmed = await confirm({
       title: 'Cancel Showtime Schedule',
-      message: `Are you sure you want to cancel Showtime #${id}? All unbooked seats will be removed from circulation.`,
+      message: `Are you sure you want to cancel Showtime #${id}? Any active customer bookings will be automatically cancelled, seats released, and customer payments queued for refund settlement in the Payments & Refunds tab.`,
       confirmText: 'Yes, Cancel Showtime',
       cancelText: 'Keep Scheduled',
       isDestructive: true,
@@ -427,7 +424,7 @@ export default function AdminDashboard() {
 
     try {
       await adminApi.cancelShowtime(id);
-      showToast(`Showtime #${id} has been cancelled.`, 'info');
+      showToast(`Showtime #${id} has been cancelled. Any active bookings were cancelled and queued for refund.`, 'info');
       fetchShowtimes();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to cancel showtime.', 'error');
@@ -510,15 +507,25 @@ export default function AdminDashboard() {
   }, [moviesList]);
 
   const filteredShowtimes = useMemo(() => {
+    const now = new Date();
     return showtimesList.filter((st) => {
-      // Movie status filter: 'ALL' | 'NOW_SHOWING' | 'COMING_SOON' | 'ENDED'
-      if (filterShowtimeMovieStatus !== 'ALL') {
+      // 1. Time / Movie status segmentation tabs
+      if (filterShowtimeMovieStatus === 'UPCOMING') {
+        if (st.status === 'CANCELLED' || new Date(st.endTime) < now) return false;
+      } else if (filterShowtimeMovieStatus === 'PAST') {
+        if (st.status !== 'CANCELLED' && new Date(st.endTime) >= now) return false;
+      } else if (filterShowtimeMovieStatus === 'NOW_SHOWING') {
         const status = st.movieStatus || movieMap.get(st.movieId)?.status;
-        if (!status || status !== filterShowtimeMovieStatus) {
-          return false;
-        }
+        if (status !== 'NOW_SHOWING') return false;
+      } else if (filterShowtimeMovieStatus === 'COMING_SOON') {
+        const status = st.movieStatus || movieMap.get(st.movieId)?.status;
+        if (status !== 'COMING_SOON') return false;
+      } else if (filterShowtimeMovieStatus === 'ENDED') {
+        const status = st.movieStatus || movieMap.get(st.movieId)?.status;
+        if (status !== 'ENDED') return false;
       }
 
+      // 2. Global search text filter
       if (!showtimeSearchText.trim()) return true;
       const q = showtimeSearchText.toLowerCase();
       return (
@@ -878,8 +885,10 @@ export default function AdminDashboard() {
                 <div className="flex flex-wrap items-center gap-2">
                   {[
                     { id: 'ALL', label: 'All Showtimes' },
-                    { id: 'NOW_SHOWING', label: 'Now Showing' },
-                    { id: 'COMING_SOON', label: 'Coming Soon' },
+                    { id: 'UPCOMING', label: 'Upcoming & Live' },
+                    { id: 'PAST', label: 'Past Screenings' },
+                    { id: 'NOW_SHOWING', label: 'Now Showing Films' },
+                    { id: 'COMING_SOON', label: 'Coming Soon Films' },
                     { id: 'ENDED', label: 'Ended Movies' },
                   ].map((tab) => (
                     <button
@@ -931,7 +940,11 @@ export default function AdminDashboard() {
                     <span className="text-xs text-[#ab9a84] font-semibold">Filter Movie:</span>
                     <select
                       value={filterShowtimeMovie}
-                      onChange={(e) => setFilterShowtimeMovie(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFilterShowtimeMovie(val);
+                        if (showtimeSearchText) setShowtimeSearchText('');
+                      }}
                       className="bg-[#120d09] border border-[#3d2f1d] rounded-lg px-3 py-1.5 text-xs text-[#f5ece0]"
                     >
                       <option value="">All Movies</option>
@@ -964,10 +977,27 @@ export default function AdminDashboard() {
                       type="text"
                       placeholder="Search showtime by movie, cinema, hall..."
                       value={showtimeSearchText}
-                      onChange={(e) => setShowtimeSearchText(e.target.value)}
-                      className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg pl-8 pr-3 py-1.5 text-xs text-[#f5ece0] placeholder-[#5c4a35] focus:outline-none focus:border-[#e0b354] transition-colors"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setShowtimeSearchText(val);
+                        if (filterShowtimeMovie) {
+                          setFilterShowtimeMovie('');
+                          fetchShowtimes({ movieId: undefined, page: 1 });
+                        }
+                      }}
+                      className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg pl-8 pr-8 py-1.5 text-xs text-[#f5ece0] placeholder-[#5c4a35] focus:outline-none focus:border-[#e0b354] transition-colors"
                     />
                     <Search className="w-3.5 h-3.5 text-[#8a765d] absolute left-2.5 top-2.5" />
+                    {showtimeSearchText && (
+                      <button
+                        type="button"
+                        onClick={() => setShowtimeSearchText('')}
+                        className="absolute right-2.5 top-2.5 text-[#8a765d] hover:text-[#f3cb62] cursor-pointer"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   <button
@@ -999,8 +1029,30 @@ export default function AdminDashboard() {
                       <span>Loading scheduled screenings...</span>
                     </div>
                   ) : filteredShowtimes.length === 0 ? (
-                    <div className="p-12 text-center text-[#6e5d49]">
-                      No scheduled showtimes found for the selected criteria.
+                    <div className="p-12 text-center space-y-3">
+                      {filterShowtimeMovieStatus === 'ENDED' ? (
+                        <div className="max-w-md mx-auto space-y-2">
+                          <div className="text-sm font-bold text-[#e6c27a]">
+                            No Showtimes for Ended Movies
+                          </div>
+                          <p className="text-xs text-[#8a765d] leading-relaxed">
+                            Titles with status <strong className="text-[#c7b59d]">ENDED</strong> have completed their theatrical run and license window. In compliance with cinema distribution regulations, ended movies cannot have active or future showtimes scheduled.
+                          </p>
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('MOVIES')}
+                              className="px-3 py-1.5 rounded-lg bg-[#241a10] border border-[#4d3c26] text-xs font-semibold text-[#f3cb62] hover:border-[#e0b354] transition-colors cursor-pointer"
+                            >
+                              View Ended Catalog in Movie Tab &rarr;
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[#6e5d49]">
+                          No scheduled showtimes found for the selected criteria.
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -1018,79 +1070,93 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#241a10]">
-                          {filteredShowtimes.map((st) => (
-                            <tr key={st.id} className="hover:bg-[#1f1710]/50 transition-colors">
-                              <td className="py-3 px-4">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-[#f5ece0]">{st.movieTitle}</span>
-                                  {(st.movieStatus || movieMap.get(st.movieId)?.status) && (
-                                    <span
-                                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                        (st.movieStatus || movieMap.get(st.movieId)?.status) === 'NOW_SHOWING'
-                                          ? 'bg-emerald-950 border border-emerald-700 text-emerald-300'
-                                          : (st.movieStatus || movieMap.get(st.movieId)?.status) === 'COMING_SOON'
-                                          ? 'bg-amber-950 border border-amber-700 text-amber-300'
-                                          : 'bg-zinc-900 border border-zinc-700 text-zinc-400'
-                                      }`}
-                                    >
-                                      {(st.movieStatus || movieMap.get(st.movieId)?.status) === 'NOW_SHOWING'
-                                        ? 'Now Showing'
-                                        : (st.movieStatus || movieMap.get(st.movieId)?.status) === 'COMING_SOON'
-                                        ? 'Coming Soon'
-                                        : 'Ended'}
+                          {filteredShowtimes.map((st) => {
+                            const now = new Date();
+                            const isCancelled = st.status === 'CANCELLED';
+                            const isCompleted = !isCancelled && new Date(st.endTime) < now;
+                            const isLive = !isCancelled && !isCompleted && new Date(st.startTime) <= now && new Date(st.endTime) >= now;
+                            const movieStatus = st.movieStatus || movieMap.get(st.movieId)?.status;
+
+                            return (
+                              <tr key={st.id} className="hover:bg-[#1f1710]/50 transition-colors">
+                                <td className="py-3 px-4">
+                                  <div className="font-bold text-[#f5ece0]">{st.movieTitle}</div>
+                                  <div className="text-[10px] text-[#8a765d] flex items-center gap-1.5 mt-0.5">
+                                    <span>ID #{st.movieId || st.id}</span>
+                                    <span>•</span>
+                                    <span className="text-[#c7b59d]">
+                                      Film: {movieStatus === 'NOW_SHOWING' ? 'Now Showing' : movieStatus === 'COMING_SOON' ? 'Coming Soon' : 'Ended'}
                                     </span>
-                                  )}
-                                </div>
-                                <div className="text-[10px] text-[#8a765d]">ID #{st.id}</div>
-                              </td>
-                              <td className="py-3 px-4 text-[#ab9a84]">
-                                <div className="font-semibold text-[#e6c27a]">{st.roomName}</div>
-                                <div className="text-[10px] text-[#8a765d]">{st.cinemaName}</div>
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 rounded bg-[#241a10] border border-[#4d3c26] text-[#f3cb62] font-mono text-[10px] font-bold">
-                                  {st.format} • {st.translationType}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-[#f5ece0]">
-                                <div className="font-mono text-emerald-400">
-                                  {formatDateTime(st.startTime)}
-                                </div>
-                                <div className="text-[10px] text-[#8a765d]">
-                                  Ends: {formatDateTime(st.endTime)}
-                                </div>
-                              </td>
-                              <td className="py-3 px-4 font-mono text-[#c7b59d]">
-                                {formatDateTime(st.cleaningEndTime)}
-                              </td>
-                              <td className="py-3 px-4 font-mono font-bold text-[#f3cb62]">
-                                {formatCurrency(st.basePrice)}
-                              </td>
-                              <td className="py-3 px-4">
-                                <span
-                                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                    st.status === 'SCHEDULED'
-                                      ? 'bg-emerald-950 border border-emerald-700 text-emerald-300'
-                                      : 'bg-zinc-900 border border-zinc-700 text-zinc-400'
-                                  }`}
-                                >
-                                  {st.status}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                {st.status === 'SCHEDULED' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCancelShowtime(st.id)}
-                                    className="p-1.5 rounded bg-[#241a10] border border-red-800/80 text-red-400 hover:bg-red-950/60 cursor-pointer"
-                                    title="Cancel Showtime"
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 text-[#ab9a84]">
+                                  <div className="font-semibold text-[#e6c27a]">{st.roomName}</div>
+                                  <div className="text-[10px] text-[#8a765d]">{st.cinemaName}</div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className="px-2 py-0.5 rounded bg-[#241a10] border border-[#4d3c26] text-[#f3cb62] font-mono text-[10px] font-bold">
+                                    {st.format} • {st.translationType}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-[#f5ece0]">
+                                  <div className="font-mono text-emerald-400">
+                                    {formatDateTime(st.startTime)}
+                                  </div>
+                                  <div className="text-[10px] text-[#8a765d]">
+                                    Ends: {formatDateTime(st.endTime)}
+                                  </div>
+                                  <div className="mt-1">
+                                    {isCancelled ? (
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-950/80 text-red-400 border border-red-800">
+                                        CANCELLED
+                                      </span>
+                                    ) : isCompleted ? (
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-800/80 text-zinc-400 border border-zinc-700">
+                                        COMPLETED
+                                      </span>
+                                    ) : isLive ? (
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-950/90 text-blue-300 border border-blue-700 animate-pulse">
+                                        LIVE NOW
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700">
+                                        UPCOMING
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4 font-mono text-[#c7b59d]">
+                                  {formatDateTime(st.cleaningEndTime)}
+                                </td>
+                                <td className="py-3 px-4 font-mono font-bold text-[#f3cb62]">
+                                  {formatCurrency(st.basePrice)}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                      st.status === 'SCHEDULED'
+                                        ? 'bg-emerald-950 border border-emerald-700 text-emerald-300'
+                                        : 'bg-red-950 border border-red-800 text-red-400'
+                                    }`}
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
+                                    {st.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  {st.status === 'SCHEDULED' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelShowtime(st.id)}
+                                      className="p-1.5 rounded bg-[#241a10] border border-red-800/80 text-red-400 hover:bg-red-950/60 cursor-pointer"
+                                      title="Cancel Showtime"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

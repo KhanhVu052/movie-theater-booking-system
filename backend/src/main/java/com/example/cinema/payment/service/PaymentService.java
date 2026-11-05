@@ -8,6 +8,7 @@ import com.example.cinema.booking.entity.BookingItem;
 import com.example.cinema.booking.enums.BookingStatus;
 import com.example.cinema.booking.repository.BookingItemRepository;
 import com.example.cinema.booking.repository.BookingRepository;
+import com.example.cinema.common.config.DevToolsProperties;
 import com.example.cinema.common.dto.PageResponse;
 import com.example.cinema.common.exception.AppException;
 import com.example.cinema.common.exception.ErrorCode;
@@ -72,6 +73,7 @@ public class PaymentService {
     UserRepository userRepository;
     VoucherService voucherService;
     VnPayProperties vnPayProperties;
+    DevToolsProperties devToolsProperties;
     PaymentMapper paymentMapper;
     ObjectMapper objectMapper;
 
@@ -392,8 +394,20 @@ public class PaymentService {
         return PageResponse.from(paymentPage.map(paymentMapper::toResponse));
     }
 
+    /**
+     * TEST-ONLY shortcut that confirms a booking without going through VNPay (SRS FR-DEV-01).
+     * It is disabled unless app.dev-tools.enabled=true and follows the same state rules as the real
+     * IPN "in time" path (FR-PAY-02 / TH1): the booking must still be PENDING_PAYMENT, not expired,
+     * and every seat must still be HELD by this very booking.
+     */
     @Transactional
     public PaymentResponse simulatePaymentSuccess(String userEmail, Long bookingId) {
+        if (!devToolsProperties.isEnabled()) {
+            throw new AppException(ErrorCode.DEV_TOOLS_DISABLED);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
@@ -415,9 +429,25 @@ public class PaymentService {
             }
         }
 
+        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            throw new AppException(ErrorCode.BOOKING_NOT_PAYABLE);
+        }
+
+        if (!booking.getExpiresAt().isAfter(now)) {
+            throw new AppException(ErrorCode.BOOKING_EXPIRED);
+        }
+
         List<BookingItem> items = bookingItemRepository.findByBookingIdOrderByIdAsc(booking.getId());
         List<Long> seatIds = items.stream().map(i -> i.getShowtimeSeat().getId()).toList();
         List<ShowtimeSeat> lockedSeats = showtimeSeatRepository.findByIdsForUpdateOrderByIdAsc(seatIds);
+
+        boolean stillOwnsAllSeats = lockedSeats.size() == seatIds.size()
+                && lockedSeats.stream().allMatch(seat ->
+                seat.getStatus() == ShowtimeSeatStatus.HELD
+                        && booking.getId().equals(seat.getHeldByBookingId()));
+        if (!stillOwnsAllSeats) {
+            throw new AppException(ErrorCode.SEAT_NOT_AVAILABLE);
+        }
 
         for (ShowtimeSeat seat : lockedSeats) {
             seat.setStatus(ShowtimeSeatStatus.BOOKED);
@@ -441,11 +471,11 @@ public class PaymentService {
                 .refundStatus(PaymentRefundStatus.NONE)
                 .responseCode("00")
                 .transactionStatus("00")
-                .payDate(LocalDateTime.now())
+                .payDate(now)
                 .build();
         Payment savedPayment = paymentRepository.save(payment);
 
-        log.info("[Payment Simulation] Booking {} successfully confirmed via Simulation", booking.getBookingCode());
+        log.warn("[DEV TOOLS] Booking {} confirmed via payment simulation (no real money moved)", booking.getBookingCode());
         return paymentMapper.toResponse(savedPayment);
     }
 
