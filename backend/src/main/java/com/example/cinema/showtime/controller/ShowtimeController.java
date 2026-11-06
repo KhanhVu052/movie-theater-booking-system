@@ -46,10 +46,13 @@ public class ShowtimeController {
             @RequestParam(required = false) ShowtimeStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromTime,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toTime,
+            @RequestParam(defaultValue = "false") boolean bookableOnly,
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size
     ) {
-        return ResponseEntity.ok(ApiResponse.success(showtimeService.getShowtimes(movieId, roomId, status, fromTime, toTime, page, size)));
+        return ResponseEntity.ok(ApiResponse.success(
+                showtimeService.getShowtimes(movieId, roomId, status, fromTime, toTime, bookableOnly, page, size)
+        ));
     }
 
     @GetMapping("/{id}")

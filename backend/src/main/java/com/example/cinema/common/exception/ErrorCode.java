@@ -59,7 +59,7 @@ public enum ErrorCode {
 
     // --- Booking & Seat Inventory Errors (1500 - 1599) ---
     BOOKING_NOT_FOUND(1501, "Booking not found", HttpStatus.NOT_FOUND),
-    SHOWTIME_NOT_AVAILABLE_FOR_BOOKING(1502, "Showtime is cancelled or has already started", HttpStatus.CONFLICT),
+    SHOWTIME_NOT_AVAILABLE_FOR_BOOKING(1502, "Showtime is cancelled or the booking window has closed", HttpStatus.CONFLICT),
     SEAT_SELECTION_INVALID(1503, "Selected seats contain duplicates or do not belong to the requested showtime", HttpStatus.CONFLICT),
     SEAT_NOT_AVAILABLE(1504, "One or more selected seats are currently held or already booked", HttpStatus.CONFLICT),
     BOOKING_CANNOT_BE_CANCELLED(1505, "Only PENDING_PAYMENT bookings can be cancelled", HttpStatus.CONFLICT),

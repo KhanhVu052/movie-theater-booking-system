@@ -1,5 +1,6 @@
 package com.example.cinema.showtime.service;
 
+import com.example.cinema.booking.config.BookingProperties;
 import com.example.cinema.booking.entity.Booking;
 import com.example.cinema.booking.enums.BookingStatus;
 import com.example.cinema.booking.repository.BookingRepository;
@@ -55,6 +56,7 @@ public class ShowtimeService {
     BookingRepository bookingRepository;
     PaymentRepository paymentRepository;
     VoucherService voucherService;
+    BookingProperties bookingProperties;
 
     @Transactional
     public ShowtimeResponse createShowtime(ShowtimeRequest request) {
@@ -121,8 +123,27 @@ public class ShowtimeService {
             int page,
             int size
     ) {
+        return getShowtimes(movieId, roomId, status, fromTime, toTime, false, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ShowtimeResponse> getShowtimes(
+            Long movieId,
+            Long roomId,
+            ShowtimeStatus status,
+            LocalDateTime fromTime,
+            LocalDateTime toTime,
+            boolean bookableOnly,
+            int page,
+            int size
+    ) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.ASC, "startTime"));
-        Page<Showtime> showtimePage = showtimeRepository.searchShowtimes(movieId, roomId, status, fromTime, toTime, pageable);
+        LocalDateTime bookableAfter = bookableOnly
+                ? LocalDateTime.now().plusMinutes(bookingProperties.getCutoffMinutes())
+                : null;
+        Page<Showtime> showtimePage = showtimeRepository.searchShowtimes(
+                movieId, roomId, status, fromTime, toTime, bookableAfter, pageable
+        );
         return PageResponse.from(showtimePage.map(showtimeMapper::toResponse));
     }
 

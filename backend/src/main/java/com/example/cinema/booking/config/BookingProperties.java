@@ -12,5 +12,6 @@ import org.springframework.context.annotation.Configuration;
 public class BookingProperties {
 
     private int maxPendingPerUser = 2;
+    private int cutoffMinutes = 15;
 }
 

@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.5)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.6)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -163,6 +163,17 @@ Khi tạo booking (createBooking), hệ thống thực hiện khóa bi quan bả
 • Nghiệm thu:
   + Khách đã có 2 đơn PENDING_PAYMENT còn hạn -> Yêu cầu đặt đơn thứ 3 bị từ chối với HTTP 429 (mã 1507).
   + Đơn PENDING_PAYMENT đã quá hạn (expires_at < NOW()) không bị tính vào giới hạn, khách tiếp tục đặt được vé mới.
+FR-BOOK-05
+Hạn chót đặt vé và Danh sách suất còn bán (Showtime Booking Cutoff & Bookable Showtimes)
+Khách hàng chỉ được phép đặt vé cho các suất chiếu còn cách giờ bắt đầu ít nhất `cutoffMinutes` phút (mặc định 15 phút, cấu hình qua `app.booking.cutoff-minutes: 15`).
+- Khi tạo booking (`createBooking`), hệ thống kiểm tra `showtime.status == SCHEDULED` và `now < showtime.startTime - cutoffMinutes`. Nếu vi phạm (suất chiếu đã bắt đầu, đã bị hủy, hoặc nằm trong khoảng thời gian đóng cổng bán vé), hệ thống từ chối với lỗi 409 Conflict (Mã 1502: "Showtime is cancelled or the booking window has closed").
+- Endpoint tra cứu suất chiếu `GET /api/v1/showtimes` bổ sung tham số truy vấn `bookableOnly` (kiểu boolean, mặc định `false`):
+  + Khi `bookableOnly = true`: chỉ trả về các suất chiếu có `status = SCHEDULED` và `startTime > NOW() + cutoffMinutes`. Được sử dụng bởi giao diện khách hàng (Trang chủ, Chi tiết phim).
+  + Khi `bookableOnly = false`: trả về toàn bộ suất chiếu theo các bộ lọc thông thường. Được sử dụng bởi giao diện quản trị (Admin Dashboard).
+• Nghiệm thu:
+  + Suất chiếu cách hiện tại 10 phút (< 15 phút cutoff): gọi đặt vé nhận lỗi 409 (mã 1502).
+  + Suất chiếu cách hiện tại 20 phút (> 15 phút cutoff): gọi đặt vé thành công tạo đơn PENDING_PAYMENT.
+  + Gọi `GET /api/v1/showtimes?bookableOnly=true`: các suất chiếu bắt đầu trong vòng 15 phút bị loại bỏ khỏi danh sách kết quả.
 FR-VOUC-01
 Áp dụng & Giữ hạn mức Voucher
 Khi khách áp dụng mã giảm giá lúc tạo booking: Khóa dòng vouchers (FOR UPDATE), kiểm tra is_active = true, thời hạn (start_at <= NOW() <= end_at), giá trị đơn tối thiểu (subtotal_amount >= min_order_value), tổng hạn mức (reserved_count + used_count < usage_limit) và giới hạn mỗi khách (COUNT(RESERVED, USED) < per_user_limit). Hợp lệ thì tăng reserved_count + 1 và tạo voucher_redemptions (RESERVED).
@@ -930,6 +941,10 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 2.6 (2026-11-06):
+  + Bổ sung G2-03 & FR-BOOK-05: Hạn chót đặt vé (cutoff 15 phút trước giờ chiếu, cấu hình app.booking.cutoff-minutes: 15) và cập nhật thông điệp mã lỗi 1502 thành "Showtime is cancelled or the booking window has closed".
+  + Bổ sung tham số truy vấn bookableOnly trên endpoint GET /api/v1/showtimes để lọc danh sách suất chiếu còn mở bán cho khách hàng.
+  + Bổ sung kiểm thử tích hợp ShowtimeCutoffIntegrationTest xác thực hạn chót đặt vé và bộ lọc bookableOnly.
 - Phiên bản 2.5 (2026-11-06):
   + Bổ sung G2-02: Chặn đặt ghế không hoạt động (is_active = false, mã 1504), tự động tính lại giá các suất chiếu tương lai khi đổi loại ghế, và chặn vô hiệu hóa phòng khi còn suất chiếu tương lai (mã 1312).
   + Bổ sung FR-BOOK-04: Giới hạn tối đa 2 đơn giữ vé PENDING_PAYMENT còn hiệu lực trên mỗi tài khoản khách hàng, trả về HTTP 429 (Mã 1507) khi vượt hạn mức.

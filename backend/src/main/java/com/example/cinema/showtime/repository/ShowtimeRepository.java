@@ -51,6 +51,7 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
               AND (:status IS NULL OR s.status = :status)
               AND (:fromTime IS NULL OR s.startTime >= :fromTime)
               AND (:toTime IS NULL OR s.startTime <= :toTime)
+              AND (:bookableAfter IS NULL OR s.startTime > :bookableAfter)
             """)
     Page<Showtime> searchShowtimes(
             @Param("movieId") Long movieId,
@@ -58,6 +59,7 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
             @Param("status") ShowtimeStatus status,
             @Param("fromTime") LocalDateTime fromTime,
             @Param("toTime") LocalDateTime toTime,
+            @Param("bookableAfter") LocalDateTime bookableAfter,
             Pageable pageable
     );
 

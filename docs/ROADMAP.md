@@ -59,7 +59,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | R-10 | README: hướng dẫn chạy test, biến môi trường cho DB test | P0 | DONE |
 | G2-01 | Giới hạn số đơn chờ thanh toán / user | P1 | DONE |
 | G2-02 | Ghế/phòng không hoạt động: chặn bán + cập nhật giá | P1 | DONE |
-| G2-03 | Hạn chót đặt vé + lọc suất chiếu còn bán | P1 | TODO |
+| G2-03 | Hạn chót đặt vé + lọc suất chiếu còn bán | P1 | DONE |
 | G2-04 | Phim `ENDED` không còn bán được | P1 | BLOCKED (D-03) |
 | G2-05 | Khách tự hủy vé đã thanh toán (cửa sổ hoàn tiền) | P2 | BLOCKED (D-04) |
 | G2-06 | Báo cáo doanh thu: đếm đúng vé và công suất | P1 | TODO |

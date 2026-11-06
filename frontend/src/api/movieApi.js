@@ -74,8 +74,8 @@ export const movieApi = {
   },
 
   // Fetch showtimes by movie and date
-  getShowtimesByMovie: (movieId, date) => {
-    return movieApi.getShowtimes({ movieId, showDate: date });
+  getShowtimesByMovie: (movieId, date, params = {}) => {
+    return movieApi.getShowtimes({ movieId, showDate: date, ...params });
   },
 
   // Fetch showtime detail by ID

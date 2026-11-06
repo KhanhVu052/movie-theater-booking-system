@@ -83,7 +83,8 @@ public class BookingService {
         Showtime showtime = showtimeRepository.findByIdForShare(request.showtimeId())
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
 
-        if (showtime.getStatus() != ShowtimeStatus.SCHEDULED || !showtime.getStartTime().isAfter(now)) {
+        LocalDateTime cutoffThreshold = showtime.getStartTime().minusMinutes(bookingProperties.getCutoffMinutes());
+        if (showtime.getStatus() != ShowtimeStatus.SCHEDULED || !now.isBefore(cutoffThreshold)) {
             throw new AppException(ErrorCode.SHOWTIME_NOT_AVAILABLE_FOR_BOOKING);
         }
 

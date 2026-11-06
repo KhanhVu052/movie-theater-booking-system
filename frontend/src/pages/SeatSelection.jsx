@@ -274,7 +274,11 @@ export default function SeatSelection() {
       const status = err.response?.status;
       const code = resData?.code;
 
-      if (code === 1507 || status === 429) {
+      if (code === 1502) {
+        const msg = 'Suất chiếu này đã đóng cổng bán vé hoặc đã bị hủy';
+        setBookingError(msg);
+        showToast(msg, 'error');
+      } else if (code === 1507 || status === 429) {
         const msg = resData?.message || 'Please pay or cancel your existing reservations first';
         setBookingError(msg);
         showToast(msg, 'error');
@@ -749,6 +753,17 @@ export default function SeatSelection() {
                         className="text-[#e6c27a] hover:underline font-semibold text-xs ml-6 inline-flex items-center gap-1"
                       >
                         Go to My Bookings &rarr;
+                      </Link>
+                    )}
+                    {(bookingError.toLowerCase().includes('closed') ||
+                      bookingError.toLowerCase().includes('cancelled') ||
+                      bookingError.toLowerCase().includes('đóng cổng') ||
+                      bookingError.toLowerCase().includes('bị hủy')) && (
+                      <Link
+                        to={showtime?.movieId ? `/movies/${showtime.movieId}` : '/'}
+                        className="text-[#e6c27a] hover:underline font-semibold text-xs ml-6 inline-flex items-center gap-1"
+                      >
+                        Choose another showtime &rarr;
                       </Link>
                     )}
                   </div>

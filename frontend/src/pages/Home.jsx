@@ -215,6 +215,7 @@ export default function Home() {
         const res = await movieApi.getShowtimes({
           movieId: quickMovieId,
           showDate: quickDate,
+          bookableOnly: true,
         });
 
         if (!isMounted) return;

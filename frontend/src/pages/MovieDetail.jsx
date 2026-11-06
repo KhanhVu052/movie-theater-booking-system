@@ -175,6 +175,7 @@ export default function MovieDetail() {
         const res = await movieApi.getShowtimes({
           movieId: id,
           showDate: selectedDate,
+          bookableOnly: true,
         });
 
         if (!isMounted) return;
