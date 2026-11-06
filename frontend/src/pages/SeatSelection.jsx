@@ -20,6 +20,7 @@ import Navbar from '../components/Navbar';
 import { useToast } from '../context/ToastContext';
 import { movieApi } from '../api/movieApi';
 import { bookingApi } from '../api/bookingApi';
+import { useSeatMapPolling } from '../hooks/useSeatMapPolling';
 
 import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
 import { causesOrphanSeat, getCouplePartner, isCouplePairAvailable } from '../utils/seatGap';
@@ -89,6 +90,35 @@ export default function SeatSelection() {
   useEffect(() => {
     fetchSeatMap();
   }, [fetchSeatMap]);
+
+  // Periodic Seat Map Polling (G4-04)
+  const handleSeatUnavailable = useCallback((unavailableSeats, updatedSeats) => {
+    const unavailableIdSet = new Set(unavailableSeats.map((s) => s.id));
+    unavailableSeats.forEach((seat) => {
+      if (seat.pairGroup) {
+        updatedSeats
+          .filter((s) => s.pairGroup === seat.pairGroup)
+          .forEach((s) => unavailableIdSet.add(s.id));
+      }
+    });
+
+    setSelectedSeatIds((prev) => prev.filter((id) => !unavailableIdSet.has(id)));
+
+    unavailableSeats.forEach((seat) => {
+      const seatLabel = `${seat.rowName || ''}${seat.seatNumber || ''}`;
+      showToast(`Ghế ${seatLabel} vừa có người khác giữ`, 'warning');
+    });
+  }, [showToast]);
+
+  const handleSeatsUpdated = useCallback((updatedSeats) => {
+    setSeats(updatedSeats);
+  }, []);
+
+  useSeatMapPolling(showtimeId, handleSeatsUpdated, 8000, {
+    enabled: !loading && !submitting && !error && showtime?.status === 'SCHEDULED',
+    selectedSeatIds,
+    onSeatUnavailable: handleSeatUnavailable,
+  });
 
   // Fetch all active vouchers on mount
   useEffect(() => {

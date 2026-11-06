@@ -132,7 +132,6 @@ public class VoucherIntegrationTest extends AbstractMySqlIT {
                 .name("Cinema " + suffix)
                 .address("123 Street")
                 .hotline("19007890")
-                .isActive(true)
                 .build());
 
         room = roomRepository.save(Room.builder()

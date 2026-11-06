@@ -43,6 +43,7 @@ export default function Payment() {
   const [initiatingPayment, setInitiatingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [modifyingSeats, setModifyingSeats] = useState(false);
 
   // 1. Fetch booking details
   const fetchBooking = useCallback(async () => {
@@ -175,6 +176,24 @@ export default function Payment() {
     } finally {
       setCancelling(false);
     }
+  };
+
+  // Handle Modify Selected Seats: Cancel pending booking first to free seats, then navigate back
+  const handleModifySeats = async (e) => {
+    e.preventDefault();
+    if (!booking) return;
+
+    if (booking.status === 'PENDING_PAYMENT') {
+      setModifyingSeats(true);
+      try {
+        await bookingApi.cancelBooking(booking.id);
+      } catch (err) {
+        console.warn('Could not cancel pending booking prior to modifying seats:', err);
+      } finally {
+        setModifyingSeats(false);
+      }
+    }
+    navigate(`/booking/${booking.showtimeId}`);
   };
 
   return (
@@ -500,12 +519,14 @@ export default function Payment() {
               {/* Return to seat selection */}
               {!isExpired && (
                 <div className="pt-2 text-center">
-                  <Link
-                    to={`/booking/${booking.showtimeId}`}
-                    className="text-xs text-[#8a765d] hover:text-[#e0b354] transition-colors"
+                  <button
+                    type="button"
+                    onClick={handleModifySeats}
+                    disabled={modifyingSeats || cancelling}
+                    className="text-xs text-[#8a765d] hover:text-[#e0b354] transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    Modify Selected Seats
-                  </Link>
+                    {modifyingSeats ? 'Releasing seats...' : 'Modify Selected Seats'}
+                  </button>
                 </div>
               )}
             </div>

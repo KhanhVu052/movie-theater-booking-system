@@ -68,6 +68,7 @@ public class VnPayUtil {
             String key = entry.getKey();
             String value = entry.getValue();
             if (key != null
+                    && key.startsWith("vnp_")
                     && !key.equalsIgnoreCase("vnp_SecureHash")
                     && !key.equalsIgnoreCase("vnp_SecureHashType")
                     && value != null

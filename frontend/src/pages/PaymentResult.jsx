@@ -8,6 +8,8 @@ import {
   Check,
   Loader2,
   Home,
+  Clock,
+  RefreshCw,
 } from 'lucide-react';
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import { paymentApi } from '../api/paymentApi';
@@ -63,10 +65,13 @@ function QRCodeGraphic({ value: _value = "GOTORO-TICKET" }) {
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
 
-  const [verifying, setVerifying] = useState(true);
+  // 'VERIFYING' | 'PROCESSING' | 'SUCCESS' | 'FAILED'
+  const [pageStatus, setPageStatus] = useState('VERIFYING');
   const [returnStatus, setReturnStatus] = useState(null);
   const [booking, setBooking] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [rechecking, setRechecking] = useState(false);
+  const [backoffAttempt, setBackoffAttempt] = useState(0);
 
   // Extract all params
   const queryParams = useMemo(() => {
@@ -77,10 +82,11 @@ export default function PaymentResult() {
     return params;
   }, [searchParams]);
 
-  // Handle Verification & Polling
+  // Handle Verification & Exponential Backoff Polling (G4-05)
   const verifyPaymentAndBooking = useCallback(async () => {
-    setVerifying(true);
+    setPageStatus('VERIFYING');
     let resolvedBookingId = queryParams.bookingId;
+    let gatewaySuccess = false;
 
     try {
       // 1. If redirected from VNPAY, verify signature and gateway response with backend
@@ -92,41 +98,112 @@ export default function PaymentResult() {
         if (returnData?.bookingId) {
           resolvedBookingId = returnData.bookingId;
         }
-      }
 
-      // 2. Poll for booking status (max 4 polling attempts for asynchronous IPN processing)
-      if (resolvedBookingId) {
-        let attempts = 0;
-        let isConfirmed = false;
+        gatewaySuccess = Boolean(returnData?.gatewaySuccess && queryParams.vnp_ResponseCode === '00');
 
-        while (attempts < 4 && !isConfirmed) {
-          const bookingRes = await bookingApi.getBookingById(resolvedBookingId);
-          const data = bookingRes?.data?.data ?? bookingRes?.data;
-
-          if (data) {
-            setBooking(data);
-            if (data.status === 'CONFIRMED' || data.status === 'EXPIRED' || data.status === 'CANCELLED') {
-              isConfirmed = true;
-              break;
+        if (!gatewaySuccess) {
+          if (resolvedBookingId) {
+            try {
+              const res = await bookingApi.getBookingById(resolvedBookingId);
+              setBooking(res?.data?.data ?? res?.data);
+            } catch {
+              // Ignore failure to fetch booking for failed payments
             }
           }
+          setPageStatus('FAILED');
+          return;
+        }
+      }
 
-          attempts++;
-          if (!isConfirmed && attempts < 4) {
-            await new Promise((r) => setTimeout(r, 1500));
+      // 2. Fetch booking status and apply Exponential Backoff if still PENDING_PAYMENT
+      if (resolvedBookingId) {
+        const initialRes = await bookingApi.getBookingById(resolvedBookingId);
+        const initialBooking = initialRes?.data?.data ?? initialRes?.data;
+        if (initialBooking) {
+          setBooking(initialBooking);
+
+          if (initialBooking.status === 'CONFIRMED') {
+            setPageStatus('SUCCESS');
+            return;
+          }
+
+          if (initialBooking.status === 'CANCELLED' || initialBooking.status === 'EXPIRED') {
+            setPageStatus('FAILED');
+            return;
+          }
+
+          // If still PENDING_PAYMENT: Enter Exponential Backoff polling (2s, 4s, 8s, 16s ~30s max)
+          if (initialBooking.status === 'PENDING_PAYMENT') {
+            setPageStatus('PROCESSING');
+
+            const delays = [2000, 4000, 8000, 16000];
+            let confirmed = false;
+
+            for (let i = 0; i < delays.length; i++) {
+              setBackoffAttempt(i + 1);
+              await new Promise((r) => setTimeout(r, delays[i]));
+
+              try {
+                const pollRes = await bookingApi.getBookingById(resolvedBookingId);
+                const pollData = pollRes?.data?.data ?? pollRes?.data;
+                if (pollData) {
+                  setBooking(pollData);
+                  if (pollData.status === 'CONFIRMED') {
+                    confirmed = true;
+                    setPageStatus('SUCCESS');
+                    break;
+                  }
+                  if (pollData.status === 'CANCELLED' || pollData.status === 'EXPIRED') {
+                    setPageStatus('FAILED');
+                    return;
+                  }
+                }
+              } catch {
+                // Ignore transient network errors during backoff polling
+              }
+            }
+
+            if (!confirmed) {
+              setPageStatus('PROCESSING');
+            }
+            return;
           }
         }
       }
+
+      setPageStatus(gatewaySuccess ? 'SUCCESS' : 'FAILED');
     } catch (err) {
       console.error('Payment outcome check error:', err);
-    } finally {
-      setVerifying(false);
+      setPageStatus('FAILED');
     }
   }, [queryParams]);
 
   useEffect(() => {
     verifyPaymentAndBooking();
   }, [verifyPaymentAndBooking]);
+
+  const handleManualRecheck = async () => {
+    const bookingId = booking?.id || returnStatus?.bookingId || queryParams.bookingId;
+    if (!bookingId) return;
+
+    setRechecking(true);
+    try {
+      const res = await bookingApi.getBookingById(bookingId);
+      const data = res?.data?.data ?? res?.data;
+      if (data) {
+        setBooking(data);
+        if (data.status === 'CONFIRMED') {
+          setPageStatus('SUCCESS');
+        } else if (data.status === 'CANCELLED' || data.status === 'EXPIRED') {
+          setPageStatus('FAILED');
+        }
+      }
+    } catch (err) {
+      console.error('Manual recheck error:', err);
+    } finally {
+      setRechecking(false);
+    }
+  };
 
   const handleCopyCode = (code) => {
     navigator.clipboard.writeText(code);
@@ -138,16 +215,15 @@ export default function PaymentResult() {
     window.print();
   };
 
-  const isSuccess =
-    booking?.status === 'CONFIRMED' ||
-    (returnStatus?.gatewaySuccess && queryParams.vnp_ResponseCode === '00');
+  const isSuccess = pageStatus === 'SUCCESS';
+  const isProcessing = pageStatus === 'PROCESSING';
 
   return (
     <div className="min-h-screen w-full bg-[#0e0a07] text-[#f2e8dc] font-body flex flex-col select-none">
       <Navbar />
 
       {/* Verifying Spinner */}
-      {verifying && (
+      {pageStatus === 'VERIFYING' && (
         <div className="flex-1 flex flex-col items-center justify-center py-32 gap-3.5">
           <Loader2 className="w-10 h-10 animate-spin text-[#e6c27a]" />
           <p className="text-sm font-medium text-[#ab9a84]">
@@ -157,7 +233,7 @@ export default function PaymentResult() {
       )}
 
       {/* Main Result Screen */}
-      {!verifying && (
+      {pageStatus !== 'VERIFYING' && (
         <div className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 py-12 w-full flex flex-col items-center">
           {/* SUCCESS: DIGITAL E-TICKET */}
           {isSuccess && booking ? (
@@ -320,6 +396,73 @@ export default function PaymentResult() {
                 >
                   <Home className="w-4 h-4" />
                   <span>Return to Home</span>
+                </Link>
+              </div>
+            </div>
+          ) : isProcessing ? (
+            /* PROCESSING STATE (G4-05) */
+            <div className="w-full max-w-lg text-center space-y-6">
+              <div className="w-16 h-16 rounded-full bg-amber-950/60 border-2 border-amber-500/80 flex items-center justify-center mx-auto text-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
+                <Clock className="w-9 h-9 animate-pulse" />
+              </div>
+
+              <div className="space-y-2">
+                <h1 className="font-body font-extrabold text-3xl text-[#f7efe4] tracking-tight">
+                  Confirming Your Reservation...
+                </h1>
+                <p className="text-xs text-[#ab9a84] leading-relaxed">
+                  We have received your payment information from VNPay. The cinema reservation system is finalizing your booking confirmation.
+                </p>
+                {backoffAttempt > 0 && (
+                  <p className="text-[11px] font-mono text-[#e6c27a]">
+                    Checking confirmation attempt {backoffAttempt} of 4...
+                  </p>
+                )}
+              </div>
+
+              {booking && (
+                <div className="p-4 rounded-xl bg-[#18120c] border border-[#362919] text-xs text-left space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-[#ab9a84]">Movie:</span>
+                    <span className="font-bold text-[#f5ece0]">{booking.movieTitle}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#ab9a84]">Booking Code:</span>
+                    <span className="font-mono text-[#f3cb62]">{booking.bookingCode}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#ab9a84]">Status:</span>
+                    <span className="font-bold uppercase text-amber-400 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
+                      Awaiting Confirmation
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={handleManualRecheck}
+                  disabled={rechecking}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-b from-[#f3cb62] to-[#dda938] hover:from-[#f7d576] hover:to-[#e5b344] text-[#1a1209] font-body font-bold text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${rechecking ? 'animate-spin' : ''}`} />
+                  <span>{rechecking ? 'Checking...' : 'Check Status Again'}</span>
+                </button>
+
+                <Link
+                  to="/my-bookings"
+                  className="px-6 py-3 rounded-xl bg-[#1c140c] border border-[#3d2f1d] text-xs font-semibold text-[#ab9a84] hover:text-[#f5ece0] transition-colors"
+                >
+                  My Bookings
+                </Link>
+
+                <Link
+                  to="/"
+                  className="px-6 py-3 rounded-xl bg-[#1c140c] border border-[#3d2f1d] text-xs font-semibold text-[#ab9a84] hover:text-[#f5ece0] transition-colors"
+                >
+                  Return to Home
                 </Link>
               </div>
             </div>
