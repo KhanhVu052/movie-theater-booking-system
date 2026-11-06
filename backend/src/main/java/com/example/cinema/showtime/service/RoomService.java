@@ -9,17 +9,23 @@ import com.example.cinema.showtime.dto.response.SeatResponse;
 import com.example.cinema.showtime.entity.Cinema;
 import com.example.cinema.showtime.entity.Room;
 import com.example.cinema.showtime.entity.Seat;
+import com.example.cinema.showtime.entity.ShowtimeSeat;
 import com.example.cinema.showtime.enums.SeatType;
+import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
+import com.example.cinema.showtime.enums.ShowtimeStatus;
 import com.example.cinema.showtime.mapper.RoomMapper;
 import com.example.cinema.showtime.mapper.SeatMapper;
 import com.example.cinema.showtime.repository.RoomRepository;
 import com.example.cinema.showtime.repository.SeatRepository;
+import com.example.cinema.showtime.repository.ShowtimeRepository;
+import com.example.cinema.showtime.repository.ShowtimeSeatRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +36,8 @@ public class RoomService {
 
     RoomRepository roomRepository;
     SeatRepository seatRepository;
+    ShowtimeRepository showtimeRepository;
+    ShowtimeSeatRepository showtimeSeatRepository;
     CinemaService cinemaService;
     RoomMapper roomMapper;
     SeatMapper seatMapper;
@@ -91,9 +99,28 @@ public class RoomService {
             throw new AppException(ErrorCode.SEAT_NOT_FOUND);
         }
 
+        LocalDateTime now = LocalDateTime.now();
+
+        if (request.type() != null) {
+            boolean hasActiveReservations = showtimeSeatRepository.existsBySeatIdInAndShowtimeStatusAndShowtimeStartTimeAfterAndStatusIn(
+                    request.seatIds(),
+                    ShowtimeStatus.SCHEDULED,
+                    now,
+                    List.of(ShowtimeSeatStatus.HELD, ShowtimeSeatStatus.BOOKED)
+            );
+            if (hasActiveReservations) {
+                throw new AppException(ErrorCode.SEAT_NOT_AVAILABLE);
+            }
+        }
+
         for (Seat seat : seats) {
-            if (request.type() != null) {
+            if (request.type() != null && request.type() != seat.getType()) {
                 seat.setType(request.type());
+                List<ShowtimeSeat> futureAvailableSeats = showtimeSeatRepository.findFutureAvailableBySeatId(seat.getId(), now);
+                for (ShowtimeSeat ss : futureAvailableSeats) {
+                    ss.setPrice(request.type().calculatePrice(ss.getShowtime().getBasePrice()));
+                }
+                showtimeSeatRepository.saveAll(futureAvailableSeats);
             }
             if (request.isActive() != null) {
                 seat.setIsActive(request.isActive());
@@ -108,6 +135,13 @@ public class RoomService {
     @Transactional
     public RoomResponse toggleRoomStatus(Long id, boolean isActive) {
         Room room = findRoomWithCinemaOrThrow(id);
+        if (!isActive) {
+            boolean hasFutureShowtimes = showtimeRepository.existsByRoomIdAndStatusAndStartTimeAfter(
+                    id, ShowtimeStatus.SCHEDULED, LocalDateTime.now());
+            if (hasFutureShowtimes) {
+                throw new AppException(ErrorCode.ROOM_HAS_FUTURE_SHOWTIMES);
+            }
+        }
         room.setIsActive(isActive);
         return roomMapper.toResponse(roomRepository.save(room));
     }

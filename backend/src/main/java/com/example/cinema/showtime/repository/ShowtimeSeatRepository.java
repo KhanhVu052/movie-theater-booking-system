@@ -2,6 +2,7 @@ package com.example.cinema.showtime.repository;
 
 import com.example.cinema.showtime.entity.ShowtimeSeat;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
+import com.example.cinema.showtime.enums.ShowtimeStatus;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -72,4 +73,44 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
     boolean existsByShowtimeIdAndStatusIn(Long showtimeId, List<ShowtimeSeatStatus> statuses);
 
     void deleteByShowtimeId(Long showtimeId);
+
+    @Query("""
+            SELECT ss FROM ShowtimeSeat ss
+            JOIN FETCH ss.showtime s
+            WHERE ss.seat.id = :seatId
+              AND ss.status = com.example.cinema.showtime.enums.ShowtimeSeatStatus.AVAILABLE
+              AND s.status = com.example.cinema.showtime.enums.ShowtimeStatus.SCHEDULED
+              AND s.startTime > :now
+            """)
+    List<ShowtimeSeat> findFutureAvailableBySeatId(@Param("seatId") Long seatId, @Param("now") LocalDateTime now);
+
+    @Query("""
+            SELECT COUNT(ss) > 0 FROM ShowtimeSeat ss
+            JOIN ss.showtime s
+            WHERE ss.seat.id = :seatId
+              AND s.status = :showtimeStatus
+              AND s.startTime > :now
+              AND ss.status IN :statuses
+            """)
+    boolean existsBySeatIdAndShowtimeStatusAndShowtimeStartTimeAfterAndStatusIn(
+            @Param("seatId") Long seatId,
+            @Param("showtimeStatus") ShowtimeStatus showtimeStatus,
+            @Param("now") LocalDateTime now,
+            @Param("statuses") Collection<ShowtimeSeatStatus> statuses
+    );
+
+    @Query("""
+            SELECT COUNT(ss) > 0 FROM ShowtimeSeat ss
+            JOIN ss.showtime s
+            WHERE ss.seat.id IN :seatIds
+              AND s.status = :showtimeStatus
+              AND s.startTime > :now
+              AND ss.status IN :statuses
+            """)
+    boolean existsBySeatIdInAndShowtimeStatusAndShowtimeStartTimeAfterAndStatusIn(
+            @Param("seatIds") Collection<Long> seatIds,
+            @Param("showtimeStatus") ShowtimeStatus showtimeStatus,
+            @Param("now") LocalDateTime now,
+            @Param("statuses") Collection<ShowtimeSeatStatus> statuses
+    );
 }

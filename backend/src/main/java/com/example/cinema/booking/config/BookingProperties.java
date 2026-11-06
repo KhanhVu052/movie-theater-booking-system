@@ -13,3 +13,4 @@ public class BookingProperties {
 
     private int maxPendingPerUser = 2;
 }
+

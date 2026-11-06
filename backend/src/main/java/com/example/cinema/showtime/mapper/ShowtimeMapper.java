@@ -59,18 +59,12 @@ public class ShowtimeMapper {
     }
 
     public ShowtimeSeatResponse toSeatResponse(ShowtimeSeat showtimeSeat) {
-        return ShowtimeSeatResponse.builder()
-                .id(showtimeSeat.getId())
-                .seatId(showtimeSeat.getSeat().getId())
-                .rowName(showtimeSeat.getSeat().getRowName())
-                .seatNumber(showtimeSeat.getSeat().getSeatNumber())
-                .seatType(showtimeSeat.getSeat().getType())
-                .price(showtimeSeat.getPrice())
-                .status(showtimeSeat.getStatus())
-                .build();
+        return toSeatResponse(showtimeSeat, showtimeSeat.getStatus());
     }
 
     public ShowtimeSeatResponse toSeatResponse(ShowtimeSeat showtimeSeat, ShowtimeSeatStatus effectiveStatus) {
+        boolean isSeatActive = showtimeSeat.getSeat() != null && Boolean.TRUE.equals(showtimeSeat.getSeat().getIsActive());
+        boolean selectable = isSeatActive && effectiveStatus == ShowtimeSeatStatus.AVAILABLE;
         return ShowtimeSeatResponse.builder()
                 .id(showtimeSeat.getId())
                 .seatId(showtimeSeat.getSeat().getId())
@@ -79,6 +73,7 @@ public class ShowtimeMapper {
                 .seatType(showtimeSeat.getSeat().getType())
                 .price(showtimeSeat.getPrice())
                 .status(effectiveStatus)
+                .selectable(selectable)
                 .build();
     }
 }

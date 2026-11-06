@@ -2,6 +2,7 @@
 
 Định dạng: `YYYY-MM-DD — ID task — Tóm tắt một câu về việc đã làm — SRS mục tương ứng (nếu có)`
 
+- 2026-11-06 — G2-02 — Ghế/phòng không hoạt động: chặn bán + cập nhật giá suất tương lai — SRS v2.5 (FR-BOOK-02, FR-SHOW-01)
 - 2026-11-06 — G2-01 — Giới hạn số đơn chờ thanh toán tối đa 2 đơn/user — SRS v2.5 (FR-BOOK-04)
 - 2026-11-06 — R-01 — Xóa email/password admin mặc định trong application-test.yaml; script QA bắt buộc nhận biến môi trường ADMIN_EMAIL và ADMIN_PASSWORD (thoát mã 2 nếu thiếu) — NFR-SEC-02
 - 2026-11-06 — R-02 — Tách riêng revertUsedVoucherIfPresent (USED -> RELEASED, giảm usedCount) khỏi releaseVoucherIfPresent (RESERVED -> RELEASED, giảm reservedCount) trong VoucherService và ShowtimeService — FR-SHOW-02, Mục 4.4

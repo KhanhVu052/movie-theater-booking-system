@@ -181,7 +181,7 @@ export default function SeatSelection() {
 
   // Seat toggle handler (Min 1, Max 8 seats)
   const handleToggleSeat = (seat) => {
-    if (seat.status !== 'AVAILABLE') return;
+    if (seat.status !== 'AVAILABLE' || seat.selectable === false) return;
 
     setBookingError('');
     setSelectionNotice('');
@@ -452,6 +452,8 @@ export default function SeatSelection() {
                         const isHeld = seat.status === 'HELD';
                         const isBooked = seat.status === 'BOOKED';
                         const isAvailable = seat.status === 'AVAILABLE';
+                        const isSelectable = seat.selectable !== undefined ? seat.selectable : isAvailable;
+                        const isInactive = !isSelectable && isAvailable;
 
                         // Seat color styling by seat type
                         let seatBg =
@@ -464,7 +466,10 @@ export default function SeatSelection() {
                             'bg-[#2e131e] border-[#8a2449] text-[#fda4af] hover:border-[#f43f5e] hover:bg-[#3d1827]';
                         }
 
-                        if (isSelected) {
+                        if (isInactive) {
+                          seatBg =
+                            'bg-[#141210] border-[#29221b] text-[#554b3f] cursor-not-allowed opacity-30 line-through';
+                        } else if (isSelected) {
                           seatBg =
                             'bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#fce092] text-[#140e08] font-black ring-2 ring-[#f3cb62]/40 shadow-[0_0_12px_rgba(243,203,98,0.6)]';
                         } else if (isHeld) {
@@ -479,9 +484,13 @@ export default function SeatSelection() {
                           <button
                             key={seat.id}
                             type="button"
-                            disabled={!isAvailable}
+                            disabled={!isSelectable}
                             onClick={() => handleToggleSeat(seat)}
-                            title={`${seat.rowName}${seat.seatNumber} • ${seat.seatType} • ${formatCurrency(seat.price)}`}
+                            title={
+                              isInactive
+                                ? `${seat.rowName}${seat.seatNumber} • Maintenance / Inactive`
+                                : `${seat.rowName}${seat.seatNumber} • ${seat.seatType} • ${formatCurrency(seat.price)}`
+                            }
                             className={`w-8 h-8 rounded-t-lg rounded-b-sm border text-[10px] font-bold flex items-center justify-center transition-all cursor-pointer ${seatBg}`}
                           >
                             {seat.rowName}{seat.seatNumber}

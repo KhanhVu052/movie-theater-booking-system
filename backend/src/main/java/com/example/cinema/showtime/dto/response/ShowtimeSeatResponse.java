@@ -12,6 +12,7 @@ public record ShowtimeSeatResponse(
         Integer seatNumber,
         SeatType seatType,
         Long price,
-        ShowtimeSeatStatus status
+        ShowtimeSeatStatus status,
+        boolean selectable
 ) {
 }

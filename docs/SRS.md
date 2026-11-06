@@ -114,9 +114,9 @@ Do InnoDB vẫn có thể phát sinh Deadlock trên các index phụ hoặc gap 
    FR-SHOW-01
    Tạo suất chiếu & Chống trùng lịch phòng
    Admin tạo suất chiếu cho phim (NOW_SHOWING, COMING_SOON) tại một phòng chiếu. Hệ thống tự tính end_time = start_time + duration_minutes và cleaning_end_time = end_time + 15 phút. Bắt buộc khóa bản ghi rooms (FOR UPDATE), kiểm tra không có suất chiếu SCHEDULED nào trong cùng phòng vi phạm: existing.start_time < new.cleaning_end_time AND new.start_time < existing.cleaning_end_time. Sau khi tạo, tự động khởi tạo danh sách showtime_seats từ các ghế có is_active = true của phòng.
-   • Lỗi: Trùng khung giờ hoặc phòng không hoạt động  409 Conflict.
+   • Lỗi: Trùng khung giờ hoặc phòng không hoạt động -> 409 Conflict. Vô hiệu hóa phòng khi còn suất chiếu SCHEDULED trong tương lai -> 409 Conflict (Mã lỗi 1312: ROOM_HAS_FUTURE_SHOWTIMES).
 
-• Nghiệm thu: 2 Admin gửi request đồng thời xếp 2 suất chiếu giao giờ nhau trong cùng 1 phòng  Chỉ 1 request thành công.
+• Nghiệm thu: 2 Admin gửi request đồng thời xếp 2 suất chiếu giao giờ nhau trong cùng 1 phòng -> Chỉ 1 request thành công. Admin không thể tắt phòng đang có suất chiếu tương lai.
 FR-SHOW-02
 Hủy suất chiếu & Điều phối hoàn tiền tự động (Showtime Cancellation & Refund Pipeline)
 Admin thực hiện hủy một suất chiếu đang SCHEDULED. Hệ thống tuân thủ nghiêm ngặt thứ tự khóa tài nguyên chống Deadlock (SRS mục 4.4):
@@ -146,9 +146,9 @@ Khách chọn từ 1–8 ghế trong cùng một showtime_id. Trong Transaction:
 2. Sắp xếp showtime_seat_id tăng dần và khóa FOR UPDATE kèm điều kiện showtime_id.
 
 3. Nếu tất cả ghế đều AVAILABLE, tạo bookings (PENDING_PAYMENT, expires_at = NOW() + 10 phút), lưu cứng giá vé vào booking_items và cập nhật ghế sang HELD.
-   • Lỗi: Bất kỳ ghế nào đang BOOKED, đang HELD (còn hạn) hoặc không thuộc showtime_id yêu cầu -> Rollback toàn bộ và trả về 409 Conflict; Khách hàng đã đạt giới hạn tối đa 2 đơn chờ thanh toán (max-pending-per-user) -> 429 Too Many Requests (mã 1507).
+   • Lỗi: Bất kỳ ghế nào đang BOOKED, đang HELD (còn hạn), không thuộc showtime_id yêu cầu, hoặc ghế vật lý bị vô hiệu hóa (is_active = false) -> Rollback toàn bộ và trả về 409 Conflict (mã 1504: SEAT_NOT_AVAILABLE); Khách hàng đã đạt giới hạn tối đa 2 đơn chờ thanh toán (max-pending-per-user) -> 429 Too Many Requests (mã 1507).
 
-• Nghiệm thu: 50 request đồng thời cùng giữ ghế A1 của suất chiếu S1  Đúng 1 booking được tạo, 49 request nhận 409 Conflict.
+• Nghiệm thu: 50 request đồng thời cùng giữ ghế A1 của suất chiếu S1 -> Đúng 1 booking được tạo, 49 request nhận 409 Conflict. Ghế có is_active = false không thể đặt và hiển thị vô hiệu hóa trên sơ đồ ghế. Đổi loại ghế vật lý tự động cập nhật lại giá cho các suất chiếu SCHEDULED tương lai ở trạng thái AVAILABLE.
 FR-BOOK-03
 Giải phóng tự động đơn giữ ghế quá hạn
 Tác vụ nền (@Scheduled chạy mỗi 30 giây) tìm các đơn PENDING_PAYMENT có expires_at < NOW(). Với từng đơn, khóa theo thứ tự bookings  showtime_seats  vouchers, chuyển đơn sang EXPIRED, giải phóng các ghế đang gắn với held_by_booking_id = booking.id về AVAILABLE, và chuyển voucher_redemptions sang RELEASED (giảm reserved_count).
@@ -931,6 +931,7 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
 
 8. Lịch sử Thay đổi (Changelog)
 - Phiên bản 2.5 (2026-11-06):
+  + Bổ sung G2-02: Chặn đặt ghế không hoạt động (is_active = false, mã 1504), tự động tính lại giá các suất chiếu tương lai khi đổi loại ghế, và chặn vô hiệu hóa phòng khi còn suất chiếu tương lai (mã 1312).
   + Bổ sung FR-BOOK-04: Giới hạn tối đa 2 đơn giữ vé PENDING_PAYMENT còn hiệu lực trên mỗi tài khoản khách hàng, trả về HTTP 429 (Mã 1507) khi vượt hạn mức.
   + Bổ sung mã lỗi 1507 vào FR-BOOK-02 và hoàn thiện khóa bi quan bảng users ở đầu chuỗi giao dịch createBooking.
   + Cập nhật mục 4.4: Bổ sung khóa bảng users (FOR UPDATE) đầu tiên trong chuỗi khóa chống Deadlock.

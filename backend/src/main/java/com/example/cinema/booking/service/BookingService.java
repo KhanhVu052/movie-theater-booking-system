@@ -145,6 +145,9 @@ public class BookingService {
             if (seat.getStatus() != ShowtimeSeatStatus.AVAILABLE) {
                 throw new AppException(ErrorCode.SEAT_NOT_AVAILABLE);
             }
+            if (seat.getSeat() == null || !Boolean.TRUE.equals(seat.getSeat().getIsActive())) {
+                throw new AppException(ErrorCode.SEAT_NOT_AVAILABLE);
+            }
             requestedSeats.add(seat);
             subtotalAmount += seat.getPrice();
         }
