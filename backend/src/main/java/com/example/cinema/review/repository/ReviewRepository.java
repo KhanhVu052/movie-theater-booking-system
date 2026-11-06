@@ -3,10 +3,12 @@ package com.example.cinema.review.repository;
 import com.example.cinema.booking.entity.Booking;
 import com.example.cinema.review.entity.Review;
 import com.example.cinema.review.enums.ReviewStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,7 +25,12 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @EntityGraph(attributePaths = {"user", "movie", "booking"})
     Optional<Review> findWithDetailsById(Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"user", "movie", "booking"})
+    @Query("SELECT r FROM Review r WHERE r.id = :id")
+    Optional<Review> findWithDetailsByIdForUpdate(@Param("id") Long id);
+
+    @EntityGraph(attributePaths = {"user", "movie"})
     Page<Review> findByMovieIdAndStatus(Long movieId, ReviewStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"user", "movie", "booking"})

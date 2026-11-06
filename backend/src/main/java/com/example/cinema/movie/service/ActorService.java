@@ -39,8 +39,8 @@ public class ActorService {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.ASC, "name"));
 
         Page<Actor> actorPage = (keyword == null || keyword.isBlank())
-                ? actorRepository.findAll(pageable)
-                : actorRepository.findByNameContainingIgnoreCase(keyword.trim(), pageable);
+                ? actorRepository.findByIsActiveTrue(pageable)
+                : actorRepository.findByNameContainingIgnoreCaseAndIsActiveTrue(keyword.trim(), pageable);
 
         return PageResponse.from(actorPage.map(actorMapper::toResponse));
     }
@@ -67,11 +67,13 @@ public class ActorService {
             throw new AppException(ErrorCode.ACTOR_IN_USE);
         }
 
-        actorRepository.delete(actor);
+        actor.setIsActive(false);
+        actorRepository.save(actor);
     }
 
     private Actor findActorByIdOrThrow(Long id) {
         return actorRepository.findById(id)
+                .filter(a -> Boolean.TRUE.equals(a.getIsActive()))
                 .orElseThrow(() -> new AppException(ErrorCode.ACTOR_NOT_FOUND));
     }
 }

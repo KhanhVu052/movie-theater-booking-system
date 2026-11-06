@@ -18,6 +18,7 @@ import Navbar from '../components/Navbar';
 import { movieApi } from '../api/movieApi';
 import MoviePoster from '../components/MoviePoster';
 import { toLocalDateStr } from '../utils/dates';
+import { getEmbedTrailerUrl } from '../utils/trailer';
 
 // Helpers
 const formatActorText = (movie) => {
@@ -69,18 +70,6 @@ const formatHour = (isoString) => {
   } catch {
     return isoString;
   }
-};
-
-const getEmbedTrailerUrl = (url) => {
-  if (!url) return '';
-  if (url.includes('youtube.com/embed/')) return url;
-  const ytMatch = url.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([\w-]{11})/
-  );
-  if (ytMatch && ytMatch[1]) {
-    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
-  }
-  return url;
 };
 
 // Generate 7 days starting today
@@ -596,6 +585,8 @@ export default function MovieDetail() {
                 src={getEmbedTrailerUrl(movie.trailerUrl)}
                 title={`${movie.title} Trailer`}
                 className="w-full h-full"
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                referrerPolicy="strict-origin-when-cross-origin"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />

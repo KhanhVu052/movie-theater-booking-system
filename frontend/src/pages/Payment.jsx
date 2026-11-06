@@ -91,22 +91,17 @@ export default function Payment() {
   }, [fetchBooking]);
 
   // Live countdown timer interval
+  const hasTimeLeft = timeLeft !== null;
   useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0 || isExpired) return;
+    if (timeLeft === null || isExpired) return;
+    const id = setInterval(() => setTimeLeft((p) => Math.max(0, p - 1)), 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExpired, hasTimeLeft]);
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setIsExpired(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft, isExpired]);
+  useEffect(() => {
+    if (timeLeft === 0) setIsExpired(true);
+  }, [timeLeft]);
 
   // Format MM:SS for countdown display
   const countdownFormatted = useMemo(() => {

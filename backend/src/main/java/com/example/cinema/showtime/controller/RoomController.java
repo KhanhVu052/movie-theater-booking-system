@@ -1,6 +1,7 @@
 package com.example.cinema.showtime.controller;
 
 import com.example.cinema.common.dto.ApiResponse;
+import com.example.cinema.common.dto.StatusToggleRequest;
 import com.example.cinema.showtime.dto.request.RoomRequest;
 import com.example.cinema.showtime.dto.request.SeatBatchUpdateRequest;
 import com.example.cinema.showtime.dto.response.RoomResponse;
@@ -69,8 +70,8 @@ public class RoomController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<RoomResponse>> toggleRoomStatus(
             @PathVariable Long id,
-            @RequestParam boolean isActive
+            @Valid @RequestBody StatusToggleRequest request
     ) {
-        return ResponseEntity.ok(ApiResponse.success("Room status updated", roomService.toggleRoomStatus(id, isActive)));
+        return ResponseEntity.ok(ApiResponse.success("Room status updated", roomService.toggleRoomStatus(id, request.isActive())));
     }
 }

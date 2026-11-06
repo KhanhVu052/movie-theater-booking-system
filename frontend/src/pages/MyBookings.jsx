@@ -35,6 +35,8 @@ export default function MyBookings() {
   const [activeTab, setActiveTab] = useState('ALL');
   const [copiedId, setCopiedId] = useState('');
   const [currentTime] = useState(() => Date.now());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Review modal states
   const [reviewModalData, setReviewModalData] = useState(null); // { movieId, bookingId, movieTitle }
@@ -61,7 +63,7 @@ export default function MyBookings() {
     setLoading(true);
     setError('');
     try {
-      const res = await bookingApi.getMyBookings({ page: 1, size: 50 });
+      const res = await bookingApi.getMyBookings({ page: currentPage, size: 20 });
       const raw = res?.data?.data ?? res?.data;
       const list = Array.isArray(raw)
         ? raw
@@ -71,13 +73,15 @@ export default function MyBookings() {
         ? raw.content
         : [];
       setBookings(list);
+      const total = raw?.totalPages || (raw?.totalItems ? Math.ceil(raw.totalItems / 20) : 1);
+      setTotalPages(total > 0 ? total : 1);
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to load booking history.';
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, currentPage]);
 
   useEffect(() => {
     fetchMyBookings();
@@ -97,10 +101,14 @@ export default function MyBookings() {
     return bookings;
   }, [bookings, activeTab]);
 
-  const handleCopyCode = (code, id) => {
-    navigator.clipboard.writeText(code);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(''), 2000);
+  const handleCopyCode = async (code, id) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(''), 2000);
+    } catch {
+      // ignore clipboard error
+    }
   };
 
   const handleCancelBooking = async (id) => {
@@ -519,6 +527,29 @@ export default function MyBookings() {
                     </div>
                   );
                 })}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-3 pt-4">
+                    <button
+                      type="button"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#ab9a84] hover:text-[#f2e8dc] disabled:opacity-40 cursor-pointer"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs text-[#a3907c]">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1.5 rounded bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#ab9a84] hover:text-[#f2e8dc] disabled:opacity-40 cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </>

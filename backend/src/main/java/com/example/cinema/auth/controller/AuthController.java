@@ -7,6 +7,7 @@ import com.example.cinema.auth.dto.response.UserResponse;
 import com.example.cinema.auth.security.UserPrincipal;
 import com.example.cinema.auth.service.AuthService;
 import com.example.cinema.common.dto.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +38,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse response = authService.login(request);
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String ip = httpRequest != null && httpRequest.getRemoteAddr() != null ? httpRequest.getRemoteAddr() : "127.0.0.1";
+        AuthResponse response = authService.login(request, ip);
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 

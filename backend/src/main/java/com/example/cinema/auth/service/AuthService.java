@@ -24,6 +24,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -38,6 +40,10 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        if (request.password().getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
+
         String normalizedEmail = request.email().trim().toLowerCase();
 
         if (userRepository.existsByEmail(normalizedEmail)) {
@@ -51,9 +57,9 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, String ip) {
         String normalizedEmail = request.email().trim().toLowerCase();
-        loginAttemptService.checkLoginAllowed(normalizedEmail);
+        loginAttemptService.checkLoginAllowed(normalizedEmail, ip);
 
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -63,7 +69,7 @@ public class AuthService {
                     )
             );
 
-            loginAttemptService.resetAttempts(normalizedEmail);
+            loginAttemptService.resetAttempts(normalizedEmail, ip);
 
             UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
             return buildAuthResponse(principal.getUser());
@@ -71,9 +77,14 @@ public class AuthService {
         } catch (DisabledException ex) {
             throw new AppException(ErrorCode.USER_INACTIVE);
         } catch (BadCredentialsException | InternalAuthenticationServiceException ex) {
-            loginAttemptService.recordFailedAttempt(normalizedEmail);
+            loginAttemptService.recordFailedAttempt(normalizedEmail, ip);
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponse login(LoginRequest request) {
+        return login(request, "127.0.0.1");
     }
 
     @Transactional(readOnly = true)

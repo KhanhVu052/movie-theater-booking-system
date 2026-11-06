@@ -10,4 +10,6 @@ public interface GenreRepository extends JpaRepository<Genre, Long> {
     boolean existsByNameIgnoreCase(String name);
 
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+
+    java.util.List<Genre> findByIsActiveTrueOrderByNameAsc();
 }

@@ -40,7 +40,7 @@ public class GenreService {
 
     @Transactional(readOnly = true)
     public List<GenreResponse> getAllGenres() {
-        return genreRepository.findAll(Sort.by(Sort.Direction.ASC, "name"))
+        return genreRepository.findByIsActiveTrueOrderByNameAsc()
                 .stream()
                 .map(genreMapper::toResponse)
                 .toList();
@@ -72,11 +72,13 @@ public class GenreService {
             throw new AppException(ErrorCode.GENRE_IN_USE);
         }
 
-        genreRepository.delete(genre);
+        genre.setIsActive(false);
+        genreRepository.save(genre);
     }
 
     private Genre findGenreByIdOrThrow(Long id) {
         return genreRepository.findById(id)
+                .filter(g -> Boolean.TRUE.equals(g.getIsActive()))
                 .orElseThrow(() -> new AppException(ErrorCode.GENRE_NOT_FOUND));
     }
 }

@@ -46,9 +46,8 @@ public class GlobalExceptionHandler {
         Map<String, String> errors = new HashMap<>();
 
         exception.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
+            String field = (error instanceof FieldError fe) ? fe.getField() : error.getObjectName();
+            errors.put(field, error.getDefaultMessage());
         });
 
         ApiResponse<Void> apiResponse = ApiResponse.error(
@@ -138,6 +137,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getStatusCode())
                 .body(ApiResponse.error(errorCode.getCode(), errorCode.getMessage()));
+    }
+
+    @ExceptionHandler({
+            org.springframework.web.HttpRequestMethodNotSupportedException.class,
+            org.springframework.web.HttpMediaTypeNotSupportedException.class,
+            org.springframework.web.HttpMediaTypeNotAcceptableException.class,
+            org.springframework.web.servlet.resource.NoResourceFoundException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleSpringWebErrors(Exception ex) {
+        org.springframework.http.HttpStatusCode status = (ex instanceof org.springframework.web.ErrorResponse er)
+                ? er.getStatusCode() : org.springframework.http.HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status)
+                .body(ApiResponse.error(status.value(), org.springframework.http.HttpStatus.valueOf(status.value()).getReasonPhrase()));
     }
 
     @ExceptionHandler(value = Exception.class)

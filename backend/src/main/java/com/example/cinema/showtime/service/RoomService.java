@@ -96,7 +96,8 @@ public class RoomService {
 
     @Transactional
     public List<SeatResponse> batchUpdateSeats(Long roomId, SeatBatchUpdateRequest request) {
-        findRoomWithCinemaOrThrow(roomId);
+        roomRepository.findByIdForUpdate(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
 
         List<Seat> seats = seatRepository.findByIdInAndRoomId(request.seatIds(), roomId);
         if (seats.size() != request.seatIds().size()) {
@@ -107,7 +108,8 @@ public class RoomService {
 
         boolean affectsType = request.type() != null;
         boolean affectsPairGroup = request.pairGroup() != null;
-        if (affectsType || affectsPairGroup) {
+        boolean deactivating = Boolean.FALSE.equals(request.isActive());
+        if (affectsType || affectsPairGroup || deactivating) {
             boolean hasActiveReservations = showtimeSeatRepository.existsBySeatIdInAndShowtimeStatusAndShowtimeStartTimeAfterAndStatusIn(
                     request.seatIds(),
                     ShowtimeStatus.SCHEDULED,
@@ -145,13 +147,11 @@ public class RoomService {
             }
         }
 
+        long newPrice = request.type() != null ? pricingService.calculateSeatPrice(null, null, request.type()) : 0L;
         for (Seat seat : seats) {
             if (request.type() != null && request.type() != seat.getType()) {
                 seat.setType(request.type());
-                for (ShowtimeSeat ss : showtimeSeatRepository.findFutureAvailableBySeatId(seat.getId(), now)) {
-                    long newPrice = pricingService.calculateSeatPrice(ss.getShowtime(), request.type());
-                    showtimeSeatRepository.repriceIfAvailable(ss.getId(), newPrice);
-                }
+                showtimeSeatRepository.repriceFutureAvailable(seat.getId(), newPrice, now);
             }
             if (request.isActive() != null) {
                 seat.setIsActive(request.isActive());

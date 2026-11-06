@@ -9,5 +9,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ActorRepository extends JpaRepository<Actor, Long> {
 
+    Page<Actor> findByIsActiveTrue(Pageable pageable);
+
+    Page<Actor> findByNameContainingIgnoreCaseAndIsActiveTrue(String keyword, Pageable pageable);
+
     Page<Actor> findByNameContainingIgnoreCase(String keyword, Pageable pageable);
 }

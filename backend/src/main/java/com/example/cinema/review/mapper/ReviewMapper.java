@@ -4,6 +4,7 @@ import com.example.cinema.auth.entity.User;
 import com.example.cinema.booking.entity.Booking;
 import com.example.cinema.movie.entity.Movie;
 import com.example.cinema.review.dto.request.ReviewRequest;
+import com.example.cinema.review.dto.response.PublicReviewResponse;
 import com.example.cinema.review.dto.response.ReviewResponse;
 import com.example.cinema.review.entity.Review;
 import com.example.cinema.review.enums.ReviewStatus;
@@ -38,6 +39,18 @@ public class ReviewMapper {
                 .status(review.getStatus())
                 .createdAt(review.getCreatedAt())
                 .updatedAt(review.getUpdatedAt())
+                .build();
+    }
+
+    public PublicReviewResponse toPublicResponse(Review r) {
+        return PublicReviewResponse.builder()
+                .id(r.getId())
+                .userFullName(r.getUser().getFullName())
+                .userAvatarUrl(r.getUser().getAvatarUrl())
+                .movieId(r.getMovie().getId())
+                .rating(r.getRating())
+                .comment(r.getComment())
+                .createdAt(r.getCreatedAt())
                 .build();
     }
 }

@@ -38,6 +38,10 @@ public class Actor {
     @Column(name = "avatar_url", length = 500)
     String avatarUrl;
 
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    Boolean isActive = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     LocalDateTime createdAt;

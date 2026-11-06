@@ -63,10 +63,14 @@ export default function ETicketModal({ booking, isOpen, onClose }) {
 
   const ticketCode = `GOTORO-${String(booking.id).padStart(8, '0')}`;
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(ticketCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(ticketCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore clipboard error
+    }
   };
 
   const handlePrint = () => {

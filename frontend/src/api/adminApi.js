@@ -13,9 +13,7 @@ export const adminApi = {
 
   // Confirm manual refund for transactions requiring refund (FR-PAY-02)
   confirmManualRefund: (id, note = null) => {
-    return axiosClient.patch(`/payments/${id}/refund`, null, {
-      params: note ? { note } : {},
-    });
+    return axiosClient.patch(`/payments/${id}/refund`, note ? { note } : {});
   },
 
   // Movie administration
@@ -41,9 +39,7 @@ export const adminApi = {
   },
 
   toggleVoucherStatus: (id, isActive) => {
-    return axiosClient.patch(`/vouchers/${id}/status`, null, {
-      params: { isActive },
-    });
+    return axiosClient.patch(`/vouchers/${id}/status`, { isActive });
   },
 
   // Review moderation for Admin (FR-REV-01)
@@ -52,9 +48,7 @@ export const adminApi = {
   },
 
   updateReviewStatus: (id, status) => {
-    return axiosClient.patch(`/reviews/${id}/status`, null, {
-      params: { status },
-    });
+    return axiosClient.patch(`/reviews/${id}/status`, { status });
   },
 
   // Showtime & Schedule management (FR-SHOW-01)
@@ -77,7 +71,7 @@ export const adminApi = {
   },
 
   cancelShowtime: (id) => {
-    return axiosClient.delete(`/showtimes/${id}`);
+    return axiosClient.post(`/showtimes/${id}/cancel`);
   },
 
   getCinemas: () => {

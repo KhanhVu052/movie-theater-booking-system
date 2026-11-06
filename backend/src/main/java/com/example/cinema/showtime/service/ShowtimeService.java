@@ -237,7 +237,9 @@ public class ShowtimeService {
 
                 List<Payment> payments = paymentRepository.findByBookingId(booking.getId());
                 for (Payment payment : payments) {
-                    if (payment.getStatus() == PaymentStatus.SUCCESS && payment.getRefundStatus() == PaymentRefundStatus.NONE) {
+                    if (payment.getStatus() == PaymentStatus.SUCCESS
+                            && payment.getRefundStatus() == PaymentRefundStatus.NONE
+                            && payment.getAmount() != null && payment.getAmount() > 0) {
                         payment.setRefundStatus(PaymentRefundStatus.REFUND_REQUIRED);
                         paymentRepository.save(payment);
                     }

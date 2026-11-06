@@ -52,7 +52,6 @@ public class SecurityConfig {
                                 "/api/v1/rooms/**",
                                 "/api/v1/showtimes/**",
                                 "/api/v1/vouchers",
-                                "/api/v1/vouchers/code/**",
                                 "/api/v1/payments/vnpay-return",
                                 "/api/v1/payments/vnpay-ipn"
                         ).permitAll()

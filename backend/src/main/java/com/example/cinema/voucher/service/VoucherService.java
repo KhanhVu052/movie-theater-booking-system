@@ -72,17 +72,20 @@ public class VoucherService {
 
     @Transactional(readOnly = true)
     public VoucherResponse getVoucherByCode(String code) {
+        LocalDateTime now = LocalDateTime.now();
         Voucher voucher = voucherRepository.findByCodeIgnoreCase(code.trim())
+                .filter(x -> Boolean.TRUE.equals(x.getIsActive())
+                        && !now.isBefore(x.getStartAt()) && !now.isAfter(x.getEndAt()))
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
         return voucherMapper.toResponse(voucher);
     }
 
     @Transactional
     public VoucherResponse toggleVoucherStatus(Long id, boolean isActive) {
-        Voucher voucher = voucherRepository.findById(id)
+        Voucher voucher = voucherRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
         voucher.setIsActive(isActive);
-        return voucherMapper.toResponse(voucherRepository.save(voucher));
+        return voucherMapper.toResponse(voucher);
     }
 
     @Transactional

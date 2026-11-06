@@ -2,81 +2,40 @@ package com.example.cinema.auth.service;
 
 import com.example.cinema.common.exception.AppException;
 import com.example.cinema.common.exception.ErrorCode;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class LoginAttemptService {
+    private static final int MAX_PER_ACCOUNT_IP = 5;
+    private static final int MAX_PER_IP = 30;
 
-    public static final int MAX_ATTEMPTS = 5;
-    public static final long LOCK_DURATION_MS = 15 * 60 * 1000L; // 15 minutes
-    public static final int MAX_CACHE_SIZE = 10_000;
+    private final Cache<String, AtomicInteger> byAccountIp = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(15)).maximumSize(100_000).build();
+    private final Cache<String, AtomicInteger> byIp = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(15)).maximumSize(100_000).build();
 
-    private final Map<String, AttemptInfo> attemptsCache = new ConcurrentHashMap<>();
-
-    public void checkLoginAllowed(String email) {
-        if (email == null) return;
-        String key = email.trim().toLowerCase();
-        AttemptInfo info = attemptsCache.get(key);
-
-        if (info != null) {
-            long now = System.currentTimeMillis();
-            if (now - info.lastAttemptTime > LOCK_DURATION_MS) {
-                attemptsCache.remove(key, info);
-            } else if (info.count >= MAX_ATTEMPTS) {
-                throw new AppException(ErrorCode.TOO_MANY_LOGIN_ATTEMPTS);
-            }
+    public void checkLoginAllowed(String email, String ip) {
+        if (count(byAccountIp, email + "|" + ip) >= MAX_PER_ACCOUNT_IP || count(byIp, ip) >= MAX_PER_IP) {
+            throw new AppException(ErrorCode.TOO_MANY_LOGIN_ATTEMPTS);
         }
     }
 
-    public void recordFailedAttempt(String email) {
-        if (email == null) return;
-        String key = email.trim().toLowerCase();
-        long now = System.currentTimeMillis();
-
-        if (attemptsCache.size() >= MAX_CACHE_SIZE) {
-            evictExpiredEntries(now);
-        }
-
-        attemptsCache.compute(key, (k, current) -> {
-            if (current == null || (now - current.lastAttemptTime > LOCK_DURATION_MS)) {
-                return new AttemptInfo(1, now);
-            } else {
-                return new AttemptInfo(current.count + 1, now);
-            }
-        });
+    public void recordFailedAttempt(String email, String ip) {
+        byAccountIp.get(email + "|" + ip, k -> new AtomicInteger()).incrementAndGet();
+        byIp.get(ip, k -> new AtomicInteger()).incrementAndGet();
     }
 
-    public void resetAttempts(String email) {
-        if (email == null) return;
-        attemptsCache.remove(email.trim().toLowerCase());
+    public void resetAttempts(String email, String ip) {
+        byAccountIp.invalidate(email + "|" + ip);
     }
 
-    public int getFailedAttempts(String email) {
-        if (email == null) return 0;
-        AttemptInfo info = attemptsCache.get(email.trim().toLowerCase());
-        if (info == null || (System.currentTimeMillis() - info.lastAttemptTime > LOCK_DURATION_MS)) {
-            return 0;
-        }
-        return info.count;
-    }
-
-    private void evictExpiredEntries(long now) {
-        attemptsCache.entrySet().removeIf(entry -> now - entry.getValue().lastAttemptTime > LOCK_DURATION_MS);
-        if (attemptsCache.size() >= MAX_CACHE_SIZE) {
-            attemptsCache.clear();
-        }
-    }
-
-    private static class AttemptInfo {
-        final int count;
-        final long lastAttemptTime;
-
-        AttemptInfo(int count, long lastAttemptTime) {
-            this.count = count;
-            this.lastAttemptTime = lastAttemptTime;
-        }
+    private int count(Cache<String, AtomicInteger> c, String k) {
+        AtomicInteger v = c.getIfPresent(k);
+        return v == null ? 0 : v.get();
     }
 }

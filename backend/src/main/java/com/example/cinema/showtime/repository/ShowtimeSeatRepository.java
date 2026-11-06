@@ -66,6 +66,15 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
             """)
     int repriceIfAvailable(@Param("id") Long id, @Param("price") long price);
 
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE ShowtimeSeat ss SET ss.price = :price
+            WHERE ss.seat.id = :seatId AND ss.status = com.example.cinema.showtime.enums.ShowtimeSeatStatus.AVAILABLE
+              AND ss.showtime.id IN (SELECT s.id FROM Showtime s WHERE s.startTime > :now
+                                      AND s.status = com.example.cinema.showtime.enums.ShowtimeStatus.SCHEDULED)
+            """)
+    int repriceFutureAvailable(@Param("seatId") Long seatId, @Param("price") long price, @Param("now") LocalDateTime now);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")})
     @Query("""

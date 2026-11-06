@@ -3,6 +3,7 @@ package com.example.cinema.review.controller;
 import com.example.cinema.common.dto.ApiResponse;
 import com.example.cinema.common.dto.PageResponse;
 import com.example.cinema.review.dto.request.ReviewRequest;
+import com.example.cinema.review.dto.request.ReviewStatusUpdateRequest;
 import com.example.cinema.review.dto.response.MovieReviewSummaryResponse;
 import com.example.cinema.review.dto.response.ReviewResponse;
 import com.example.cinema.review.enums.ReviewStatus;
@@ -85,18 +86,11 @@ public class ReviewController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ReviewResponse>> updateReviewStatusByAdmin(
             @PathVariable Long id,
-            @RequestParam ReviewStatus status
+            @Valid @RequestBody ReviewStatusUpdateRequest request
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Review status updated successfully",
-                reviewService.updateReviewStatusByAdmin(id, status)
+                reviewService.updateReviewStatusByAdmin(id, request.getEffectiveStatus())
         ));
-    }
-
-    @PatchMapping("/showtime/{showtimeId}/simulate-ended")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> simulateShowtimeEnded(@PathVariable Long showtimeId) {
-        reviewService.simulateShowtimeEnded(showtimeId);
-        return ResponseEntity.ok(ApiResponse.success("Showtime fast-forwarded to ended state for review testing", null));
     }
 }

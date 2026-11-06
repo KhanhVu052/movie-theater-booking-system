@@ -5,6 +5,7 @@ import com.example.cinema.common.dto.ApiResponse;
 import com.example.cinema.common.dto.PageResponse;
 import com.example.cinema.payment.config.VnPayUtil;
 import com.example.cinema.payment.dto.request.PaymentCreateRequest;
+import com.example.cinema.payment.dto.request.RefundConfirmRequest;
 import com.example.cinema.payment.dto.response.PaymentResponse;
 import com.example.cinema.payment.dto.response.PaymentUrlResponse;
 import com.example.cinema.payment.dto.response.RevenueReportResponse;
@@ -64,18 +65,6 @@ public class PaymentController {
                 .body(ApiResponse.success("VNPay payment URL generated successfully", response));
     }
 
-    @PostMapping("/simulate-success")
-    public ResponseEntity<ApiResponse<PaymentResponse>> simulatePaymentSuccess(
-            Authentication authentication,
-            @Valid @RequestBody PaymentCreateRequest request
-    ) {
-        PaymentResponse response = deadlockRetryExecutor.executeWithRetry(
-                "SimulatePayment-" + request.bookingId(),
-                () -> paymentService.simulatePaymentSuccess(authentication.getName(), request.bookingId())
-        );
-        return ResponseEntity.ok(ApiResponse.success("Test payment simulated successfully", response));
-    }
-
     @GetMapping("/vnpay-return")
     public ResponseEntity<ApiResponse<VnPayReturnResponse>> handleVnPayReturn(
             @RequestParam Map<String, String> params
@@ -96,7 +85,7 @@ public class PaymentController {
     }
 
     @GetMapping("/booking/{bookingId}")
-    public ResponseEntity<ApiResponse<List<PaymentResponse>>> getPaymentsByBooking(
+    public ResponseEntity<ApiResponse<List<?>>> getPaymentsByBooking(
             Authentication authentication,
             @PathVariable Long bookingId
     ) {
@@ -123,9 +112,10 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<PaymentResponse>> confirmManualRefund(
             Authentication authentication,
             @PathVariable Long id,
-            @RequestParam(required = false) String note
+            @Valid @RequestBody(required = false) RefundConfirmRequest body
     ) {
         String adminEmail = authentication != null ? authentication.getName() : null;
+        String note = body != null ? body.note() : null;
         PaymentResponse response = deadlockRetryExecutor.executeWithRetry(
                 "ConfirmRefund-" + id,
                 () -> paymentService.confirmManualRefund(id, adminEmail, note)

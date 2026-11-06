@@ -26,6 +26,7 @@ import { movieApi } from '../api/movieApi';
 import MoviePoster from '../components/MoviePoster';
 import CustomDatePicker from '../components/CustomDatePicker';
 import { toLocalDateStr } from '../utils/dates';
+import { getEmbedTrailerUrl } from '../utils/trailer';
 
 // Normalize and extract data from Backend ApiResponse<T> or PageResponse<T>
 const extractPayload = (response) => {
@@ -89,19 +90,6 @@ const formatShowtimeHour = (isoString) => {
   } catch {
     return isoString;
   }
-};
-
-// Convert regular YouTube URL to Iframe Embed URL
-const getEmbedTrailerUrl = (url) => {
-  if (!url) return '';
-  if (url.includes('youtube.com/embed/')) return url;
-  const ytMatch = url.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([\w-]{11})/
-  );
-  if (ytMatch && ytMatch[1]) {
-    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
-  }
-  return url;
 };
 
 export default function Home() {
@@ -332,10 +320,14 @@ export default function Home() {
     }
   };
 
-  const handleCopyVoucher = (code) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(''), 2200);
+  const handleCopyVoucher = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(''), 2200);
+    } catch {
+      // ignore clipboard error
+    }
   };
 
   return (
@@ -1014,6 +1006,8 @@ export default function Home() {
                 src={getEmbedTrailerUrl(trailerModal.trailerUrl)}
                 title={`${trailerModal.title} Official Trailer`}
                 className="w-full h-full"
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                referrerPolicy="strict-origin-when-cross-origin"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />

@@ -1,6 +1,7 @@
 package com.example.cinema.voucher.controller;
 
 import com.example.cinema.common.dto.ApiResponse;
+import com.example.cinema.common.dto.StatusToggleRequest;
 import com.example.cinema.voucher.dto.request.VoucherRequest;
 import com.example.cinema.voucher.dto.response.VoucherResponse;
 import com.example.cinema.voucher.service.VoucherService;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -58,8 +58,8 @@ public class VoucherController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<VoucherResponse>> toggleVoucherStatus(
             @PathVariable Long id,
-            @RequestParam boolean isActive
+            @Valid @RequestBody StatusToggleRequest request
     ) {
-        return ResponseEntity.ok(ApiResponse.success("Voucher status updated", voucherService.toggleVoucherStatus(id, isActive)));
+        return ResponseEntity.ok(ApiResponse.success("Voucher status updated", voucherService.toggleVoucherStatus(id, request.isActive())));
     }
 }

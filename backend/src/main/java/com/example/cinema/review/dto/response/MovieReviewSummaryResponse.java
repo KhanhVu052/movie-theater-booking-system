@@ -8,6 +8,6 @@ public record MovieReviewSummaryResponse(
         Long movieId,
         Double averageRating,
         Long totalReviews,
-        PageResponse<ReviewResponse> reviews
+        PageResponse<PublicReviewResponse> reviews
 ) {
 }

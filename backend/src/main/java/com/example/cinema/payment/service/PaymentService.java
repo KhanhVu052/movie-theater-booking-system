@@ -95,7 +95,7 @@ public class PaymentService {
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
         if (!booking.getUser().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
+            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
         }
 
         if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
@@ -369,7 +369,7 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> getPaymentsByBooking(String userEmail, Long bookingId) {
+    public List<?> getPaymentsByBooking(String userEmail, Long bookingId) {
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
@@ -377,11 +377,12 @@ public class PaymentService {
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
         if (!booking.getUser().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
+            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
         }
 
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
         return paymentRepository.findByBookingIdOrderByCreatedAtAsc(bookingId).stream()
-                .map(paymentMapper::toResponse)
+                .map(p -> isAdmin ? paymentMapper.toResponse(p) : paymentMapper.toCustomerResponse(p))
                 .toList();
     }
 
@@ -418,7 +419,7 @@ public class PaymentService {
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
         if (!booking.getUser().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
+            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
         }
 
         if (booking.getStatus() == BookingStatus.CONFIRMED) {

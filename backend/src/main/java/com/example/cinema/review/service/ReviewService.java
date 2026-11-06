@@ -75,7 +75,7 @@ public class ReviewService {
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        Review review = reviewRepository.findWithDetailsById(reviewId)
+        Review review = reviewRepository.findWithDetailsByIdForUpdate(reviewId)
                 .orElseThrow(() -> new AppException(ErrorCode.REVIEW_NOT_FOUND));
 
         if (!review.getUser().getId().equals(currentUser.getId())) {
@@ -108,7 +108,7 @@ public class ReviewService {
                 .movieId(movieId)
                 .averageRating(roundedAvg)
                 .totalReviews(totalVisible)
-                .reviews(PageResponse.from(reviewPage.map(reviewMapper::toResponse)))
+                .reviews(PageResponse.from(reviewPage.map(reviewMapper::toPublicResponse)))
                 .build();
     }
 
@@ -126,7 +126,7 @@ public class ReviewService {
 
     @Transactional
     public ReviewResponse updateReviewStatusByAdmin(Long reviewId, ReviewStatus status) {
-        Review review = reviewRepository.findWithDetailsById(reviewId)
+        Review review = reviewRepository.findWithDetailsByIdForUpdate(reviewId)
                 .orElseThrow(() -> new AppException(ErrorCode.REVIEW_NOT_FOUND));
 
         review.setStatus(status);

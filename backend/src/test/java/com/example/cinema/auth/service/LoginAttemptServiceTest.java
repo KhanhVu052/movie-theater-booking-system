@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class LoginAttemptServiceTest {
@@ -19,56 +19,64 @@ class LoginAttemptServiceTest {
     }
 
     @Test
-    @DisplayName("G4-07: Login allowed initially with zero failed attempts")
+    @DisplayName("G4-07 / Enterprise #5: Login allowed initially with zero failed attempts")
     void loginAllowedInitially() {
-        loginAttemptService.checkLoginAllowed("user@example.com");
-        assertThat(loginAttemptService.getFailedAttempts("user@example.com")).isEqualTo(0);
+        assertThatCode(() -> loginAttemptService.checkLoginAllowed("user@example.com", "127.0.0.1"))
+                .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("G4-07: Blocking after 5 failed login attempts within 15 minutes")
+    @DisplayName("G4-07 / Enterprise #5: Blocking after 5 failed login attempts for account+IP")
     void blockAfterFiveFailedAttempts() {
         String email = "victim@example.com";
+        String ip = "192.168.1.100";
 
         for (int i = 1; i <= 4; i++) {
-            loginAttemptService.recordFailedAttempt(email);
-            loginAttemptService.checkLoginAllowed(email); // Still allowed
-            assertThat(loginAttemptService.getFailedAttempts(email)).isEqualTo(i);
+            loginAttemptService.recordFailedAttempt(email, ip);
+            loginAttemptService.checkLoginAllowed(email, ip); // Still allowed
         }
 
-        loginAttemptService.recordFailedAttempt(email);
-        assertThat(loginAttemptService.getFailedAttempts(email)).isEqualTo(5);
+        loginAttemptService.recordFailedAttempt(email, ip);
 
-        assertThatThrownBy(() -> loginAttemptService.checkLoginAllowed(email))
+        assertThatThrownBy(() -> loginAttemptService.checkLoginAllowed(email, ip))
                 .isInstanceOf(AppException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.TOO_MANY_LOGIN_ATTEMPTS);
     }
 
     @Test
-    @DisplayName("G4-07: Resetting attempts restores login permission immediately")
-    void resetClearsLockout() {
-        String email = "recovering@example.com";
+    @DisplayName("Enterprise #5: Blocking IP after 30 failed attempts across different accounts")
+    void blockIpAfterThirtyFailedAttempts() {
+        String ip = "10.0.0.1";
 
-        for (int i = 0; i < 5; i++) {
-            loginAttemptService.recordFailedAttempt(email);
+        for (int i = 1; i <= 29; i++) {
+            loginAttemptService.recordFailedAttempt("user_" + i + "@cinema.com", ip);
+            loginAttemptService.checkLoginAllowed("new_user@cinema.com", ip);
         }
 
-        assertThatThrownBy(() -> loginAttemptService.checkLoginAllowed(email))
-                .isInstanceOf(AppException.class);
+        loginAttemptService.recordFailedAttempt("user_30@cinema.com", ip);
 
-        loginAttemptService.resetAttempts(email);
-        loginAttemptService.checkLoginAllowed(email); // Should succeed without exception
-        assertThat(loginAttemptService.getFailedAttempts(email)).isEqualTo(0);
+        assertThatThrownBy(() -> loginAttemptService.checkLoginAllowed("any_user@cinema.com", ip))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.TOO_MANY_LOGIN_ATTEMPTS);
     }
 
     @Test
-    @DisplayName("HP-04: Bounded cache eviction when MAX_CACHE_SIZE is reached")
-    void boundedCacheEviction() {
-        for (int i = 0; i < 50; i++) {
-            loginAttemptService.recordFailedAttempt("random_" + i + "@cinema.com");
+    @DisplayName("G4-07 / Enterprise #5: Resetting attempts restores login permission immediately")
+    void resetClearsLockout() {
+        String email = "recovering@example.com";
+        String ip = "192.168.1.101";
+
+        for (int i = 0; i < 5; i++) {
+            loginAttemptService.recordFailedAttempt(email, ip);
         }
-        assertThat(loginAttemptService.getFailedAttempts("random_0@cinema.com")).isEqualTo(1);
+
+        assertThatThrownBy(() -> loginAttemptService.checkLoginAllowed(email, ip))
+                .isInstanceOf(AppException.class);
+
+        loginAttemptService.resetAttempts(email, ip);
+        assertThatCode(() -> loginAttemptService.checkLoginAllowed(email, ip))
+                .doesNotThrowAnyException();
     }
 }
-

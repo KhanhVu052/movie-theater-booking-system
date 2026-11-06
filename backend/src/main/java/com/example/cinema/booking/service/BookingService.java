@@ -277,7 +277,7 @@ public class BookingService {
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
         if (!booking.getUser().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
+            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
         }
 
         if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
@@ -310,7 +310,7 @@ public class BookingService {
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
         if (!booking.getUser().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
+            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
         }
 
         if (booking.getStatus() != BookingStatus.CONFIRMED) {
@@ -338,7 +338,9 @@ public class BookingService {
 
         List<Payment> payments = paymentRepository.findByBookingId(booking.getId());
         for (Payment payment : payments) {
-            if (payment.getStatus() == PaymentStatus.SUCCESS && payment.getRefundStatus() == PaymentRefundStatus.NONE) {
+            if (payment.getStatus() == PaymentStatus.SUCCESS
+                    && payment.getRefundStatus() == PaymentRefundStatus.NONE
+                    && payment.getAmount() != null && payment.getAmount() > 0) {
                 payment.setRefundStatus(PaymentRefundStatus.REFUND_REQUIRED);
                 paymentRepository.save(payment);
             }
@@ -386,7 +388,7 @@ public class BookingService {
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
         if (!booking.getUser().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
+            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
         }
 
         List<BookingItem> items = bookingItemRepository.findByBookingIdOrderByIdAsc(bookingId);

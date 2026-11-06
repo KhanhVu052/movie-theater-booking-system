@@ -75,13 +75,16 @@ public class ShowtimeController {
                 .body(ApiResponse.success("Showtime created and seat inventory initialized successfully", response));
     }
 
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> cancelShowtime(@PathVariable Long id) {
+        deadlockRetryExecutor.runWithRetry("CancelShowtime-" + id, () -> showtimeService.cancelShowtime(id));
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> cancelShowtime(@PathVariable Long id) {
-        deadlockRetryExecutor.executeWithRetry("CancelShowtime-" + id, () -> {
-            showtimeService.cancelShowtime(id);
-            return null;
-        });
-        return ResponseEntity.ok(ApiResponse.success("Showtime cancelled successfully", null));
+    public ResponseEntity<Void> deleteShowtimeLegacy(@PathVariable Long id) {
+        return cancelShowtime(id);
     }
 }

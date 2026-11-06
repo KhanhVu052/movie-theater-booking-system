@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -16,6 +17,7 @@ public record MovieRequest(
         @Size(max = 255, message = "Title must not exceed 255 characters")
         String title,
 
+        @Size(max = 5000)
         String description,
 
         @Size(max = 150, message = "Director name must not exceed 150 characters")
@@ -35,10 +37,12 @@ public record MovieRequest(
         @Size(max = 50, message = "Original language must not exceed 50 characters")
         String originalLanguage,
 
-        @Size(max = 500, message = "Poster URL must not exceed 500 characters")
+        @Size(max = 500)
+        @Pattern(regexp = "^(https?://.*)?$", message = "Poster URL must be http(s)")
         String posterUrl,
 
-        @Size(max = 500, message = "Trailer URL must not exceed 500 characters")
+        @Size(max = 500)
+        @Pattern(regexp = "^(https://.*)?$", message = "Trailer URL must start with https://")
         String trailerUrl,
 
         @NotNull(message = "Movie status is required")
