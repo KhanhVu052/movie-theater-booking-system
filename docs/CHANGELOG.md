@@ -2,6 +2,7 @@
 
 Định dạng: `YYYY-MM-DD — ID task — Tóm tắt một câu về việc đã làm — SRS mục tương ứng (nếu có)`
 
+- 2026-11-06 — G3-01 — Luật ghế lẻ (Orphan Seat Detection): chặn đặt vé để lại 1 ghế trống đơn độc — SRS v3.0 (FR-BOOK-01)
 - 2026-11-06 — G2-06 — Báo cáo doanh thu: đếm đúng số vé và công suất ghế thực tế — SRS v2.9 (FR-REP-01)
 - 2026-11-06 — G2-05 — Cho phép khách tự hủy vé đã thanh toán trước giờ chiếu 60 phút — SRS v2.8 (FR-BOOK-08)
 - 2026-11-06 — G2-04 — Chặn kết thúc phim khi còn suất tương lai & chặn đặt vé phim đã kết thúc — SRS v2.7 (FR-SHOW-01, FR-BOOK-02)

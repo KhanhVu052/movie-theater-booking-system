@@ -14,5 +14,6 @@ public class BookingProperties {
     private int maxPendingPerUser = 2;
     private int cutoffMinutes = 15;
     private int refundCutoffMinutes = 60;
+    private boolean orphanSeatRuleEnabled = true;
 }
 

@@ -22,6 +22,7 @@ import { movieApi } from '../api/movieApi';
 import { bookingApi } from '../api/bookingApi';
 
 import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
+import { causesOrphanSeat } from '../utils/seatGap';
 
 export default function SeatSelection() {
   const { showtimeId } = useParams();
@@ -179,7 +180,7 @@ export default function SeatSelection() {
 
   const finalAmount = Math.max(0, subtotal - discountAmount);
 
-  // Seat toggle handler (Min 1, Max 8 seats)
+  // Seat toggle handler (Min 1, Max 8 seats, with orphan seat warning)
   const handleToggleSeat = (seat) => {
     if (seat.status !== 'AVAILABLE' || seat.selectable === false) return;
 
@@ -187,14 +188,24 @@ export default function SeatSelection() {
     setSelectionNotice('');
 
     setSelectedSeatIds((prev) => {
+      let nextSelected;
       if (prev.includes(seat.id)) {
-        return prev.filter((id) => id !== seat.id);
+        nextSelected = prev.filter((id) => id !== seat.id);
+      } else {
+        if (prev.length >= 8) {
+          setSelectionNotice('Maximum of 8 seats allowed per booking.');
+          return prev;
+        }
+        nextSelected = [...prev, seat.id];
       }
-      if (prev.length >= 8) {
-        setSelectionNotice('Maximum of 8 seats allowed per booking.');
-        return prev;
+
+      if (causesOrphanSeat(seats, nextSelected)) {
+        const warningMsg = 'Không thể để trống 1 ghế đơn độc. Vui lòng chọn ghế liền kề.';
+        setSelectionNotice(warningMsg);
+        showToast(warningMsg, 'warning');
       }
-      return [...prev, seat.id];
+
+      return nextSelected;
     });
   };
 
@@ -245,6 +256,13 @@ export default function SeatSelection() {
   const handleConfirmBooking = async () => {
     if (selectedSeatIds.length === 0) return;
 
+    if (causesOrphanSeat(seats, selectedSeatIds)) {
+      const msg = 'Không thể để trống 1 ghế đơn độc. Vui lòng chọn ghế liền kề.';
+      setBookingError(msg);
+      showToast(msg, 'error');
+      return;
+    }
+
     // Check auth
     const token = localStorage.getItem('token');
     if (!token) {
@@ -276,6 +294,10 @@ export default function SeatSelection() {
 
       if (code === 1502) {
         const msg = 'Suất chiếu này đã đóng cổng bán vé hoặc đã bị hủy';
+        setBookingError(msg);
+        showToast(msg, 'error');
+      } else if (code === 1509 || (status === 400 && resData?.message?.toLowerCase().includes('orphan'))) {
+        const msg = resData?.message || 'Không thể để trống 1 ghế đơn độc. Vui lòng chọn ghế liền kề.';
         setBookingError(msg);
         showToast(msg, 'error');
       } else if (code === 1507 || status === 429) {

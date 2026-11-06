@@ -63,7 +63,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | G2-04 | Phim `ENDED` không còn bán được | P1 | DONE |
 | G2-05 | Khách tự hủy vé đã thanh toán (cửa sổ hoàn tiền) | P2 | DONE |
 | G2-06 | Báo cáo doanh thu: đếm đúng vé và công suất | P1 | DONE |
-| G3-01 | Luật ghế lẻ (orphan seat) | P2 | TODO |
+| G3-01 | Luật ghế lẻ (orphan seat) | P2 | DONE |
 | G3-02 | Ghế đôi (couple) | P2 | BLOCKED (D-01, D-02) |
 | G3-03 | `PricingPolicy` (cuối tuần, giờ vàng, suất sáng) | P2 | BLOCKED (D-05) |
 | G4-01 | `GlobalExceptionHandler` đủ loại lỗi | P3 | TODO |
@@ -241,7 +241,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 - **Test (bảng ca, hàng A1..A8 trống):** chọn A2 → từ chối (A1 kẹt ở mép); chọn A1–A2 → cho phép; chọn A3–A4 khi A1–A2 đã chiếm → cho phép; chọn A4 khi A3 và A5 đã chiếm → cho phép (không để lại ghế trống); chọn A2 khi A1 đã chiếm → cho phép; ghế lẻ có sẵn trước đó không làm khách khác bị từ chối. Thêm test Vitest cho `seatGap.js` với cùng bảng ca.
 - **Tài liệu:** thêm **FR-BOOK-06**; cập nhật FR-BOOK-02 (bước khoá theo hàng).
 
-### G3-02 — Ghế đôi (BLOCKED bởi D-01, D-02)
+### G3-02 — Ghế đôi 
 - **Phương án A (mỗi sofa = 2 hàng trong `seats`):**
   1. Migration `V3__seat_pair_group.sql`: `ALTER TABLE seats ADD COLUMN pair_group INT NULL; CREATE INDEX idx_seats_room_pair ON seats (room_id, pair_group);`
   2. `Seat` thêm `Integer pairGroup`; `SeatResponse`/`SeatBatchUpdateRequest` thêm trường tương ứng (đọc DTO trước, giữ tương thích).
@@ -253,7 +253,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 - **Phương án B (mỗi sofa = 1 hàng):** không cần migration; giữ hệ số giá theo D-02, chỉ làm rõ UI ("1 ghế = 2 người") và tài liệu.
 - **Tài liệu:** thêm **FR-BOOK-07**; cập nhật mô tả bảng `seats` nếu chọn A.
 
-### G3-03 — `PricingPolicy` (BLOCKED bởi D-05)
+### G3-03 — `PricingPolicy` 
 - **Vấn đề:** `SeatType` gán cứng VIP +20.000, COUPLE ×2; không có phụ thu cuối tuần/giờ vàng; legend ở `SeatSelection.jsx` tự tính lại các hằng số.
 - **ĐỌC TRƯỚC:** `showtime/enums/SeatType.java`, `ShowtimeService.createShowtime` và nhánh khởi tạo kho ghế, `ShowtimeResponse`, `SeatSelection.jsx` (legend).
 - **Bước:**

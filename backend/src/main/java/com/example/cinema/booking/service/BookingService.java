@@ -3,6 +3,7 @@ package com.example.cinema.booking.service;
 import com.example.cinema.auth.entity.User;
 import com.example.cinema.auth.enums.Role;
 import com.example.cinema.auth.repository.UserRepository;
+import com.example.cinema.booking.component.SeatSelectionValidator;
 import com.example.cinema.booking.config.BookingProperties;
 import com.example.cinema.booking.dto.request.BookingCreateRequest;
 import com.example.cinema.booking.dto.response.BookingResponse;
@@ -67,6 +68,7 @@ public class BookingService {
     BookingMapper bookingMapper;
     BookingProperties bookingProperties;
     PaymentRepository paymentRepository;
+    SeatSelectionValidator seatSelectionValidator;
 
     @Transactional
     public BookingResponse createBooking(String userEmail, BookingCreateRequest request) {
@@ -99,6 +101,12 @@ public class BookingService {
 
         if (showtime.getMovie() != null && showtime.getMovie().getStatus() == MovieStatus.ENDED) {
             throw new AppException(ErrorCode.SHOWTIME_NOT_AVAILABLE_FOR_BOOKING);
+        }
+
+        if (bookingProperties.isOrphanSeatRuleEnabled()) {
+            List<ShowtimeSeat> allSeatsInShowtime = showtimeSeatRepository
+                    .findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtime.getId());
+            seatSelectionValidator.validateOrphanSeats(allSeatsInShowtime, uniqueRequestedSeatIds);
         }
 
         List<Long> expiredBookingIds = bookingRepository.findExpiredBookingIdsHoldingSeats(uniqueRequestedSeatIds, now);

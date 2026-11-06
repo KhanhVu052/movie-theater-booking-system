@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.9)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 3.0)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -132,11 +132,22 @@ Admin thực hiện hủy một suất chiếu đang SCHEDULED. Hệ thống tu�
 
 • Nghiệm thu: Hủy suất chiếu có đơn CONFIRMED đã thanh toán -> Đơn chuyển CANCELLED, giao dịch chuyển REFUND_REQUIRED, ghế được trả về trống, voucher được hoàn lại.
 FR-BOOK-01
-Hiển thị sơ đồ ghế theo suất chiếu
+Hiển thị sơ đồ ghế và Luật ghế lẻ (Orphan Seat Detection – cập nhật v3.0)
 Trả về danh sách ghế của suất chiếu (showtime_seats) kèm vị trí hàng/cột, hạng ghế (NORMAL, VIP, COUPLE), giá vé và trạng thái hiển thị. Nếu ghế có status = 'HELD' nhưng đơn đang giữ ghế đó đã quá hạn (bookings.expires_at < NOW()), hệ thống trả về trạng thái hiển thị là AVAILABLE.
-• Lỗi: Suất chiếu không tồn tại  404 Not Found.
 
-• Nghiệm thu: Ghế đã hết hạn giữ 10 phút dù Scheduler chưa chạy vẫn hiển thị là ghế trống.
+Quy tắc Luật ghế lẻ (Orphan Seat Detection):
+Khi khách hàng chọn danh sách ghế trong cùng một hàng (row), hệ thống kiểm tra và tuyệt đối không cho phép để lại ĐÚNG 1 GHẾ TRỐNG ĐƠN ĐỘC (AVAILABLE) ở:
+a) Giữa 2 ghế không còn trống (đã BOOKED, đang HELD, hoặc nằm trong danh sách ghế khách đang chọn).
+b) Giữa mép hàng (đầu hàng / cuối hàng / lối đi) và một ghế không còn trống.
+Khoảng trống từ 2 ghế trở lên (>= 2 ghế liên tiếp) là hoàn toàn hợp lệ vì nhóm khách khác vẫn có thể ngồi cạnh nhau. Nếu ghế lẻ đã tồn tại sẵn từ trước lần đặt này (do người khác để lại), khách hàng không bị từ chối oan.
+Cấu hình bật/tắt luật ghế lẻ qua `app.booking.orphan-seat-rule-enabled` (mặc định: true).
+• Lỗi: 
+  - Suất chiếu không tồn tại → 404 Not Found (mã 1301).
+  - Chọn ghế để lại 1 ghế trống đơn độc → 400 Bad Request (mã 1509: ORPHAN_SEAT_DETECTED).
+• Nghiệm thu: 
+  - Ghế đã hết hạn giữ 10 phút dù Scheduler chưa chạy vẫn hiển thị là ghế trống.
+  - Khách chọn ghế tạo ra ghế lẻ đơn độc ở mép hàng hoặc giữa các ghế đã chọn/đã chiếm bị cảnh báo ngay từ client (cảnh báo toast) và bị từ chối ở backend với mã lỗi 1509.
+  - Khách chọn toàn bộ hàng hoặc để lại khoảng trống >= 2 ghế được chấp thuận bình thường.
 FR-BOOK-02
 Giữ ghế đồng thời & Thu hồi có điều kiện
 Khách chọn từ 1–8 ghế trong cùng một showtime_id. Trong Transaction:
@@ -964,6 +975,11 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 3.0 (2026-11-06):
+  + Bổ sung G3-01 & cập nhật FR-BOOK-01: Luật ghế lẻ (Orphan Seat Detection) chặn chọn ghế để lại 1 ghế trống đơn độc ở mép hàng hoặc kẹp giữa các ghế đã chiếm/đã chọn.
+  + Thêm mã lỗi 1509 (ORPHAN_SEAT_DETECTED: 400 Bad Request) và cấu hình bật/tắt app.booking.orphan-seat-rule-enabled (mặc định: true).
+  + Bổ sung client-side validation và warning toast/modal trên SeatSelection.jsx và tiện ích utils/seatGap.js.
+  + Bổ sung bộ kiểm thử tích hợp OrphanSeatIntegrationTest (backend) và unit test seatGap.test.js (frontend).
 - Phiên bản 2.9 (2026-11-06):
   + Bổ sung G2-06 & hoàn thiện FR-REP-01: Báo cáo doanh thu chuẩn xác KPI (đếm đúng số vé bán ra BookingItem và tính công suất ghế thực tế ShowtimeSeat).
   + Phân định rõ hai cửa sổ thời gian: Doanh thu & số vé bán theo ngày thanh toán (payments.pay_date); Tổng số ghế & tỷ lệ lấp đầy theo thời gian suất chiếu diễn ra (showtimes.start_time).
