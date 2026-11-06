@@ -18,6 +18,7 @@ import com.example.cinema.common.exception.AppException;
 import com.example.cinema.common.exception.ErrorCode;
 import com.example.cinema.movie.enums.MovieStatus;
 import com.example.cinema.payment.entity.Payment;
+import com.example.cinema.payment.enums.PaymentProvider;
 import com.example.cinema.payment.enums.PaymentRefundStatus;
 import com.example.cinema.payment.enums.PaymentStatus;
 import com.example.cinema.payment.repository.PaymentRepository;
@@ -247,6 +248,22 @@ public class BookingService {
 
         showtimeSeatRepository.saveAll(requestedSeats);
         List<BookingItem> savedItems = bookingItemRepository.saveAll(bookingItems);
+
+        if (finalAmount == 0L) {
+            Payment zeroPayment = Payment.builder()
+                    .booking(savedBooking)
+                    .provider(PaymentProvider.VNPAY)
+                    .transactionRef("FREE-" + savedBooking.getBookingCode())
+                    .transactionNo("VOUCHER_100_" + savedBooking.getId())
+                    .amount(0L)
+                    .status(PaymentStatus.SUCCESS)
+                    .refundStatus(PaymentRefundStatus.NONE)
+                    .responseCode("00")
+                    .transactionStatus("00")
+                    .payDate(now)
+                    .build();
+            paymentRepository.save(zeroPayment);
+        }
 
         return bookingMapper.toResponse(savedBooking, savedItems);
     }

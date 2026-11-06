@@ -17,6 +17,10 @@ import com.example.cinema.movie.entity.Movie;
 import com.example.cinema.movie.enums.AgeRating;
 import com.example.cinema.movie.enums.MovieStatus;
 import com.example.cinema.movie.repository.MovieRepository;
+import com.example.cinema.payment.entity.Payment;
+import com.example.cinema.payment.enums.PaymentRefundStatus;
+import com.example.cinema.payment.enums.PaymentStatus;
+import com.example.cinema.payment.repository.PaymentRepository;
 import com.example.cinema.showtime.entity.Cinema;
 import com.example.cinema.showtime.entity.Room;
 import com.example.cinema.showtime.entity.Seat;
@@ -74,6 +78,9 @@ public class VoucherIntegrationTest extends AbstractMySqlIT {
 
     @Autowired
     BookingItemRepository bookingItemRepository;
+
+    @Autowired
+    PaymentRepository paymentRepository;
 
     @Autowired
     UserRepository userRepository;
@@ -194,6 +201,7 @@ public class VoucherIntegrationTest extends AbstractMySqlIT {
                     .filter(b -> b.getShowtime().getId().equals(showtime.getId()))
                     .toList();
             for (Booking b : bookings) {
+                paymentRepository.deleteAll(paymentRepository.findByBookingId(b.getId()));
                 voucherRedemptionRepository.findByBookingId(b.getId()).ifPresent(voucherRedemptionRepository::delete);
                 bookingItemRepository.deleteAll(bookingItemRepository.findByBookingId(b.getId()));
                 bookingRepository.delete(b);
@@ -268,6 +276,16 @@ public class VoucherIntegrationTest extends AbstractMySqlIT {
         Voucher dbVoucher = voucherRepository.findById(freeVoucher.getId()).orElseThrow();
         assertThat(dbVoucher.getUsedCount()).isEqualTo(1);
         assertThat(dbVoucher.getReservedCount()).isEqualTo(0);
+
+        // Assert Payment of 0 VND is generated with SUCCESS status (HP-03)
+        List<Payment> payments = paymentRepository.findByBookingId(dbBooking.getId());
+        assertThat(payments).hasSize(1);
+        Payment payment = payments.get(0);
+        assertThat(payment.getAmount()).isEqualTo(0L);
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
+        assertThat(payment.getRefundStatus()).isEqualTo(PaymentRefundStatus.NONE);
+        assertThat(payment.getTransactionRef()).startsWith("FREE-");
+        assertThat(payment.getPayDate()).isNotNull();
     }
 
     @Test

@@ -82,8 +82,8 @@ export default function PaymentResult() {
     return params;
   }, [searchParams]);
 
-  // Handle Verification & Exponential Backoff Polling (G4-05)
-  const verifyPaymentAndBooking = useCallback(async () => {
+  // Handle Verification & Exponential Backoff Polling (G4-05, HP-06)
+  const verifyPaymentAndBooking = useCallback(async (signal = { cancelled: false }) => {
     setPageStatus('VERIFYING');
     let resolvedBookingId = queryParams.bookingId;
     let gatewaySuccess = false;
@@ -92,6 +92,7 @@ export default function PaymentResult() {
       // 1. If redirected from VNPAY, verify signature and gateway response with backend
       if (queryParams.vnp_ResponseCode || queryParams.vnp_TxnRef) {
         const returnRes = await paymentApi.handleVnPayReturn(queryParams);
+        if (signal.cancelled) return;
         const returnData = returnRes?.data?.data ?? returnRes?.data;
         setReturnStatus(returnData);
 
@@ -105,19 +106,24 @@ export default function PaymentResult() {
           if (resolvedBookingId) {
             try {
               const res = await bookingApi.getBookingById(resolvedBookingId);
+              if (signal.cancelled) return;
               setBooking(res?.data?.data ?? res?.data);
             } catch {
               // Ignore failure to fetch booking for failed payments
             }
           }
+          if (signal.cancelled) return;
           setPageStatus('FAILED');
           return;
         }
       }
 
+      if (signal.cancelled) return;
+
       // 2. Fetch booking status and apply Exponential Backoff if still PENDING_PAYMENT
       if (resolvedBookingId) {
         const initialRes = await bookingApi.getBookingById(resolvedBookingId);
+        if (signal.cancelled) return;
         const initialBooking = initialRes?.data?.data ?? initialRes?.data;
         if (initialBooking) {
           setBooking(initialBooking);
@@ -140,11 +146,14 @@ export default function PaymentResult() {
             let confirmed = false;
 
             for (let i = 0; i < delays.length; i++) {
+              if (signal.cancelled) return;
               setBackoffAttempt(i + 1);
               await new Promise((r) => setTimeout(r, delays[i]));
+              if (signal.cancelled) return;
 
               try {
                 const pollRes = await bookingApi.getBookingById(resolvedBookingId);
+                if (signal.cancelled) return;
                 const pollData = pollRes?.data?.data ?? pollRes?.data;
                 if (pollData) {
                   setBooking(pollData);
@@ -163,6 +172,7 @@ export default function PaymentResult() {
               }
             }
 
+            if (signal.cancelled) return;
             if (!confirmed) {
               setPageStatus('PROCESSING');
             }
@@ -171,15 +181,21 @@ export default function PaymentResult() {
         }
       }
 
+      if (signal.cancelled) return;
       setPageStatus(gatewaySuccess ? 'SUCCESS' : 'FAILED');
     } catch (err) {
+      if (signal.cancelled) return;
       console.error('Payment outcome check error:', err);
       setPageStatus('FAILED');
     }
   }, [queryParams]);
 
   useEffect(() => {
-    verifyPaymentAndBooking();
+    const signal = { cancelled: false };
+    verifyPaymentAndBooking(signal);
+    return () => {
+      signal.cancelled = true;
+    };
   }, [verifyPaymentAndBooking]);
 
   const handleManualRecheck = async () => {

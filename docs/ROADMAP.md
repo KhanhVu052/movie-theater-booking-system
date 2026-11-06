@@ -94,6 +94,12 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | G4-09 | Hiệu năng và dọn dẹp (N+1, page size, `Clock`, audit hoàn tiền - AF-17) | P3 | DONE |
 | G4-10 | Testcontainers + test đồng thời + CI chạy test (AF-07) | P3 | DONE |
 | G4-11 | Hoàn thiện tài liệu (AF-14, SRS v3.4) | P3 | DONE |
+| HP-01 | Chuẩn hóa thứ tự khóa showtimes -> bookings -> showtime_seats trong cancelShowtime & DeadlockRetryExecutor | P1 | DONE |
+| HP-02 | Loại bỏ khóa lan voucher khỏi câu lệnh FOR UPDATE BookingRepository & @BatchSize(50) Voucher | P1 | DONE |
+| HP-03 | Tạo bản ghi Payment 0đ (SUCCESS) cho đơn hàng 100% voucher | P2 | DONE |
+| HP-04 | Chống OOM DoS trong LoginAttemptService (MAX_CACHE_SIZE = 10_000, eviction) | P2 | DONE |
+| HP-05 | useSeatMapPolling: Tách effect options khỏi timer lifecycle chống reset chu kỳ 8s | P2 | DONE |
+| HP-06 | PaymentResult: Unmount cancellation guard cho vòng lặp Exponential Backoff | P3 | DONE |
 
 **Thứ tự đề xuất:** Phase 0 → G2-01, G2-02, G2-03, G2-06 → (sau khi chốt D-03) G2-04 → (D-05) G3-03 → G3-01 → (D-01/D-02) G3-02 → G2-05 → Nhóm 4. Mỗi task chức năng phải kèm test của nó; G4-10 là hạ tầng test dùng chung và có thể làm sớm hơn nếu muốn.
 

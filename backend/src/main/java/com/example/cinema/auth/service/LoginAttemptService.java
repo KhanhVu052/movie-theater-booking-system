@@ -12,6 +12,7 @@ public class LoginAttemptService {
 
     public static final int MAX_ATTEMPTS = 5;
     public static final long LOCK_DURATION_MS = 15 * 60 * 1000L; // 15 minutes
+    public static final int MAX_CACHE_SIZE = 10_000;
 
     private final Map<String, AttemptInfo> attemptsCache = new ConcurrentHashMap<>();
 
@@ -23,7 +24,7 @@ public class LoginAttemptService {
         if (info != null) {
             long now = System.currentTimeMillis();
             if (now - info.lastAttemptTime > LOCK_DURATION_MS) {
-                attemptsCache.remove(key);
+                attemptsCache.remove(key, info);
             } else if (info.count >= MAX_ATTEMPTS) {
                 throw new AppException(ErrorCode.TOO_MANY_LOGIN_ATTEMPTS);
             }
@@ -34,6 +35,10 @@ public class LoginAttemptService {
         if (email == null) return;
         String key = email.trim().toLowerCase();
         long now = System.currentTimeMillis();
+
+        if (attemptsCache.size() >= MAX_CACHE_SIZE) {
+            evictExpiredEntries(now);
+        }
 
         attemptsCache.compute(key, (k, current) -> {
             if (current == null || (now - current.lastAttemptTime > LOCK_DURATION_MS)) {
@@ -58,6 +63,13 @@ public class LoginAttemptService {
         return info.count;
     }
 
+    private void evictExpiredEntries(long now) {
+        attemptsCache.entrySet().removeIf(entry -> now - entry.getValue().lastAttemptTime > LOCK_DURATION_MS);
+        if (attemptsCache.size() >= MAX_CACHE_SIZE) {
+            attemptsCache.clear();
+        }
+    }
+
     private static class AttemptInfo {
         final int count;
         final long lastAttemptTime;
@@ -68,4 +80,3 @@ public class LoginAttemptService {
         }
     }
 }
-

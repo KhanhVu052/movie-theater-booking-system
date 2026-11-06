@@ -215,6 +215,12 @@ public class ShowtimeService {
         showtime.setStatus(ShowtimeStatus.CANCELLED);
         showtimeRepository.save(showtime);
 
+        // Lock Ordering Invariant (SRS 4.4): showtimes -> bookings (ASC) -> showtime_seats (ASC) -> vouchers
+        List<Long> bookingIds = bookingRepository.findIdsByShowtimeId(id);
+        List<Booking> bookings = bookingIds.isEmpty()
+                ? List.of()
+                : bookingRepository.findByIdsForUpdateOrderByIdAsc(bookingIds);
+
         List<ShowtimeSeat> seats = showtimeSeatRepository.findByShowtimeIdForUpdate(id);
         for (ShowtimeSeat seat : seats) {
             seat.setStatus(ShowtimeSeatStatus.AVAILABLE);
@@ -222,29 +228,25 @@ public class ShowtimeService {
         }
         showtimeSeatRepository.saveAll(seats);
 
-        List<Long> bookingIds = bookingRepository.findIdsByShowtimeId(id);
-        if (!bookingIds.isEmpty()) {
-            List<Booking> bookings = bookingRepository.findByIdsForUpdateOrderByIdAsc(bookingIds);
+        for (Booking booking : bookings) {
+            if (booking.getStatus() == BookingStatus.CONFIRMED) {
+                booking.setStatus(BookingStatus.CANCELLED);
+                bookingRepository.save(booking);
 
-            for (Booking booking : bookings) {
-                if (booking.getStatus() == BookingStatus.CONFIRMED) {
-                    booking.setStatus(BookingStatus.CANCELLED);
-                    bookingRepository.save(booking);
-
-                    List<Payment> payments = paymentRepository.findByBookingId(booking.getId());
-                    for (Payment payment : payments) {
-                        if (payment.getStatus() == PaymentStatus.SUCCESS && payment.getRefundStatus() == PaymentRefundStatus.NONE) {
-                            payment.setRefundStatus(PaymentRefundStatus.REFUND_REQUIRED);
-                            paymentRepository.save(payment);
-                        }
+                List<Payment> payments = paymentRepository.findByBookingId(booking.getId());
+                for (Payment payment : payments) {
+                    if (payment.getStatus() == PaymentStatus.SUCCESS && payment.getRefundStatus() == PaymentRefundStatus.NONE) {
+                        payment.setRefundStatus(PaymentRefundStatus.REFUND_REQUIRED);
+                        paymentRepository.save(payment);
                     }
-                    voucherService.revertUsedVoucherIfPresent(booking);
-                } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
-                    booking.setStatus(BookingStatus.CANCELLED);
-                    bookingRepository.save(booking);
-                    voucherService.releaseVoucherIfPresent(booking);
                 }
+                voucherService.revertUsedVoucherIfPresent(booking);
+            } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+                booking.setStatus(BookingStatus.CANCELLED);
+                bookingRepository.save(booking);
+                voucherService.releaseVoucherIfPresent(booking);
             }
         }
+        log.info("Cancelled showtime id={} and processed {} associated bookings", id, bookings.size());
     }
 }

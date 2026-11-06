@@ -61,5 +61,14 @@ class LoginAttemptServiceTest {
         loginAttemptService.checkLoginAllowed(email); // Should succeed without exception
         assertThat(loginAttemptService.getFailedAttempts(email)).isEqualTo(0);
     }
+
+    @Test
+    @DisplayName("HP-04: Bounded cache eviction when MAX_CACHE_SIZE is reached")
+    void boundedCacheEviction() {
+        for (int i = 0; i < 50; i++) {
+            loginAttemptService.recordFailedAttempt("random_" + i + "@cinema.com");
+        }
+        assertThat(loginAttemptService.getFailedAttempts("random_0@cinema.com")).isEqualTo(1);
+    }
 }
 

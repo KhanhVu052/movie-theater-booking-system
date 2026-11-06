@@ -1,5 +1,6 @@
 package com.example.cinema.showtime.controller;
 
+import com.example.cinema.common.component.DeadlockRetryExecutor;
 import com.example.cinema.common.dto.ApiResponse;
 import com.example.cinema.common.dto.PageResponse;
 import com.example.cinema.showtime.dto.request.ShowtimeRequest;
@@ -38,6 +39,7 @@ import java.util.List;
 public class ShowtimeController {
 
     ShowtimeService showtimeService;
+    DeadlockRetryExecutor deadlockRetryExecutor;
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<ShowtimeResponse>>> getShowtimes(
@@ -76,7 +78,10 @@ public class ShowtimeController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> cancelShowtime(@PathVariable Long id) {
-        showtimeService.cancelShowtime(id);
+        deadlockRetryExecutor.executeWithRetry("CancelShowtime-" + id, () -> {
+            showtimeService.cancelShowtime(id);
+            return null;
+        });
         return ResponseEntity.ok(ApiResponse.success("Showtime cancelled successfully", null));
     }
 }

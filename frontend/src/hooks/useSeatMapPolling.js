@@ -144,15 +144,35 @@ export function useSeatMapPolling(
   }
 
   const pollerRef = useRef(null);
+  const latestOptionsRef = useRef({
+    onSeatsUpdated,
+    onSeatUnavailable,
+    selectedSeatIds,
+  });
+
+  useEffect(() => {
+    latestOptionsRef.current = {
+      onSeatsUpdated,
+      onSeatUnavailable,
+      selectedSeatIds,
+    };
+    if (pollerRef.current) {
+      pollerRef.current.updateOptions({
+        onSeatsUpdated,
+        onSeatUnavailable,
+        selectedSeatIds,
+      });
+    }
+  }, [onSeatsUpdated, onSeatUnavailable, selectedSeatIds]);
 
   useEffect(() => {
     const poller = new SeatMapPoller({
       showtimeId,
       intervalMs,
       enabled,
-      onSeatsUpdated,
-      onSeatUnavailable,
-      selectedSeatIds,
+      onSeatsUpdated: latestOptionsRef.current.onSeatsUpdated,
+      onSeatUnavailable: latestOptionsRef.current.onSeatUnavailable,
+      selectedSeatIds: latestOptionsRef.current.selectedSeatIds,
     });
     pollerRef.current = poller;
     poller.start();
@@ -161,7 +181,7 @@ export function useSeatMapPolling(
       poller.stop();
       pollerRef.current = null;
     };
-  }, [showtimeId, intervalMs, enabled, onSeatsUpdated, onSeatUnavailable, selectedSeatIds]);
+  }, [showtimeId, intervalMs, enabled]);
 
   const pollSeats = useCallback(() => {
     if (pollerRef.current) {

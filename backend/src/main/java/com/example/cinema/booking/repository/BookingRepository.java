@@ -26,12 +26,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")})
-    @Query("SELECT b FROM Booking b LEFT JOIN FETCH b.voucher WHERE b.id = :id")
+    @Query("SELECT b FROM Booking b WHERE b.id = :id")
     Optional<Booking> findByIdForUpdate(@Param("id") Long id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")})
-    @Query("SELECT b FROM Booking b LEFT JOIN FETCH b.voucher WHERE b.id IN :ids ORDER BY b.id ASC")
+    @Query("SELECT b FROM Booking b WHERE b.id IN :ids ORDER BY b.id ASC")
     List<Booking> findByIdsForUpdateOrderByIdAsc(@Param("ids") Collection<Long> ids);
 
 
