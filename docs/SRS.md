@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 3.0)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 3.1)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -148,6 +148,32 @@ Cấu hình bật/tắt luật ghế lẻ qua `app.booking.orphan-seat-rule-enab
   - Ghế đã hết hạn giữ 10 phút dù Scheduler chưa chạy vẫn hiển thị là ghế trống.
   - Khách chọn ghế tạo ra ghế lẻ đơn độc ở mép hàng hoặc giữa các ghế đã chọn/đã chiếm bị cảnh báo ngay từ client (cảnh báo toast) và bị từ chối ở backend với mã lỗi 1509.
   - Khách chọn toàn bộ hàng hoặc để lại khoảng trống >= 2 ghế được chấp thuận bình thường.
+
+FR-SEAT-02 / FR-BOOK-07
+Quy tắc ghế đôi (Couple Seats / Sofa đôi – cập nhật v3.1)
+Ghế đôi (COUPLE) được triển khai theo Phương án A (Quyết định D-01): Mỗi sofa đôi gồm 2 bản ghi vật lý riêng biệt trong bảng `seats`, liên kết với nhau bằng trường `pair_group` (cùng phòng chiếu `room_id`, cùng hàng `row_name`, và cùng `pair_group`).
+
+1. Tính nguyên tử khi chọn ghế (Atomic Pair Selection):
+   - Khách hàng không thể đặt lẻ 1 ghế trong cặp. Khi chọn hoặc bỏ chọn một ghế đôi, cả 2 ghế cấu thành cặp sẽ được tự động chọn/bỏ chọn đồng thời.
+   - Nếu client gửi request `createBooking` chỉ chứa 1 ghế của cặp đôi, hệ thống từ chối ngay với mã lỗi 1510 (`COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR: 400 Bad Request`).
+   - Nếu 1 trong 2 ghế đã bị giữ (HELD) hoặc đã bán (BOOKED), cả cặp ghế coi như không khả dụng và bị vô hiệu hóa trên sơ đồ ghế.
+
+2. Quy tắc tính giá chuẩn (Quyết định D-02):
+   - Mỗi ghế trong cặp mang giá cơ sở của loại ghế `COUPLE` (`calculatePrice(basePrice) = basePrice`).
+   - Tổng tiền cho cả cặp ghế = giá ghế 1 + giá ghế 2 (server tự tính khi giữ ghế và lưu cứng vào `booking_items`, tuyệt đối không nhân đôi 2 lần).
+
+3. Khóa đồng thời và chống Deadlock:
+   - Khi khóa ghế trong `createBooking`, cả 2 ghế trong cặp được đưa vào danh sách khóa được sắp xếp tăng dần theo ID (`ORDER BY id ASC`) và khóa trong một câu lệnh duy nhất.
+
+• Lỗi: 
+  - Gửi request chỉ chứa 1 ghế của cặp ghế đôi → 400 Bad Request (mã 1510: COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR).
+  - Một trong 2 ghế của cặp đã bị chiếm (HELD hoặc BOOKED) → 409 Conflict (mã 1504: SEAT_NOT_AVAILABLE).
+
+• Nghiệm thu: 
+  - Click vào ghế đôi trên giao diện sơ đồ tự động toggle cả 2 ghế cùng lúc.
+  - Sơ đồ ghế hiển thị các cặp ghế đôi liền khối (bo góc pill-shape), phân biệt rõ với ghế đơn.
+  - Nếu 1 ghế trong cặp bị chiếm, cả cặp chuyển màu xám/vô hiệu hóa.
+  - Đặt thành công 1 cặp ghế đôi tạo đúng 2 bản ghi `booking_items` với tổng tiền bằng đúng tổng 2 ghế.
 FR-BOOK-02
 Giữ ghế đồng thời & Thu hồi có điều kiện
 Khách chọn từ 1–8 ghế trong cùng một showtime_id. Trong Transaction:
@@ -538,6 +564,10 @@ is_active
 BOOLEAN
 NOT NULL, DEFAULT TRUE
 Trạng thái sử dụng của ghế (ghế hỏng đặt false để không mở bán).
+pair_group
+INT
+NULL
+Định danh nhóm cặp ghế đôi (D-01). Hai ghế kề nhau có cùng room_id, row_name và pair_group tạo thành một sofa đôi trọn vẹn.
 created_at
 DATETIME
 NOT NULL, DEFAULT CURRENT_TIMESTAMP
@@ -975,6 +1005,13 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 3.1 (2026-11-06):
+  + Bổ sung G3-02 & FR-SEAT-02 / FR-BOOK-07: Quy tắc ghế đôi (Couple Seats / Sofa đôi) theo Phương án A (D-01) và cách tính giá chuẩn theo D-02 [ĐÃ CHỐT].
+  + Thêm cột `pair_group` vào bảng `seats` (Migration V3__seat_pair_group.sql), mở rộng DTO SeatResponse/ShowtimeSeatResponse.
+  + Bổ sung mã lỗi 1510 (COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR: 400 Bad Request) khi chọn lẻ 1 ghế trong cặp ghế đôi.
+  + Điều chỉnh SeatType.COUPLE: Mỗi ghế trong cặp mang giá cơ sở, tổng cả cặp = giá ghế 1 + giá ghế 2 (server tự tính, tránh nhân sai hệ số).
+  + Cập nhật SeatSelection.jsx: Tự động chọn/bỏ chọn nguyên cặp ghế đôi, hiển thị nối viền liền khối (pill shape), vô hiệu hóa cả cặp nếu 1 ghế đã bị giữ/đặt.
+  + Bổ sung bộ kiểm thử CoupleSeatIntegrationTest (backend) và coupleSeat.test.js (frontend).
 - Phiên bản 3.0 (2026-11-06):
   + Bổ sung G3-01 & cập nhật FR-BOOK-01: Luật ghế lẻ (Orphan Seat Detection) chặn chọn ghế để lại 1 ghế trống đơn độc ở mép hàng hoặc kẹp giữa các ghế đã chiếm/đã chọn.
   + Thêm mã lỗi 1509 (ORPHAN_SEAT_DETECTED: 400 Bad Request) và cấu hình bật/tắt app.booking.orphan-seat-rule-enabled (mặc định: true).

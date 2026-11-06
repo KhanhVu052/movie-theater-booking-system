@@ -11,6 +11,11 @@ public record SeatBatchUpdateRequest(
 
         SeatType type,
 
-        Boolean isActive
+        Boolean isActive,
+
+        Integer pairGroup
 ) {
+    public SeatBatchUpdateRequest(List<Long> seatIds, SeatType type, Boolean isActive) {
+        this(seatIds, type, isActive, null);
+    }
 }

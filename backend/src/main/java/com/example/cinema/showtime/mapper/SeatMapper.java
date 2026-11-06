@@ -14,6 +14,7 @@ public class SeatMapper {
                 .seatNumber(seat.getSeatNumber())
                 .type(seat.getType())
                 .isActive(seat.getIsActive())
+                .pairGroup(seat.getPairGroup())
                 .build();
     }
 }

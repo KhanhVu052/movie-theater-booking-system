@@ -74,6 +74,7 @@ public class ShowtimeMapper {
                 .price(showtimeSeat.getPrice())
                 .status(effectiveStatus)
                 .selectable(selectable)
+                .pairGroup(showtimeSeat.getSeat() != null ? showtimeSeat.getSeat().getPairGroup() : null)
                 .build();
     }
 }

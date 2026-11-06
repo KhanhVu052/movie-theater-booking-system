@@ -125,6 +125,9 @@ public class RoomService {
             if (request.isActive() != null) {
                 seat.setIsActive(request.isActive());
             }
+            if (request.pairGroup() != null) {
+                seat.setPairGroup(request.pairGroup() <= 0 ? null : request.pairGroup());
+            }
         }
 
         return seatRepository.saveAll(seats).stream()

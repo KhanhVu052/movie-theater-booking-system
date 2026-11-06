@@ -59,7 +59,7 @@ movie-theater-booking-system/
 │   │   ├── utils/            # formatters, voucherUtils, bookingUtils
 │   │   └── test/             # Vitest automated business rule test suite
 └── docs/
-    └── SRS.md                # Software Requirements Specification (v3.0)
+    └── SRS.md                # Software Requirements Specification (v3.1)
 ```
 
 ---
@@ -204,7 +204,8 @@ cd backend
 This project strictly implements and fulfills the software specification outlined in `docs/SRS.md`:
 * **FR-SHOW-01**: Showtime scheduling with room collision prevention and 15m cleaning end time.
 * **FR-SHOW-02**: Showtime cancellation with automated refund pipeline (`REFUND_REQUIRED`), voucher restoration, and strict deadlock-free locking order.
-* **FR-BOOK-01**: Real-time seat inventory projection based on hold expiration state.
+* **FR-SEAT-02**: Couple / sofa seat atomic pair reservation, pair_group link, and base price calculation.
+* **FR-BOOK-01**: Real-time seat inventory projection based on hold expiration state and orphan seat rule.
 * **FR-BOOK-02**: Concurrency-safe seat holding for up to 8 seats per order.
 * **FR-BOOK-03**: Background hold reclamation scheduler every 30 seconds.
 * **FR-BOOK-04**: Pending reservation ceiling enforcement (max 2 active holds per user, HTTP 429).

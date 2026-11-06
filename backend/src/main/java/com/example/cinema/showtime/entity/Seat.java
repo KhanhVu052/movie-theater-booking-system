@@ -57,6 +57,9 @@ public class Seat {
     @Builder.Default
     Boolean isActive = true;
 
+    @Column(name = "pair_group")
+    Integer pairGroup;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     LocalDateTime createdAt;

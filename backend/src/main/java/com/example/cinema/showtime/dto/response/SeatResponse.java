@@ -9,6 +9,10 @@ public record SeatResponse(
         String rowName,
         Integer seatNumber,
         SeatType type,
-        Boolean isActive
+        Boolean isActive,
+        Integer pairGroup
 ) {
+    public SeatResponse(Long id, String rowName, Integer seatNumber, SeatType type, Boolean isActive) {
+        this(id, rowName, seatNumber, type, isActive, null);
+    }
 }

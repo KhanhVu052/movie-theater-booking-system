@@ -64,7 +64,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | G2-05 | Khách tự hủy vé đã thanh toán (cửa sổ hoàn tiền) | P2 | DONE |
 | G2-06 | Báo cáo doanh thu: đếm đúng vé và công suất | P1 | DONE |
 | G3-01 | Luật ghế lẻ (orphan seat) | P2 | DONE |
-| G3-02 | Ghế đôi (couple) | P2 | BLOCKED (D-01, D-02) |
+| G3-02 | Ghế đôi (couple) | P2 | DONE |
 | G3-03 | `PricingPolicy` (cuối tuần, giờ vàng, suất sáng) | P2 | BLOCKED (D-05) |
 | G4-01 | `GlobalExceptionHandler` đủ loại lỗi | P3 | TODO |
 | G4-02 | `getShowtimeSeats` chỉ đọc | P3 | TODO |
@@ -339,8 +339,8 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 
 | ID | Câu hỏi | Mặc định đề xuất | Chốt |
 |---|---|---|---|
-| D-01 | Sofa đôi là 2 hàng trong bảng `seats` (A) hay 1 hàng (B)? | A nếu sơ đồ phòng vẽ từng ghế riêng | Phương án A (ghép cặp qua pair_group) |
-| D-02 | Giá ghế đôi: mỗi ghế = giá cơ sở × 2 (hiện tại) hay mỗi ghế = giá cơ sở (cặp = 2×)? | Mỗi ghế = giá cơ sở × hệ số cấu hình | Mỗi ghế = giá cơ sở (cặp = tổng 2 ghế) |
+| D-01 | Sofa đôi là 2 hàng trong bảng `seats` (A) hay 1 hàng (B)? | A nếu sơ đồ phòng vẽ từng ghế riêng | Phương án A (ghép cặp qua pair_group) [ĐÃ CHỐT] |
+| D-02 | Giá ghế đôi: mỗi ghế = giá cơ sở × 2 (hiện tại) hay mỗi ghế = giá cơ sở (cặp = 2×)? | Mỗi ghế = giá cơ sở × hệ số cấu hình | Mỗi ghế = giá cơ sở (cặp = tổng 2 ghế) [ĐÃ CHỐT] |
 | D-03 | Kết thúc phim còn suất tương lai: chặn hay tự hủy các suất đó? | Chặn kèm thông báo | Chặn kèm thông báo (409 Conflict) [ĐÃ CHỐT] |
 | D-04 | Có cho khách tự hủy vé đã thanh toán không? Hạn chót bao lâu? | Có, trước giờ chiếu 60 phút | Có, trước giờ chiếu 60 phút [ĐÃ CHỐT] |
 | D-05 | Quy tắc giá: phụ thu cuối tuần (Thứ 6–CN hay Thứ 7–CN?), giờ vàng (18:00–22:00?), giảm suất sáng (trước 12:00?) và số tiền | Theo `PricingProperties` mặc định | Theo `PricingProperties` (T7-CN +15k, tối +10k, sáng -10k) |

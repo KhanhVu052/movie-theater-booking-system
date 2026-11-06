@@ -13,6 +13,19 @@ public record ShowtimeSeatResponse(
         SeatType seatType,
         Long price,
         ShowtimeSeatStatus status,
-        boolean selectable
+        boolean selectable,
+        Integer pairGroup
 ) {
+    public ShowtimeSeatResponse(
+            Long id,
+            Long seatId,
+            String rowName,
+            Integer seatNumber,
+            SeatType seatType,
+            Long price,
+            ShowtimeSeatStatus status,
+            boolean selectable
+    ) {
+        this(id, seatId, rowName, seatNumber, seatType, price, status, selectable, null);
+    }
 }

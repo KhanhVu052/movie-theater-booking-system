@@ -16,7 +16,8 @@ public enum SeatType {
     COUPLE {
         @Override
         public long calculatePrice(long basePrice) {
-            return basePrice * 2L;
+            // Per D-02: Each seat in the pair carries the base price; total pair price = seat1 + seat2 (2 * basePrice)
+            return basePrice;
         }
     };
 

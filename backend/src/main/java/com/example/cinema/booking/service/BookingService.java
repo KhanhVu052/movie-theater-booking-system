@@ -103,9 +103,13 @@ public class BookingService {
             throw new AppException(ErrorCode.SHOWTIME_NOT_AVAILABLE_FOR_BOOKING);
         }
 
+        List<ShowtimeSeat> allSeatsInShowtime = showtimeSeatRepository
+                .findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtime.getId());
+
+        // Validate couple seats integrity (must book whole pair)
+        seatSelectionValidator.validateCoupleSeats(allSeatsInShowtime, uniqueRequestedSeatIds);
+
         if (bookingProperties.isOrphanSeatRuleEnabled()) {
-            List<ShowtimeSeat> allSeatsInShowtime = showtimeSeatRepository
-                    .findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtime.getId());
             seatSelectionValidator.validateOrphanSeats(allSeatsInShowtime, uniqueRequestedSeatIds);
         }
 

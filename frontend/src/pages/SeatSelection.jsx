@@ -22,7 +22,7 @@ import { movieApi } from '../api/movieApi';
 import { bookingApi } from '../api/bookingApi';
 
 import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
-import { causesOrphanSeat } from '../utils/seatGap';
+import { causesOrphanSeat, getCouplePartner, isCouplePairAvailable } from '../utils/seatGap';
 
 export default function SeatSelection() {
   const { showtimeId } = useParams();
@@ -180,23 +180,51 @@ export default function SeatSelection() {
 
   const finalAmount = Math.max(0, subtotal - discountAmount);
 
-  // Seat toggle handler (Min 1, Max 8 seats, with orphan seat warning)
+  // Seat toggle handler (Min 1, Max 8 seats, with orphan seat warning & atomic couple pair selection)
   const handleToggleSeat = (seat) => {
     if (seat.status !== 'AVAILABLE' || seat.selectable === false) return;
 
     setBookingError('');
     setSelectionNotice('');
 
+    const partner = getCouplePartner(seat, seats);
+    const isCouple = seat.seatType === 'COUPLE' || seat.pairGroup != null;
+
+    if (isCouple && !isCouplePairAvailable(seat, seats)) {
+      const unavailMsg = 'Cặp ghế đôi này hiện không khả dụng.';
+      setSelectionNotice(unavailMsg);
+      showToast(unavailMsg, 'warning');
+      return;
+    }
+
     setSelectedSeatIds((prev) => {
       let nextSelected;
-      if (prev.includes(seat.id)) {
-        nextSelected = prev.filter((id) => id !== seat.id);
-      } else {
-        if (prev.length >= 8) {
-          setSelectionNotice('Maximum of 8 seats allowed per booking.');
-          return prev;
+      if (partner) {
+        if (prev.includes(seat.id)) {
+          // Deselect both seats of the couple pair
+          nextSelected = prev.filter((id) => id !== seat.id && id !== partner.id);
+        } else {
+          // Both seats must be selected together
+          if (prev.length + 2 > 8) {
+            const maxMsg = 'Chỉ được chọn tối đa 8 ghế cho mỗi lượt đặt vé.';
+            setSelectionNotice(maxMsg);
+            showToast(maxMsg, 'warning');
+            return prev;
+          }
+          nextSelected = [...prev, seat.id, partner.id];
         }
-        nextSelected = [...prev, seat.id];
+      } else {
+        if (prev.includes(seat.id)) {
+          nextSelected = prev.filter((id) => id !== seat.id);
+        } else {
+          if (prev.length >= 8) {
+            const maxMsg = 'Chỉ được chọn tối đa 8 ghế cho mỗi lượt đặt vé.';
+            setSelectionNotice(maxMsg);
+            showToast(maxMsg, 'warning');
+            return prev;
+          }
+          nextSelected = [...prev, seat.id];
+        }
       }
 
       if (causesOrphanSeat(seats, nextSelected)) {
@@ -298,6 +326,10 @@ export default function SeatSelection() {
         showToast(msg, 'error');
       } else if (code === 1509 || (status === 400 && resData?.message?.toLowerCase().includes('orphan'))) {
         const msg = resData?.message || 'Không thể để trống 1 ghế đơn độc. Vui lòng chọn ghế liền kề.';
+        setBookingError(msg);
+        showToast(msg, 'error');
+      } else if (code === 1510 || (status === 400 && resData?.message?.toLowerCase().includes('couple'))) {
+        const msg = resData?.message || 'Vui lòng chọn trọn vẹn cả cặp ghế đôi.';
         setBookingError(msg);
         showToast(msg, 'error');
       } else if (code === 1507 || status === 429) {
@@ -475,11 +507,16 @@ export default function SeatSelection() {
                     <div className="flex items-center gap-2">
                       {rowSeats.map((seat) => {
                         const isSelected = selectedSeatIds.includes(seat.id);
-                        const isHeld = seat.status === 'HELD';
-                        const isBooked = seat.status === 'BOOKED';
-                        const isAvailable = seat.status === 'AVAILABLE';
-                        const isSelectable = seat.selectable !== undefined ? seat.selectable : isAvailable;
-                        const isInactive = !isSelectable && isAvailable;
+                        const partner = getCouplePartner(seat, seats);
+                        const isCouple = seat.seatType === 'COUPLE' || seat.pairGroup != null;
+                        const isCoupleAvail = isCouple ? isCouplePairAvailable(seat, seats) : true;
+                        const isPartnerHeld = partner && partner.status === 'HELD';
+                        const isPartnerBooked = partner && partner.status === 'BOOKED';
+
+                        const isHeld = seat.status === 'HELD' || (isCouple && isPartnerHeld);
+                        const isBooked = seat.status === 'BOOKED' || (isCouple && isPartnerBooked);
+                        const isSelectable = (seat.selectable !== undefined ? seat.selectable : seat.status === 'AVAILABLE') && isCoupleAvail;
+                        const isInactive = !isSelectable && seat.status === 'AVAILABLE' && !isHeld && !isBooked;
 
                         // Seat color styling by seat type
                         let seatBg =
@@ -487,7 +524,7 @@ export default function SeatSelection() {
                         if (seat.seatType === 'VIP') {
                           seatBg =
                             'bg-[#2b1b0b] border-[#966b28] text-[#fce092] hover:border-[#ffd700] hover:bg-[#38230e]';
-                        } else if (seat.seatType === 'COUPLE') {
+                        } else if (isCouple) {
                           seatBg =
                             'bg-[#2e131e] border-[#8a2449] text-[#fda4af] hover:border-[#f43f5e] hover:bg-[#3d1827]';
                         }
@@ -496,14 +533,25 @@ export default function SeatSelection() {
                           seatBg =
                             'bg-[#141210] border-[#29221b] text-[#554b3f] cursor-not-allowed opacity-30 line-through';
                         } else if (isSelected) {
-                          seatBg =
-                            'bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#fce092] text-[#140e08] font-black ring-2 ring-[#f3cb62]/40 shadow-[0_0_12px_rgba(243,203,98,0.6)]';
+                          seatBg = isCouple
+                            ? 'bg-gradient-to-b from-[#f43f5e] to-[#be123c] border-[#fda4af] text-white font-black ring-2 ring-[#f43f5e]/40 shadow-[0_0_12px_rgba(244,63,94,0.6)]'
+                            : 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#fce092] text-[#140e08] font-black ring-2 ring-[#f3cb62]/40 shadow-[0_0_12px_rgba(243,203,98,0.6)]';
                         } else if (isHeld) {
                           seatBg =
                             'bg-[#18181b]/80 border-[#27272a] text-[#52525b] cursor-not-allowed opacity-60';
                         } else if (isBooked) {
                           seatBg =
                             'bg-[#12100e] border-[#1f1a15] text-[#3f352a] cursor-not-allowed opacity-40';
+                        }
+
+                        // Shape styling for couple pill sofa
+                        let shapeClasses = 'w-8 h-8 rounded-t-lg rounded-b-sm border text-[10px]';
+                        if (isCouple && partner) {
+                          if (seat.seatNumber < partner.seatNumber) {
+                            shapeClasses = 'w-8 h-8 rounded-l-xl rounded-r-none border-r-0 mr-[-8px] z-10 text-[10px]';
+                          } else {
+                            shapeClasses = 'w-8 h-8 rounded-r-xl rounded-l-none border-l border-l-[#fda4af]/30 text-[10px]';
+                          }
                         }
 
                         return (
@@ -515,9 +563,11 @@ export default function SeatSelection() {
                             title={
                               isInactive
                                 ? `${seat.rowName}${seat.seatNumber} • Maintenance / Inactive`
-                                : `${seat.rowName}${seat.seatNumber} • ${seat.seatType} • ${formatCurrency(seat.price)}`
+                                : isCouple
+                                  ? `${seat.rowName}${seat.seatNumber} • Cặp ghế đôi • ${formatCurrency(seat.price)}/ghế`
+                                  : `${seat.rowName}${seat.seatNumber} • ${seat.seatType} • ${formatCurrency(seat.price)}`
                             }
-                            className={`w-8 h-8 rounded-t-lg rounded-b-sm border text-[10px] font-bold flex items-center justify-center transition-all cursor-pointer ${seatBg}`}
+                            className={`${shapeClasses} font-bold flex items-center justify-center transition-all cursor-pointer ${seatBg}`}
                           >
                             {seat.rowName}{seat.seatNumber}
                           </button>
@@ -627,7 +677,7 @@ export default function SeatSelection() {
                           <span className="text-[#fce092]">{seatTypeBreakdown.VIP}x VIP ({formatCurrency(showtime.basePrice + 20000)})</span>
                         )}
                         {seatTypeBreakdown.COUPLE > 0 && (
-                          <span className="text-[#fda4af]">{seatTypeBreakdown.COUPLE}x Couple ({formatCurrency(showtime.basePrice * 2)})</span>
+                          <span className="text-[#fda4af]">{Math.floor(seatTypeBreakdown.COUPLE / 2)}x Cặp ghế đôi ({formatCurrency(showtime.basePrice * 2)})</span>
                         )}
                       </div>
                     </div>
