@@ -1,17 +1,17 @@
 export const PRICE_TAG_DEFINITIONS = {
   WEEKEND: {
     id: 'weekend',
-    text: 'Phụ thu cuối tuần',
+    text: 'Weekend Surcharge',
     color: 'bg-[#966b28]/20 border-[#966b28]/60 text-[#fce092]',
   },
   PEAK_HOUR: {
     id: 'peak-hour',
-    text: 'Khung giờ vàng',
+    text: 'Peak Hour',
     color: 'bg-amber-950/40 border-amber-600/50 text-amber-400',
   },
   EARLY_BIRD: {
     id: 'early-bird',
-    text: 'Ưu đãi suất chiếu sớm',
+    text: 'Early Bird Discount',
     color: 'bg-emerald-950/40 border-emerald-600/50 text-emerald-400',
   },
 };

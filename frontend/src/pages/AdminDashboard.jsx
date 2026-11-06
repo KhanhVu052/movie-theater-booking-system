@@ -435,7 +435,7 @@ export default function AdminDashboard() {
       fetchShowtimes();
     } catch (err) {
       if (err.response?.data?.code === 1313) {
-        showToast('Không thể hủy suất chiếu đã bắt đầu hoặc đang diễn ra.', 'error');
+        showToast('Cannot cancel a showtime that has already started or is currently in progress.', 'error');
       } else {
         showToast(err.response?.data?.message || 'Failed to cancel showtime.', 'error');
       }
@@ -445,25 +445,25 @@ export default function AdminDashboard() {
   // Discontinue Movie (G2-04)
   const handleDiscontinueMovie = async (id, title) => {
     const confirmed = await confirm({
-      title: 'Ngừng chiếu phim',
-      message: `Bạn có chắc chắn muốn ngừng chiếu phim "${title}"? Trạng thái của phim sẽ được chuyển thành ENDED.`,
-      confirmText: 'Xác nhận ngừng chiếu',
-      cancelText: 'Hủy',
+      title: 'Discontinue Movie',
+      message: `Are you sure you want to discontinue "${title}"? The movie status will be changed to ENDED.`,
+      confirmText: 'Confirm Discontinue',
+      cancelText: 'Cancel',
       isDestructive: true,
     });
     if (!confirmed) return;
 
     try {
       await adminApi.deleteMovie(id);
-      showToast(`Phim "${title}" đã được chuyển sang trạng thái ENDED.`, 'info');
-      setNotice(`Phim "${title}" đã chuyển sang trạng thái ENDED.`);
+      showToast(`Movie "${title}" has been moved to ENDED status.`, 'info');
+      setNotice(`Movie "${title}" moved to ENDED status.`);
       setTimeout(() => setNotice(''), 4000);
       fetchMovies();
     } catch (err) {
       const resData = err.response?.data;
       const code = resData?.code;
       if (code === 1207 || err.response?.status === 409) {
-        const errorMsg = 'Phim vẫn còn các suất chiếu sắp diễn ra. Vui lòng hủy các suất chiếu này trước khi ngừng chiếu phim.';
+        const errorMsg = 'Movie still has scheduled future showtimes. Please cancel these showtimes before discontinuing the movie.';
         showToast(errorMsg, 'error');
         setActionError(errorMsg);
         setTimeout(() => setActionError(''), 5000);
@@ -752,11 +752,11 @@ export default function AdminDashboard() {
                   <AlertCircle className="w-4 h-4 text-[#e0b354] shrink-0 mt-0.5" />
                   <div className="space-y-0.5">
                     <p className="text-[#f5ece0] font-medium">
-                      Quy tắc thống kê doanh thu &amp; công suất:
+                      Revenue &amp; Capacity Calculation Rules:
                     </p>
                     <ul className="list-disc list-inside text-[11px] text-[#ab9a84] space-y-0.5">
-                      <li>Doanh thu và số vé bán ra được tính theo ngày thanh toán thành công (pay_date).</li>
-                      <li>Tổng số ghế và tỷ lệ lấp đầy (occupancy) được tính theo thời gian suất chiếu diễn ra (start_time).</li>
+                      <li>Realized revenue and tickets sold are calculated based on successful payment date (pay_date).</li>
+                      <li>Total room capacity and occupancy rate are calculated based on showtime screening time (start_time).</li>
                     </ul>
                   </div>
                 </div>
@@ -1473,10 +1473,10 @@ export default function AdminDashboard() {
                                     type="button"
                                     onClick={() => handleDiscontinueMovie(m.id, m.title)}
                                     className="px-2.5 py-1 rounded bg-red-950/40 border border-red-800/60 text-xs font-semibold text-red-300 hover:bg-red-900/60 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                    title="Ngừng chiếu phim (chuyển sang ENDED)"
+                                    title="Discontinue movie (change status to ENDED)"
                                   >
                                     <Ban className="w-3.5 h-3.5" />
-                                    <span>Ngừng chiếu</span>
+                                    <span>Discontinue</span>
                                   </button>
                                 )}
                               </div>

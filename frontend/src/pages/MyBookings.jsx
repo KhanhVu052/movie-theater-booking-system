@@ -128,10 +128,10 @@ export default function MyBookings() {
   // Cancel Confirmed Booking within 60-minute refund window (G2-05)
   const handleCancelConfirmedBooking = async (id, movieTitle) => {
     const confirmed = await confirm({
-      title: 'Hủy vé & Yêu cầu hoàn tiền',
-      message: `Bạn có chắc chắn muốn hủy đơn vé xem phim "${movieTitle}"? Toàn bộ ghế đã chọn sẽ được trả lại và yêu cầu hoàn tiền sẽ được chuyển tới ban quản trị rạp.`,
-      confirmText: 'Xác nhận hủy vé & hoàn tiền',
-      cancelText: 'Giữ vé',
+      title: 'Cancel Booking & Request Refund',
+      message: `Are you sure you want to cancel the ticket for "${movieTitle}"? All selected seats will be released and your refund request will be forwarded to theater administration.`,
+      confirmText: 'Confirm Cancellation & Refund',
+      cancelText: 'Keep Ticket',
       isDestructive: true,
     });
     if (!confirmed) return;
@@ -139,15 +139,15 @@ export default function MyBookings() {
     setCancellingId(id);
     try {
       await bookingApi.cancelConfirmedBooking(id);
-      showToast('Đã hủy vé thành công. Yêu cầu hoàn tiền đang được ban quản lý xử lý.', 'info');
+      showToast('Ticket cancelled successfully. Refund request is being processed.', 'info');
       fetchMyBookings();
     } catch (err) {
       const resData = err.response?.data;
       const code = resData?.code;
       if (code === 1508) {
-        showToast('Đã quá thời hạn hủy vé (chỉ được hủy trước giờ chiếu tối thiểu 60 phút).', 'error');
+        showToast('Cancellation window has passed (cancellation must be at least 60 minutes before showtime).', 'error');
       } else {
-        showToast(resData?.message || 'Không thể hủy vé.', 'error');
+        showToast(resData?.message || 'Failed to cancel booking.', 'error');
       }
     } finally {
       setCancellingId(null);
@@ -360,7 +360,7 @@ export default function MyBookings() {
                                 {b.showtimeStatus === 'CANCELLED' ? 'Showtime Cancelled' : 'Cancelled'}
                               </span>
                               <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-700/80 text-amber-300 text-[10px] font-bold">
-                                Đang chờ hoàn tiền
+                                Refund Pending
                               </span>
                             </div>
                           )}
@@ -458,9 +458,9 @@ export default function MyBookings() {
                                   onClick={() => handleCancelConfirmedBooking(b.id, b.movieTitle)}
                                   disabled={cancellingId === b.id}
                                   className="px-3.5 py-2 rounded-lg bg-[#241a10] border border-red-900/60 hover:bg-red-950/40 text-xs font-semibold text-red-300 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                  title="Hủy vé trước giờ chiếu tối thiểu 60 phút để nhận hoàn tiền"
+                                  title="Cancel ticket at least 60 minutes before showtime to receive refund"
                                 >
-                                  {cancellingId === b.id ? 'Đang hủy...' : 'Cancel & request refund'}
+                                  {cancellingId === b.id ? 'Cancelling...' : 'Cancel & request refund'}
                                 </button>
                               )}
 

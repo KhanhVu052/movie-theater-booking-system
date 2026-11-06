@@ -11,7 +11,7 @@ describe('Dynamic Pricing Matrix & Price Tags Policy (AF-09, AF-15, D-05)', () =
     const showtime = { priceTags: ['EARLY_BIRD'] };
     const badges = computePricingBadges(showtime);
     expect(badges.map((b) => b.id)).toEqual(['early-bird']);
-    expect(badges[0].text).toBe('Ưu đãi suất chiếu sớm');
+    expect(badges[0].text).toBe('Early Bird Discount');
     expect(badges[0].color).toContain('emerald');
   });
 
@@ -19,7 +19,7 @@ describe('Dynamic Pricing Matrix & Price Tags Policy (AF-09, AF-15, D-05)', () =
     const showtime = { priceTags: ['PEAK_HOUR'] };
     const badges = computePricingBadges(showtime);
     expect(badges.map((b) => b.id)).toEqual(['peak-hour']);
-    expect(badges[0].text).toBe('Khung giờ vàng');
+    expect(badges[0].text).toBe('Peak Hour');
     expect(badges[0].color).toContain('amber');
   });
 
@@ -27,7 +27,7 @@ describe('Dynamic Pricing Matrix & Price Tags Policy (AF-09, AF-15, D-05)', () =
     const showtime = { priceTags: ['WEEKEND'] };
     const badges = computePricingBadges(showtime);
     expect(badges.map((b) => b.id)).toEqual(['weekend']);
-    expect(badges[0].text).toBe('Phụ thu cuối tuần');
+    expect(badges[0].text).toBe('Weekend Surcharge');
   });
 
   it('4. Stacking weekend and peak-hour badges', () => {

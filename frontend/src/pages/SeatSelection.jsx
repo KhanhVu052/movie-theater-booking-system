@@ -198,7 +198,7 @@ export default function SeatSelection() {
     const isCouple = seat.seatType === 'COUPLE' || seat.pairGroup != null;
 
     if (isCouple && !isCouplePairAvailable(seat, seats)) {
-      const unavailMsg = 'Cặp ghế đôi này hiện không khả dụng.';
+      const unavailMsg = 'This couple seat pair is currently unavailable.';
       setSelectionNotice(unavailMsg);
       showToast(unavailMsg, 'warning');
       return;
@@ -213,7 +213,7 @@ export default function SeatSelection() {
         } else {
           // Both seats must be selected together
           if (prev.length + 2 > 8) {
-            const maxMsg = 'Chỉ được chọn tối đa 8 ghế cho mỗi lượt đặt vé.';
+            const maxMsg = 'You can only select up to 8 seats per booking.';
             setSelectionNotice(maxMsg);
             showToast(maxMsg, 'warning');
             return prev;
@@ -225,7 +225,7 @@ export default function SeatSelection() {
           nextSelected = prev.filter((id) => id !== seat.id);
         } else {
           if (prev.length >= 8) {
-            const maxMsg = 'Chỉ được chọn tối đa 8 ghế cho mỗi lượt đặt vé.';
+            const maxMsg = 'You can only select up to 8 seats per booking.';
             setSelectionNotice(maxMsg);
             showToast(maxMsg, 'warning');
             return prev;
@@ -235,7 +235,7 @@ export default function SeatSelection() {
       }
 
       if (causesOrphanSeat(seats, nextSelected)) {
-        const warningMsg = 'Không thể để trống 1 ghế đơn độc. Vui lòng chọn ghế liền kề.';
+        const warningMsg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
         setSelectionNotice(warningMsg);
         showToast(warningMsg, 'warning');
       }
@@ -292,7 +292,7 @@ export default function SeatSelection() {
     if (selectedSeatIds.length === 0) return;
 
     if (causesOrphanSeat(seats, selectedSeatIds)) {
-      const msg = 'Không thể để trống 1 ghế đơn độc. Vui lòng chọn ghế liền kề.';
+      const msg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
       setBookingError(msg);
       showToast(msg, 'error');
       return;
@@ -328,15 +328,15 @@ export default function SeatSelection() {
       const code = resData?.code;
 
       if (code === 1502) {
-        const msg = 'Suất chiếu này đã đóng cổng bán vé hoặc đã bị hủy';
+        const msg = 'This showtime is closed for booking or has been cancelled.';
         setBookingError(msg);
         showToast(msg, 'error');
       } else if (code === 1509 || (status === 400 && resData?.message?.toLowerCase().includes('orphan'))) {
-        const msg = resData?.message || 'Không thể để trống 1 ghế đơn độc. Vui lòng chọn ghế liền kề.';
+        const msg = resData?.message || 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
         setBookingError(msg);
         showToast(msg, 'error');
       } else if (code === 1510 || (status === 400 && resData?.message?.toLowerCase().includes('couple'))) {
-        const msg = resData?.message || 'Vui lòng chọn trọn vẹn cả cặp ghế đôi.';
+        const msg = resData?.message || 'Couple seats must be selected and booked together as a complete pair.';
         setBookingError(msg);
         showToast(msg, 'error');
       } else if (code === 1507 || status === 429) {
@@ -580,7 +580,7 @@ export default function SeatSelection() {
                               isInactive
                                 ? `${seat.rowName}${seat.seatNumber} • Maintenance / Inactive`
                                 : isCouple
-                                  ? `${seat.rowName}${seat.seatNumber} • Cặp ghế đôi • ${formatCurrency(seat.price)}/ghế`
+                                  ? `${seat.rowName}${seat.seatNumber} • Couple Seat • ${formatCurrency(seat.price)}/seat`
                                   : `${seat.rowName}${seat.seatNumber} • ${seat.seatType} • ${formatCurrency(seat.price)}`
                             }
                             className={`${shapeClasses} font-bold flex items-center justify-center transition-all cursor-pointer ${seatBg}`}
@@ -611,7 +611,7 @@ export default function SeatSelection() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-t border bg-[#2e131e] border-[#8a2449]" />
-                  <span className="text-[#fda4af] font-semibold">Couple ({formatCurrency(seatPrices.COUPLE_PAIR)}/cặp)</span>
+                  <span className="text-[#fda4af] font-semibold">Couple ({formatCurrency(seatPrices.COUPLE_PAIR)}/pair)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-t border bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#fce092]" />
@@ -693,7 +693,7 @@ export default function SeatSelection() {
                           <span className="text-[#fce092]">{seatTypeBreakdown.VIP}x VIP ({formatCurrency(seatPrices.VIP)})</span>
                         )}
                         {seatTypeBreakdown.COUPLE > 0 && (
-                          <span className="text-[#fda4af]">{Math.floor(seatTypeBreakdown.COUPLE / 2)}x Cặp ghế đôi ({formatCurrency(seatPrices.COUPLE_PAIR)})</span>
+                          <span className="text-[#fda4af]">{Math.floor(seatTypeBreakdown.COUPLE / 2)}x Couple Pair ({formatCurrency(seatPrices.COUPLE_PAIR)})</span>
                         )}
                       </div>
                     </div>
@@ -844,9 +844,7 @@ export default function SeatSelection() {
                       </Link>
                     )}
                     {(bookingError.toLowerCase().includes('closed') ||
-                      bookingError.toLowerCase().includes('cancelled') ||
-                      bookingError.toLowerCase().includes('đóng cổng') ||
-                      bookingError.toLowerCase().includes('bị hủy')) && (
+                      bookingError.toLowerCase().includes('cancelled')) && (
                       <Link
                         to={showtime?.movieId ? `/movies/${showtime.movieId}` : '/'}
                         className="text-[#e6c27a] hover:underline font-semibold text-xs ml-6 inline-flex items-center gap-1"
