@@ -1,6 +1,7 @@
 package com.example.cinema.showtime.service;
 
 import com.example.cinema.booking.config.BookingProperties;
+import com.example.cinema.showtime.config.ShowtimeProperties;
 import com.example.cinema.booking.entity.Booking;
 import com.example.cinema.booking.enums.BookingStatus;
 import com.example.cinema.booking.repository.BookingRepository;
@@ -15,6 +16,7 @@ import com.example.cinema.common.exception.ErrorCode;
 import com.example.cinema.movie.entity.Movie;
 import com.example.cinema.movie.enums.MovieStatus;
 import com.example.cinema.movie.repository.MovieRepository;
+import com.example.cinema.showtime.dto.projection.SeatTypePriceProjection;
 import com.example.cinema.showtime.dto.request.ShowtimeRequest;
 import com.example.cinema.showtime.dto.response.ShowtimeResponse;
 import com.example.cinema.showtime.dto.response.ShowtimeSeatResponse;
@@ -22,6 +24,7 @@ import com.example.cinema.showtime.entity.Room;
 import com.example.cinema.showtime.entity.Seat;
 import com.example.cinema.showtime.entity.Showtime;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
+import com.example.cinema.showtime.enums.SeatType;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
 import com.example.cinema.showtime.enums.ShowtimeStatus;
 import com.example.cinema.showtime.mapper.ShowtimeMapper;
@@ -40,7 +43,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -58,6 +64,7 @@ public class ShowtimeService {
     PaymentRepository paymentRepository;
     VoucherService voucherService;
     BookingProperties bookingProperties;
+    ShowtimeProperties showtimeProperties;
 
     @Transactional
     public ShowtimeResponse createShowtime(ShowtimeRequest request) {
@@ -77,7 +84,7 @@ public class ShowtimeService {
 
         LocalDateTime startTime = request.startTime();
         LocalDateTime endTime = startTime.plusMinutes(movie.getDurationMinutes());
-        LocalDateTime cleaningEndTime = endTime.plusMinutes(15);
+        LocalDateTime cleaningEndTime = endTime.plusMinutes(showtimeProperties.getCleaningMinutes());
 
         boolean hasOverlap = showtimeRepository.existsOverlappingShowtime(
                 room.getId(),
@@ -111,7 +118,15 @@ public class ShowtimeService {
 
         showtimeSeatRepository.saveAll(showtimeSeats);
 
-        return showtimeMapper.toResponse(savedShowtime);
+        Map<SeatType, Long> seatTypePrices = showtimeSeats.stream()
+                .collect(Collectors.toMap(
+                        ss -> ss.getSeat().getType(),
+                        ShowtimeSeat::getPrice,
+                        Math::min,
+                        () -> new EnumMap<>(SeatType.class)
+                ));
+        List<String> priceTags = pricingService.describePriceTags(savedShowtime.getStartTime());
+        return showtimeMapper.toResponse(savedShowtime, seatTypePrices, priceTags);
     }
 
     @Transactional(readOnly = true)
@@ -152,7 +167,15 @@ public class ShowtimeService {
     public ShowtimeResponse getShowtimeById(Long id) {
         Showtime showtime = showtimeRepository.findDetailById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
-        return showtimeMapper.toResponse(showtime);
+        List<SeatTypePriceProjection> projections = showtimeSeatRepository.findPricesByType(showtime.getId());
+        Map<SeatType, Long> seatTypePrices = new EnumMap<>(SeatType.class);
+        for (SeatTypePriceProjection projection : projections) {
+            if (projection.getSeatType() != null) {
+                seatTypePrices.put(projection.getSeatType(), projection.getPrice());
+            }
+        }
+        List<String> priceTags = pricingService.describePriceTags(showtime.getStartTime());
+        return showtimeMapper.toResponse(showtime, seatTypePrices, priceTags);
     }
 
     @Transactional

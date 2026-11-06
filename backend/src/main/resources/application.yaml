@@ -27,10 +27,15 @@ spring:
 
 app:
   booking:
+    hold-minutes: 10
+    expiry-scan-delay-ms: 30000
+    expiry-scan-batch-size: 100
     max-pending-per-user: 2
     cutoff-minutes: 15
     refund-cutoff-minutes: 60
     orphan-seat-rule-enabled: true
+  showtime:
+    cleaning-minutes: 15
   pricing:
     standard-base-price: 60000
     vip-surcharge: 15000

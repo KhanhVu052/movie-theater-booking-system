@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -142,6 +143,35 @@ public class PricingPolicyTest {
         assertThat(map.get(SeatType.NORMAL)).isEqualTo(75_000L); // 60k + 15k
         assertThat(map.get(SeatType.VIP)).isEqualTo(90_000L);    // 60k + 15k + 15k
         assertThat(map.get(SeatType.COUPLE)).isEqualTo(85_000L); // 60k + 10k + 15k
+    }
+
+    @Test
+    @DisplayName("Case 7: describePriceTags returns semantic tags without hardcoded prices")
+    void testCase7_describePriceTags() {
+        // Weekend peak hour (Saturday 19:30) -> ["WEEKEND", "PEAK_HOUR"]
+        LocalDateTime satEvening = LocalDateTime.of(2026, 11, 14, 19, 30);
+        List<String> satEveningTags = pricingService.describePriceTags(satEvening);
+        assertThat(satEveningTags).containsExactly("WEEKEND", "PEAK_HOUR");
+
+        // Sunday morning (09:00) -> ["WEEKEND", "EARLY_BIRD"]
+        LocalDateTime sunMorning = LocalDateTime.of(2026, 11, 15, 9, 0);
+        List<String> sunMorningTags = pricingService.describePriceTags(sunMorning);
+        assertThat(sunMorningTags).containsExactly("WEEKEND", "EARLY_BIRD");
+
+        // Weekday morning (Tuesday 10:00) -> ["EARLY_BIRD"]
+        LocalDateTime tueMorning = LocalDateTime.of(2026, 11, 10, 10, 0);
+        List<String> tueMorningTags = pricingService.describePriceTags(tueMorning);
+        assertThat(tueMorningTags).containsExactly("EARLY_BIRD");
+
+        // Weekday peak hour (Thursday 20:00) -> ["PEAK_HOUR"]
+        LocalDateTime thuPeak = LocalDateTime.of(2026, 11, 12, 20, 0);
+        List<String> thuPeakTags = pricingService.describePriceTags(thuPeak);
+        assertThat(thuPeakTags).containsExactly("PEAK_HOUR");
+
+        // Weekday regular afternoon (Wednesday 14:00) -> empty list
+        LocalDateTime wedAfternoon = LocalDateTime.of(2026, 11, 11, 14, 0);
+        List<String> wedAfternoonTags = pricingService.describePriceTags(wedAfternoon);
+        assertThat(wedAfternoonTags).isEmpty();
     }
 }
 

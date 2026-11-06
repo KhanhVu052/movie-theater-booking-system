@@ -65,7 +65,7 @@ public enum ErrorCode {
     SEAT_SELECTION_INVALID(1503, "Selected seats contain duplicates or do not belong to the requested showtime", HttpStatus.CONFLICT),
     SEAT_NOT_AVAILABLE(1504, "One or more selected seats are currently held or already booked", HttpStatus.CONFLICT),
     BOOKING_CANNOT_BE_CANCELLED(1505, "Only PENDING_PAYMENT bookings can be cancelled", HttpStatus.CONFLICT),
-    BOOKING_EXPIRED(1506, "Booking hold time (10 minutes) has already expired", HttpStatus.CONFLICT),
+    BOOKING_EXPIRED(1506, "Booking hold time has already expired", HttpStatus.CONFLICT),
     TOO_MANY_PENDING_BOOKINGS(1507, "Please pay or cancel your existing reservations first", HttpStatus.TOO_MANY_REQUESTS),
     BOOKING_CANCELLATION_WINDOW_CLOSED(1508, "Booking cancellation window has closed", HttpStatus.CONFLICT),
     ORPHAN_SEAT_DETECTED(1509, "Cannot leave a single empty seat (orphan seat)", HttpStatus.BAD_REQUEST),

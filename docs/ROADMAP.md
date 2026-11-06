@@ -66,6 +66,9 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | AF-05 | Đồng bộ luật ghế lẻ Client/Server qua fixture docs/fixtures/seat-gap-cases.json | P1 | DONE |
 | AF-06 | `cancelShowtime`: Luôn hủy mềm (soft delete), chặn hủy suất đã bắt đầu (D-08) | P1 | DONE |
 | AF-10 | Chống race condition luồng Admin tạo suất / ngừng chiếu / tắt phòng (thứ tự khóa) | P1 | DONE |
+| AF-08 | Đưa tham số nghiệp vụ còn hardcode ra @ConfigurationProperties (D-09) | P2 | DONE |
+| AF-09 | Giá hiển thị đóng băng từ kho showtime_seats & chuẩn hóa priceTags DTO | P2 | DONE |
+| AF-15 | Bóc tách hàm ánh xạ thẻ định giá ra src/utils/priceTags.js và chuẩn hóa test vitest | P2 | DONE |
 | G2-01 | Giới hạn số đơn chờ thanh toán / user | P1 | DONE |
 | G2-02 | Ghế/phòng không hoạt động: chặn bán + cập nhật giá | P1 | DONE |
 | G2-03 | Hạn chót đặt vé + lọc suất chiếu còn bán | P1 | DONE |
@@ -356,6 +359,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | D-06 | JWT lưu `localStorage` (hiện tại) hay cookie HttpOnly? | Giữ `localStorage`, ghi rủi ro vào README | Giữ `localStorage`, ghi nhận rủi ro XSS |
 | D-07 | Ghế COUPLE chưa có pairGroup: chặn bán hay tự ghép theo số chẵn/lẻ? | Chặn bán, bắt buộc gán pairGroup | Chặn bán & bắt buộc gán pairGroup tay [ĐÃ CHỐT] |
 | D-08 | Admin hủy suất chiếu đã/đang diễn ra: chặn hay cho phép? Hủy suất chưa có đơn: hủy mềm hay xóa cứng? | Chặn hủy suất đã bắt đầu (409, mã 1313); luôn hủy mềm (CANCELLED) | Chặn hủy suất đã bắt đầu & Luôn hủy mềm [ĐÃ CHỐT] |
+| D-09 | Trần thời gian giữ ghế (`holdMinutes`) tối đa là bao nhiêu? | Cấu hình qua `BookingProperties`, kiểm tra `@Min(1) @Max(10)` (tối đa 10 phút) | Cấu hình động, trần tối đa 10 phút [ĐÃ CHỐT] |
 
 ## 9. Quy trình đồng bộ tài liệu
 

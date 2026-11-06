@@ -23,6 +23,7 @@ import { bookingApi } from '../api/bookingApi';
 
 import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
 import { causesOrphanSeat, getCouplePartner, isCouplePairAvailable } from '../utils/seatGap';
+import { computePricingBadges, resolveSeatPrices } from '../utils/priceTags';
 
 export default function SeatSelection() {
   const { showtimeId } = useParams();
@@ -156,56 +157,10 @@ export default function SeatSelection() {
   }, [selectedSeatObjects]);
 
   // Dynamic seat prices for legend and breakdown (reads server showtime.seatTypePrices or seat inventory)
-  const seatPrices = useMemo(() => {
-    const normalSeat = seats.find((s) => s.seatType === 'NORMAL');
-    const vipSeat = seats.find((s) => s.seatType === 'VIP');
-    const coupleSeat = seats.find((s) => s.seatType === 'COUPLE' || s.pairGroup != null);
-
-    const normal = showtime?.seatTypePrices?.NORMAL ?? normalSeat?.price ?? showtime?.basePrice ?? 60000;
-    const vip = showtime?.seatTypePrices?.VIP ?? vipSeat?.price ?? (normal + 15000);
-    const couplePerSeat = showtime?.seatTypePrices?.COUPLE ?? coupleSeat?.price ?? (normal + 10000);
-    const couplePair = couplePerSeat * 2;
-
-    return {
-      NORMAL: normal,
-      VIP: vip,
-      COUPLE: couplePerSeat,
-      COUPLE_PAIR: couplePair,
-    };
-  }, [showtime, seats]);
+  const seatPrices = useMemo(() => resolveSeatPrices(showtime, seats), [showtime, seats]);
 
   // Dynamic pricing matrix badges for Header Bar (Early Bird, Peak Hour, Weekend)
-  const pricingBadges = useMemo(() => {
-    if (!showtime?.startTime) return [];
-    const badges = [];
-    const date = new Date(showtime.startTime);
-    const day = date.getDay(); // 0 is Sunday, 6 is Saturday
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const timeInMinutes = hours * 60 + minutes;
-
-    if (day === 0 || day === 6) {
-      badges.push({
-        id: 'weekend',
-        text: 'Cuối tuần (+15k)',
-        color: 'bg-[#966b28]/20 border-[#966b28]/60 text-[#fce092]',
-      });
-    }
-    if (timeInMinutes < 12 * 60) {
-      badges.push({
-        id: 'early-bird',
-        text: 'Ưu đãi suất sớm (-10k)',
-        color: 'bg-emerald-950/40 border-emerald-600/50 text-emerald-400',
-      });
-    } else if (timeInMinutes >= 18 * 60 && timeInMinutes < 22 * 60) {
-      badges.push({
-        id: 'peak-hour',
-        text: 'Giờ vàng (+10k)',
-        color: 'bg-amber-950/40 border-amber-600/50 text-amber-400',
-      });
-    }
-    return badges;
-  }, [showtime]);
+  const pricingBadges = useMemo(() => computePricingBadges(showtime), [showtime]);
 
   // Auto-unapply voucher if subtotal drops below required minOrderValue
   useEffect(() => {

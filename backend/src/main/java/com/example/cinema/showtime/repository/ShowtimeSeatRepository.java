@@ -1,6 +1,7 @@
 package com.example.cinema.showtime.repository;
 
 import com.example.cinema.showtime.dto.projection.MovieCapacityProjection;
+import com.example.cinema.showtime.dto.projection.SeatTypePriceProjection;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
 import com.example.cinema.showtime.enums.ShowtimeStatus;
@@ -24,6 +25,9 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
 
     @EntityGraph(attributePaths = {"seat"})
     List<ShowtimeSeat> findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(Long showtimeId);
+
+    @Query("SELECT ss.seat.type AS seatType, MIN(ss.price) AS price FROM ShowtimeSeat ss WHERE ss.showtime.id = :sid GROUP BY ss.seat.type")
+    List<SeatTypePriceProjection> findPricesByType(@Param("sid") Long sid);
 
     @Query("""
             SELECT ss.id FROM ShowtimeSeat ss

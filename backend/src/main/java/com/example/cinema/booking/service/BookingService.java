@@ -58,8 +58,6 @@ import java.util.stream.Collectors;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class BookingService {
 
-    private static final int SEAT_HOLD_MINUTES = 10;
-
     BookingRepository bookingRepository;
     BookingItemRepository bookingItemRepository;
     ShowtimeRepository showtimeRepository;
@@ -205,7 +203,7 @@ public class BookingService {
         }
 
         long finalAmount = subtotalAmount - discountAmount;
-        LocalDateTime expiresAt = now.plusMinutes(SEAT_HOLD_MINUTES);
+        LocalDateTime expiresAt = now.plusMinutes(bookingProperties.getHoldMinutes());
 
         Booking booking = Booking.builder()
                 .bookingCode(generateUniqueBookingCode())

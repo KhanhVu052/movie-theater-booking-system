@@ -8,6 +8,7 @@ import com.example.cinema.showtime.enums.TranslationType;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @Builder
@@ -31,7 +32,8 @@ public record ShowtimeResponse(
         ShowtimeStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        Map<SeatType, Long> seatTypePrices
+        Map<SeatType, Long> seatTypePrices,
+        List<String> priceTags
 ) {
     public ShowtimeResponse(
             Long id,
@@ -57,7 +59,7 @@ public record ShowtimeResponse(
         this(
                 id, movieId, movieTitle, movieStatus, posterUrl, durationMinutes,
                 roomId, roomName, cinemaId, cinemaName, format, translationType,
-                startTime, endTime, cleaningEndTime, basePrice, status, createdAt, updatedAt, null
+                startTime, endTime, cleaningEndTime, basePrice, status, createdAt, updatedAt, null, null
         );
     }
 }

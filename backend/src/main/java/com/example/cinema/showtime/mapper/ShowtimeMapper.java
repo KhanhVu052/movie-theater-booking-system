@@ -16,6 +16,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -45,7 +46,10 @@ public class ShowtimeMapper {
     }
 
     public ShowtimeResponse toResponse(Showtime showtime) {
-        Map<SeatType, Long> seatTypePrices = pricingService != null ? pricingService.calculateSeatTypePrices(showtime) : null;
+        return toResponse(showtime, null, null);
+    }
+
+    public ShowtimeResponse toResponse(Showtime showtime, Map<SeatType, Long> seatTypePrices, List<String> priceTags) {
         return ShowtimeResponse.builder()
                 .id(showtime.getId())
                 .movieId(showtime.getMovie().getId())
@@ -67,6 +71,7 @@ public class ShowtimeMapper {
                 .createdAt(showtime.getCreatedAt())
                 .updatedAt(showtime.getUpdatedAt())
                 .seatTypePrices(seatTypePrices)
+                .priceTags(priceTags)
                 .build();
     }
 

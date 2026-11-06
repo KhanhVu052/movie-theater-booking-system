@@ -1,5 +1,6 @@
 package com.example.cinema.booking.component;
 
+import com.example.cinema.booking.config.BookingProperties;
 import com.example.cinema.booking.enums.BookingStatus;
 import com.example.cinema.booking.repository.BookingRepository;
 import com.example.cinema.booking.service.BookingService;
@@ -21,19 +22,18 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class BookingExpirationScheduler {
 
-    private static final int BATCH_SIZE = 100;
-
     BookingRepository bookingRepository;
     BookingService bookingService;
     DeadlockRetryExecutor deadlockRetryExecutor;
+    BookingProperties bookingProperties;
 
-    @Scheduled(fixedDelay = 30_000)
+    @Scheduled(fixedDelayString = "${app.booking.expiry-scan-delay-ms:30000}")
     public void releaseExpiredBookings() {
         LocalDateTime now = LocalDateTime.now();
         List<Long> expiredBookingIds = bookingRepository.findExpiredBookingIdsBatch(
                 BookingStatus.PENDING_PAYMENT,
                 now,
-                PageRequest.of(0, BATCH_SIZE)
+                PageRequest.of(0, bookingProperties.getExpiryScanBatchSize())
         );
 
         if (expiredBookingIds.isEmpty()) {

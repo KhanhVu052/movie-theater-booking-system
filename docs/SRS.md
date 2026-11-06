@@ -207,7 +207,7 @@ Hệ thống tính toán giá vé theo ma trận phụ thu và giảm giá độ
 6. Thời điểm áp giá & Nguyên tắc Bất biến (Single Source of Truth):
    - Giá từng ghế được tính toán và lưu cố định vào trường `showtime_seats.price` ngay tại thời điểm tạo suất chiếu (`ShowtimeService.createShowtime`) và khi cập nhật hàng loạt loại ghế trong phòng (`RoomService.batchUpdateSeats`).
    - Khi tạo đơn đặt vé (`BookingService.createBooking`), Backend đọc giá trực tiếp từ `showtime_seats.price` để tính tổng tiền và lưu vào `booking_items.price`. Tuyệt đối không tin cậy hay nhận giá từ phía client.
-   - API chi tiết suất chiếu (`GET /api/v1/showtimes/{id}`) trả về trường `seatTypePrices` (Map<SeatType, Long>) đại diện cho giá của từng hạng ghế tương ứng suất chiếu đó để giao diện hiển thị bảng giá chuẩn.
+   - API chi tiết suất chiếu (`GET /api/v1/showtimes/{id}`) trả về trường `seatTypePrices` (Map<SeatType, Long>) đọc đóng băng từ `showtime_seats` và danh sách thẻ định giá ngữ nghĩa `priceTags` (List<String>: `WEEKEND`, `PEAK_HOUR`, `EARLY_BIRD`).
 • Lỗi: 
   - Suất chiếu hoặc cấu hình giá không hợp lệ → 400 Bad Request.
 • Tiêu chí nghiệm thu:
@@ -216,7 +216,7 @@ Hệ thống tính toán giá vé theo ma trận phụ thu và giảm giá độ
   - Giá vé thường chiều cuối tuần (CN 14:00): 60.000 + 15.000 = 75.000đ.
   - Giá vé VIP giờ vàng tối cuối tuần (T7 20:00): 60.000 + 15.000 + 15.000 + 10.000 = 100.000đ.
   - Giá vé sau khi giảm không bao giờ thấp hơn mức sàn 40.000đ.
-  - Giao diện `SeatSelection` hiển thị các badge trực quan theo đúng lịch chiếu ("Cuối tuần (+15k)", "Ưu đãi suất sớm (-10k)", "Giờ vàng (+10k)") và bảng chú thích giá (Legend) phản ánh đúng giá vé động.
+  - Giao diện `SeatSelection` hiển thị các badge trực quan theo đúng thẻ định giá từ server ("Phụ thu cuối tuần", "Ưu đãi suất chiếu sớm", "Khung giờ vàng") và bảng chú thích giá (Legend) phản ánh đúng giá vé đã đóng băng trong kho `showtime_seats`.
 
 FR-BOOK-02
 Giữ ghế đồng thời & Thu hồi có điều kiện (Khóa trước, Validate sau - AF-01, AF-12)

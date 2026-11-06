@@ -12,7 +12,9 @@ import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -74,6 +76,28 @@ public class PricingService {
             map.put(type, calculateSeatPrice(showtime, type));
         }
         return map;
+    }
+
+    public List<String> describePriceTags(LocalDateTime startTime) {
+        if (startTime == null) {
+            return List.of();
+        }
+        List<String> tags = new ArrayList<>();
+        DayOfWeek dayOfWeek = startTime.getDayOfWeek();
+        if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
+            tags.add("WEEKEND");
+        }
+
+        LocalTime time = startTime.toLocalTime();
+        if (pricingProperties.getMorningCutoffTime() != null && time.isBefore(pricingProperties.getMorningCutoffTime())) {
+            tags.add("EARLY_BIRD");
+        } else if (pricingProperties.getPeakHourStartTime() != null
+                && pricingProperties.getPeakHourEndTime() != null
+                && !time.isBefore(pricingProperties.getPeakHourStartTime())
+                && time.isBefore(pricingProperties.getPeakHourEndTime())) {
+            tags.add("PEAK_HOUR");
+        }
+        return tags;
     }
 }
 

@@ -23,22 +23,5 @@ public class PricingProperties {
     private LocalTime peakHourStartTime = LocalTime.of(18, 0);
     private LocalTime peakHourEndTime = LocalTime.of(22, 0);
     private long minSeatPrice = 40_000L;
-
-    // Aliases to support naming variants from ROADMAP D-05
-    public long getPrimeTimeSurcharge() {
-        return peakHourSurcharge;
-    }
-
-    public void setPrimeTimeSurcharge(long primeTimeSurcharge) {
-        this.peakHourSurcharge = primeTimeSurcharge;
-    }
-
-    public long getMatineeDiscount() {
-        return morningDiscount;
-    }
-
-    public void setMatineeDiscount(long matineeDiscount) {
-        this.morningDiscount = matineeDiscount;
-    }
 }
 
