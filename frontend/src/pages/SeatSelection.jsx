@@ -155,6 +155,58 @@ export default function SeatSelection() {
     return counts;
   }, [selectedSeatObjects]);
 
+  // Dynamic seat prices for legend and breakdown (reads server showtime.seatTypePrices or seat inventory)
+  const seatPrices = useMemo(() => {
+    const normalSeat = seats.find((s) => s.seatType === 'NORMAL');
+    const vipSeat = seats.find((s) => s.seatType === 'VIP');
+    const coupleSeat = seats.find((s) => s.seatType === 'COUPLE' || s.pairGroup != null);
+
+    const normal = showtime?.seatTypePrices?.NORMAL ?? normalSeat?.price ?? showtime?.basePrice ?? 60000;
+    const vip = showtime?.seatTypePrices?.VIP ?? vipSeat?.price ?? (normal + 15000);
+    const couplePerSeat = showtime?.seatTypePrices?.COUPLE ?? coupleSeat?.price ?? (normal + 10000);
+    const couplePair = couplePerSeat * 2;
+
+    return {
+      NORMAL: normal,
+      VIP: vip,
+      COUPLE: couplePerSeat,
+      COUPLE_PAIR: couplePair,
+    };
+  }, [showtime, seats]);
+
+  // Dynamic pricing matrix badges for Header Bar (Early Bird, Peak Hour, Weekend)
+  const pricingBadges = useMemo(() => {
+    if (!showtime?.startTime) return [];
+    const badges = [];
+    const date = new Date(showtime.startTime);
+    const day = date.getDay(); // 0 is Sunday, 6 is Saturday
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const timeInMinutes = hours * 60 + minutes;
+
+    if (day === 0 || day === 6) {
+      badges.push({
+        id: 'weekend',
+        text: 'Cuối tuần (+15k)',
+        color: 'bg-[#966b28]/20 border-[#966b28]/60 text-[#fce092]',
+      });
+    }
+    if (timeInMinutes < 12 * 60) {
+      badges.push({
+        id: 'early-bird',
+        text: 'Ưu đãi suất sớm (-10k)',
+        color: 'bg-emerald-950/40 border-emerald-600/50 text-emerald-400',
+      });
+    } else if (timeInMinutes >= 18 * 60 && timeInMinutes < 22 * 60) {
+      badges.push({
+        id: 'peak-hour',
+        text: 'Giờ vàng (+10k)',
+        color: 'bg-amber-950/40 border-amber-600/50 text-amber-400',
+      });
+    }
+    return badges;
+  }, [showtime]);
+
   // Auto-unapply voucher if subtotal drops below required minOrderValue
   useEffect(() => {
     if (appliedVoucher && appliedVoucher.minOrderValue && subtotal < appliedVoucher.minOrderValue) {
@@ -417,6 +469,15 @@ export default function SeatSelection() {
                     {showtime.format}
                   </span>
                 )}
+                {pricingBadges.map((badge) => (
+                  <span
+                    key={badge.id}
+                    data-testid={`pricing-badge-${badge.id}`}
+                    className={`px-2 py-0.5 rounded border text-[11px] font-bold ${badge.color}`}
+                  >
+                    {badge.text}
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -587,15 +648,15 @@ export default function SeatSelection() {
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 mt-10 pt-6 border-t border-[#241a10] text-xs text-[#ab9a84]">
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-t border bg-[#1a140c] border-[#3d2b17]" />
-                  <span>Regular ({formatCurrency(showtime.basePrice)})</span>
+                  <span>Regular ({formatCurrency(seatPrices.NORMAL)})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-t border bg-[#2b1b0b] border-[#966b28]" />
-                  <span className="text-[#fce092] font-semibold">VIP ({formatCurrency(showtime.basePrice + 20000)})</span>
+                  <span className="text-[#fce092] font-semibold">VIP ({formatCurrency(seatPrices.VIP)})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-t border bg-[#2e131e] border-[#8a2449]" />
-                  <span className="text-[#fda4af] font-semibold">Couple ({formatCurrency(showtime.basePrice * 2)})</span>
+                  <span className="text-[#fda4af] font-semibold">Couple ({formatCurrency(seatPrices.COUPLE_PAIR)}/cặp)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-t border bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#fce092]" />
@@ -671,13 +732,13 @@ export default function SeatSelection() {
                       {/* Seat breakdown summary tags */}
                       <div className="text-[11px] text-[#8a765d] pt-1 flex flex-wrap gap-x-3 gap-y-1">
                         {seatTypeBreakdown.NORMAL > 0 && (
-                          <span>{seatTypeBreakdown.NORMAL}x Regular ({formatCurrency(showtime.basePrice)})</span>
+                          <span>{seatTypeBreakdown.NORMAL}x Regular ({formatCurrency(seatPrices.NORMAL)})</span>
                         )}
                         {seatTypeBreakdown.VIP > 0 && (
-                          <span className="text-[#fce092]">{seatTypeBreakdown.VIP}x VIP ({formatCurrency(showtime.basePrice + 20000)})</span>
+                          <span className="text-[#fce092]">{seatTypeBreakdown.VIP}x VIP ({formatCurrency(seatPrices.VIP)})</span>
                         )}
                         {seatTypeBreakdown.COUPLE > 0 && (
-                          <span className="text-[#fda4af]">{Math.floor(seatTypeBreakdown.COUPLE / 2)}x Cặp ghế đôi ({formatCurrency(showtime.basePrice * 2)})</span>
+                          <span className="text-[#fda4af]">{Math.floor(seatTypeBreakdown.COUPLE / 2)}x Cặp ghế đôi ({formatCurrency(seatPrices.COUPLE_PAIR)})</span>
                         )}
                       </div>
                     </div>

@@ -7,13 +7,23 @@ import com.example.cinema.showtime.dto.response.ShowtimeSeatResponse;
 import com.example.cinema.showtime.entity.Room;
 import com.example.cinema.showtime.entity.Showtime;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
+import com.example.cinema.showtime.enums.SeatType;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
+import com.example.cinema.showtime.service.PricingService;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Component
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ShowtimeMapper {
+
+    PricingService pricingService;
 
     public Showtime toEntity(
             ShowtimeRequest request,
@@ -35,6 +45,7 @@ public class ShowtimeMapper {
     }
 
     public ShowtimeResponse toResponse(Showtime showtime) {
+        Map<SeatType, Long> seatTypePrices = pricingService != null ? pricingService.calculateSeatTypePrices(showtime) : null;
         return ShowtimeResponse.builder()
                 .id(showtime.getId())
                 .movieId(showtime.getMovie().getId())
@@ -55,6 +66,7 @@ public class ShowtimeMapper {
                 .status(showtime.getStatus())
                 .createdAt(showtime.getCreatedAt())
                 .updatedAt(showtime.getUpdatedAt())
+                .seatTypePrices(seatTypePrices)
                 .build();
     }
 

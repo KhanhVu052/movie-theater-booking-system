@@ -73,3 +73,4 @@ describe('Couple Seats Business Rules (G3-02, D-01, D-02)', () => {
     expect(selected).toEqual([]);
   });
 });
+

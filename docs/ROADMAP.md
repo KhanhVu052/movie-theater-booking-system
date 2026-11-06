@@ -65,7 +65,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | G2-06 | Báo cáo doanh thu: đếm đúng vé và công suất | P1 | DONE |
 | G3-01 | Luật ghế lẻ (orphan seat) | P2 | DONE |
 | G3-02 | Ghế đôi (couple) | P2 | DONE |
-| G3-03 | `PricingPolicy` (cuối tuần, giờ vàng, suất sáng) | P2 | BLOCKED (D-05) |
+| G3-03 | `PricingPolicy` (cuối tuần, giờ vàng, suất sáng) | P2 | DONE |
 | G4-01 | `GlobalExceptionHandler` đủ loại lỗi | P3 | TODO |
 | G4-02 | `getShowtimeSeats` chỉ đọc | P3 | TODO |
 | G4-03 | Voucher: danh sách công khai vs admin, đơn 0 đồng | P3 | TODO |
@@ -343,7 +343,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | D-02 | Giá ghế đôi: mỗi ghế = giá cơ sở × 2 (hiện tại) hay mỗi ghế = giá cơ sở (cặp = 2×)? | Mỗi ghế = giá cơ sở × hệ số cấu hình | Mỗi ghế = giá cơ sở (cặp = tổng 2 ghế) [ĐÃ CHỐT] |
 | D-03 | Kết thúc phim còn suất tương lai: chặn hay tự hủy các suất đó? | Chặn kèm thông báo | Chặn kèm thông báo (409 Conflict) [ĐÃ CHỐT] |
 | D-04 | Có cho khách tự hủy vé đã thanh toán không? Hạn chót bao lâu? | Có, trước giờ chiếu 60 phút | Có, trước giờ chiếu 60 phút [ĐÃ CHỐT] |
-| D-05 | Quy tắc giá: phụ thu cuối tuần (Thứ 6–CN hay Thứ 7–CN?), giờ vàng (18:00–22:00?), giảm suất sáng (trước 12:00?) và số tiền | Theo `PricingProperties` mặc định | Theo `PricingProperties` (T7-CN +15k, tối +10k, sáng -10k) |
+| D-05 | Quy tắc giá: phụ thu cuối tuần (Thứ 6–CN hay Thứ 7–CN?), giờ vàng (18:00–22:00?), giảm suất sáng (trước 12:00?) và số tiền | Theo `PricingProperties` mặc định | Theo `PricingProperties` (T7-CN +15k, tối +10k, sáng -10k, sàn 40k) [ĐÃ CHỐT] |
 | D-06 | JWT lưu `localStorage` (hiện tại) hay cookie HttpOnly? | Giữ `localStorage`, ghi rủi ro vào README | Giữ `localStorage`, ghi nhận rủi ro XSS |
 
 ## 9. Quy trình đồng bộ tài liệu

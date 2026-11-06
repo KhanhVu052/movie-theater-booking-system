@@ -41,6 +41,7 @@ public class RoomService {
     CinemaService cinemaService;
     RoomMapper roomMapper;
     SeatMapper seatMapper;
+    PricingService pricingService;
 
     @Transactional
     public RoomResponse createRoom(RoomRequest request) {
@@ -118,7 +119,7 @@ public class RoomService {
                 seat.setType(request.type());
                 List<ShowtimeSeat> futureAvailableSeats = showtimeSeatRepository.findFutureAvailableBySeatId(seat.getId(), now);
                 for (ShowtimeSeat ss : futureAvailableSeats) {
-                    ss.setPrice(request.type().calculatePrice(ss.getShowtime().getBasePrice()));
+                    ss.setPrice(pricingService.calculateSeatPrice(ss.getShowtime(), request.type()));
                 }
                 showtimeSeatRepository.saveAll(futureAvailableSeats);
             }

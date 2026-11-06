@@ -53,6 +53,7 @@ public class ShowtimeService {
     SeatRepository seatRepository;
     MovieRepository movieRepository;
     ShowtimeMapper showtimeMapper;
+    PricingService pricingService;
     BookingRepository bookingRepository;
     PaymentRepository paymentRepository;
     VoucherService voucherService;
@@ -102,7 +103,7 @@ public class ShowtimeService {
                 .map(seat -> ShowtimeSeat.builder()
                         .showtime(savedShowtime)
                         .seat(seat)
-                        .price(seat.getType().calculatePrice(savedShowtime.getBasePrice()))
+                        .price(pricingService.calculateSeatPrice(savedShowtime, seat.getType()))
                         .status(ShowtimeSeatStatus.AVAILABLE)
                         .heldByBookingId(null)
                         .build())
@@ -171,7 +172,7 @@ public class ShowtimeService {
                         .map(seat -> ShowtimeSeat.builder()
                                 .showtime(showtime)
                                 .seat(seat)
-                                .price(seat.getType().calculatePrice(showtime.getBasePrice()))
+                                .price(pricingService.calculateSeatPrice(showtime, seat.getType()))
                                 .status(ShowtimeSeatStatus.AVAILABLE)
                                 .heldByBookingId(null)
                                 .build())

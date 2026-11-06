@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 3.1)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 3.2)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -174,6 +174,37 @@ Ghế đôi (COUPLE) được triển khai theo Phương án A (Quyết định 
   - Sơ đồ ghế hiển thị các cặp ghế đôi liền khối (bo góc pill-shape), phân biệt rõ với ghế đơn.
   - Nếu 1 ghế trong cặp bị chiếm, cả cặp chuyển màu xám/vô hiệu hóa.
   - Đặt thành công 1 cặp ghế đôi tạo đúng 2 bản ghi `booking_items` với tổng tiền bằng đúng tổng 2 ghế.
+
+FR-PRICE-01
+Chính sách ma trận định giá tự động theo ngày, giờ và loại ghế (Pricing Policy Matrix – cập nhật v3.2)
+Hệ thống tính toán giá vé theo ma trận phụ thu và giảm giá động tập trung qua `PricingService` và cấu hình linh hoạt trong `PricingProperties` (`app.pricing` trong `application.yaml`), tuyệt đối không hardcode giá vé tại controller hay client (Quyết định D-05 [ĐÃ CHỐT]):
+1. Giá cơ sở (Base Price): Lấy từ giá cơ sở của suất chiếu (`showtime.basePrice`), nếu chưa cấu hình sẽ sử dụng giá chuẩn mặc định (`app.pricing.standard-base-price`, mặc định 60.000đ).
+2. Phụ thu loại ghế (Seat Type Surcharge):
+   - Ghế thường (NORMAL): +0đ.
+   - Ghế VIP: phụ thu `vip-surcharge` (mặc định +15.000đ).
+   - Ghế đôi (COUPLE): phụ thu `couple-surcharge` (mặc định +10.000đ cho mỗi ghế cấu thành cặp).
+3. Phụ thu ngày cuối tuần (Weekend Surcharge):
+   - Áp dụng cho các suất chiếu diễn ra vào Thứ Bảy (SATURDAY) hoặc Chủ Nhật (SUNDAY): phụ thu `weekend-surcharge` (mặc định +15.000đ).
+4. Khung giờ trong ngày (Time-of-day Adjustment):
+   - Suất chiếu sáng (trước 12:00 / `morning-cutoff-time`): giảm giá suất sớm `morning-discount` (mặc định -10.000đ).
+   - Khung giờ vàng (từ 18:00 đến trước 22:00 / [`peak-hour-start-time`, `peak-hour-end-time`)): phụ thu giờ cao điểm `peak-hour-surcharge` (mặc định +10.000đ).
+   - Các khung giờ chiều thông thường (12:00 - 18:00) hoặc đêm muộn (>= 22:00): không điều chỉnh phụ thu theo giờ (+0đ).
+5. Sàn giá tối thiểu (Minimum Seat Price Floor):
+   - Sau khi tổng hợp toàn bộ phụ thu và khấu trừ, giá vé không được thấp hơn ngưỡng sàn `min-seat-price` (mặc định 40.000đ) nhằm bảo vệ doanh thu.
+6. Thời điểm áp giá & Nguyên tắc Bất biến (Single Source of Truth):
+   - Giá từng ghế được tính toán và lưu cố định vào trường `showtime_seats.price` ngay tại thời điểm tạo suất chiếu (`ShowtimeService.createShowtime`) và khi cập nhật hàng loạt loại ghế trong phòng (`RoomService.batchUpdateSeats`).
+   - Khi tạo đơn đặt vé (`BookingService.createBooking`), Backend đọc giá trực tiếp từ `showtime_seats.price` để tính tổng tiền và lưu vào `booking_items.price`. Tuyệt đối không tin cậy hay nhận giá từ phía client.
+   - API chi tiết suất chiếu (`GET /api/v1/showtimes/{id}`) trả về trường `seatTypePrices` (Map<SeatType, Long>) đại diện cho giá của từng hạng ghế tương ứng suất chiếu đó để giao diện hiển thị bảng giá chuẩn.
+• Lỗi: 
+  - Suất chiếu hoặc cấu hình giá không hợp lệ → 400 Bad Request.
+• Tiêu chí nghiệm thu:
+  - Giá vé suất thường sáng ngày thường (T4 09:30): 60.000 - 10.000 = 50.000đ.
+  - Giá vé VIP giờ vàng tối ngày thường (T4 19:45): 60.000 + 15.000 + 10.000 = 85.000đ.
+  - Giá vé thường chiều cuối tuần (CN 14:00): 60.000 + 15.000 = 75.000đ.
+  - Giá vé VIP giờ vàng tối cuối tuần (T7 20:00): 60.000 + 15.000 + 15.000 + 10.000 = 100.000đ.
+  - Giá vé sau khi giảm không bao giờ thấp hơn mức sàn 40.000đ.
+  - Giao diện `SeatSelection` hiển thị các badge trực quan theo đúng lịch chiếu ("Cuối tuần (+15k)", "Ưu đãi suất sớm (-10k)", "Giờ vàng (+10k)") và bảng chú thích giá (Legend) phản ánh đúng giá vé động.
+
 FR-BOOK-02
 Giữ ghế đồng thời & Thu hồi có điều kiện
 Khách chọn từ 1–8 ghế trong cùng một showtime_id. Trong Transaction:
@@ -1005,6 +1036,12 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 3.2 (2026-11-06):
+  + Bổ sung G3-03 & FR-PRICE-01: Chính sách ma trận định giá tự động theo ngày, giờ và loại ghế (Pricing Policy Matrix) qua PricingProperties (app.pricing) và PricingService theo Quyết định D-05 [ĐÃ CHỐT].
+  + Cấu hình ma trận: chuẩn cơ sở 60k, phụ thu VIP +15k, phụ thu ghế đôi +10k/ghế, phụ thu cuối tuần (T7-CN) +15k, ưu đãi suất sớm (trước 12:00) -10k, phụ thu giờ vàng (18:00-22:00) +10k, sàn giá tối thiểu 40k.
+  + Áp giá cố định vào showtime_seats.price khi tạo suất chiếu và đổi hạng ghế phòng chiếu; mở rộng ShowtimeResponse chứa trường seatTypePrices (Map<SeatType, Long>).
+  + Cập nhật SeatSelection.jsx: Hiển thị các badge ma trận giá trực quan (Cuối tuần, Suất sớm, Giờ vàng) trên Header Bar và cập nhật bảng chú thích giá Legend đọc trực tiếp từ server.
+  + Bổ sung bộ kiểm thử PricingPolicyTest (backend) và pricingPolicy.test.js (frontend).
 - Phiên bản 3.1 (2026-11-06):
   + Bổ sung G3-02 & FR-SEAT-02 / FR-BOOK-07: Quy tắc ghế đôi (Couple Seats / Sofa đôi) theo Phương án A (D-01) và cách tính giá chuẩn theo D-02 [ĐÃ CHỐT].
   + Thêm cột `pair_group` vào bảng `seats` (Migration V3__seat_pair_group.sql), mở rộng DTO SeatResponse/ShowtimeSeatResponse.

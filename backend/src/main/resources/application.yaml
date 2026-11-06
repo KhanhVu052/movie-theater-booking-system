@@ -31,6 +31,17 @@ app:
     cutoff-minutes: 15
     refund-cutoff-minutes: 60
     orphan-seat-rule-enabled: true
+  pricing:
+    standard-base-price: 60000
+    vip-surcharge: 15000
+    couple-surcharge: 10000
+    weekend-surcharge: 15000
+    peak-hour-surcharge: 10000
+    morning-discount: 10000
+    morning-cutoff-time: "12:00"
+    peak-hour-start-time: "18:00"
+    peak-hour-end-time: "22:00"
+    min-seat-price: 40000
   jwt:
     # Required, no default on purpose. Generate one with: openssl rand -base64 48
     secret: ${JWT_SECRET}

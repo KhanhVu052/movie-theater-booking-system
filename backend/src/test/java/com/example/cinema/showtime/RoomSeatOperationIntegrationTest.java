@@ -27,6 +27,7 @@ import com.example.cinema.showtime.repository.RoomRepository;
 import com.example.cinema.showtime.repository.SeatRepository;
 import com.example.cinema.showtime.repository.ShowtimeRepository;
 import com.example.cinema.showtime.repository.ShowtimeSeatRepository;
+import com.example.cinema.showtime.service.PricingService;
 import com.example.cinema.showtime.service.RoomService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +56,9 @@ public class RoomSeatOperationIntegrationTest {
     RoomService roomService;
 
     @Autowired
+    PricingService pricingService;
+
+    @Autowired
     BookingService bookingService;
 
     @Autowired
@@ -77,6 +81,9 @@ public class RoomSeatOperationIntegrationTest {
 
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    com.example.cinema.booking.repository.BookingRepository bookingRepository;
 
     @Autowired
     EntityManager entityManager;
@@ -215,9 +222,10 @@ public class RoomSeatOperationIntegrationTest {
         entityManager.flush();
         entityManager.clear();
 
-        // Verify showtime seat price is updated to VIP price: 80,000 + 20,000 = 100,000
+        // Verify showtime seat price is updated to VIP price calculated via PricingService
         ShowtimeSeat updatedShowtimeSeat = showtimeSeatRepository.findById(showtimeSeat.getId()).orElseThrow();
-        assertThat(updatedShowtimeSeat.getPrice()).isEqualTo(100000L);
+        long expectedPrice = pricingService.calculateSeatPrice(showtime, SeatType.VIP);
+        assertThat(updatedShowtimeSeat.getPrice()).isEqualTo(expectedPrice);
     }
 
     @Test
@@ -244,11 +252,23 @@ public class RoomSeatOperationIntegrationTest {
                 .status(ShowtimeStatus.SCHEDULED)
                 .build());
 
+        com.example.cinema.booking.entity.Booking holdBooking = bookingRepository.save(com.example.cinema.booking.entity.Booking.builder()
+                .bookingCode("HOLD-" + UUID.randomUUID().toString().substring(0, 8))
+                .user(testUser)
+                .showtime(showtime)
+                .subtotalAmount(80000L)
+                .discountAmount(0L)
+                .finalAmount(80000L)
+                .status(com.example.cinema.booking.enums.BookingStatus.PENDING_PAYMENT)
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
+                .build());
+
         showtimeSeatRepository.save(ShowtimeSeat.builder()
                 .showtime(showtime)
                 .seat(seat)
                 .price(80000L)
                 .status(ShowtimeSeatStatus.HELD) // HELD in future showtime
+                .heldByBookingId(holdBooking.getId())
                 .build());
 
         entityManager.flush();
