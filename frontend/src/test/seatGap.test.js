@@ -1,5 +1,22 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import { causesOrphanSeat, findOrphanSeatIds } from '../utils/seatGap';
+
+const fixturePath = path.resolve(__dirname, '../../../docs/fixtures/seat-gap-cases.json');
+const fixtureCases = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+
+describe('Shared Seat Gap Cases Fixture (AF-05, docs/fixtures/seat-gap-cases.json)', () => {
+  it.each(fixtureCases)('$id: $name', (tc) => {
+    const isOrphan = causesOrphanSeat(tc.seats, tc.selectedSeatIds);
+    expect(isOrphan).toBe(tc.expectOrphan);
+
+    const orphanIds = findOrphanSeatIds(tc.seats, tc.selectedSeatIds);
+    if (tc.expectedNewOrphanIds) {
+      expect(orphanIds.sort()).toEqual([...tc.expectedNewOrphanIds].sort());
+    }
+  });
+});
 
 describe('Orphan Seat Detection (FR-BOOK-01, G3-01)', () => {
   const createRowSeats = (rowName, count, overrides = {}) => {

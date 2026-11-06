@@ -5,7 +5,7 @@
  */
 
 export function isSeatEmpty(seat, selectedIdSet) {
-  if (!seat || seat.isActive === false) return false;
+  if (!seat || seat.selectable === false) return false;
   if (selectedIdSet.has(seat.id)) return false;
   return seat.status === 'AVAILABLE';
 }
@@ -25,6 +25,10 @@ function findOrphanSeatIdsInRow(rowSeats, selectedIdSet) {
 
     const block = sorted.slice(i, j + 1);
     const m = block.length;
+    if (m <= 1) {
+      i = j + 1;
+      continue;
+    }
     let k = 0;
 
     while (k < m) {
@@ -86,15 +90,15 @@ export function causesOrphanSeat(allSeats, candidateSelectedIds) {
 }
 
 /**
- * Finds the partner seat of a couple/sofa seat (G3-02, D-01).
- * Matches by same rowName and pairGroup (or adjacent seatNumber if pairGroup is null).
+ * Finds the partner seat of a couple/sofa seat (G3-02, D-01, D-07).
+ * Matches strictly by same rowName and positive pairGroup.
  */
 export function getCouplePartner(seat, allSeats) {
   if (!seat || !allSeats) return null;
-  const isCouple = seat.seatType === 'COUPLE' || seat.pairGroup != null;
+  const isCouple = seat.seatType === 'COUPLE' || (seat.pairGroup != null && seat.pairGroup > 0);
   if (!isCouple) return null;
 
-  if (seat.pairGroup != null) {
+  if (seat.pairGroup != null && seat.pairGroup > 0) {
     return (
       allSeats.find(
         (s) =>
@@ -105,17 +109,8 @@ export function getCouplePartner(seat, allSeats) {
     );
   }
 
-  // Fallback if pairGroup is null but seatType is COUPLE
-  const partnerNum = (seat.seatNumber || 0) % 2 === 1 ? (seat.seatNumber || 0) + 1 : (seat.seatNumber || 0) - 1;
-  return (
-    allSeats.find(
-      (s) =>
-        s.id !== seat.id &&
-        s.rowName === seat.rowName &&
-        s.seatNumber === partnerNum &&
-        s.seatType === 'COUPLE'
-    ) || null
-  );
+  // COUPLE seat without valid pairGroup has no partner (D-07: no fallback % 2)
+  return null;
 }
 
 /**
@@ -127,8 +122,11 @@ export function isCouplePairAvailable(seat, allSeats) {
   const isAvailable = seat.status === 'AVAILABLE' && seat.selectable !== false;
   if (!isAvailable) return false;
 
+  const isCouple = seat.seatType === 'COUPLE' || (seat.pairGroup != null && seat.pairGroup > 0);
+  if (!isCouple) return isAvailable;
+
   const partner = getCouplePartner(seat, allSeats);
-  if (!partner) return isAvailable;
+  if (!partner) return false; // COUPLE seat without pairGroup cannot be booked (D-07)
 
   return partner.status === 'AVAILABLE' && partner.selectable !== false;
 }

@@ -22,13 +22,12 @@ describe('Couple Seats Business Rules (G3-02, D-01, D-02)', () => {
     expect(partnerOf2.id).toBe(1);
   });
 
-  it('2. getCouplePartner finds partner seat via fallback odd/even seat numbers when pairGroup is null', () => {
+  it('2. getCouplePartner returns null and isCouplePairAvailable returns false when pairGroup is null (D-07)', () => {
     const partner = getCouplePartner(seats[4], seats);
-    expect(partner).toBeDefined();
-    expect(partner.id).toBe(6);
+    expect(partner).toBeNull();
 
-    const partnerOf6 = getCouplePartner(seats[5], seats);
-    expect(partnerOf6.id).toBe(5);
+    const isAvailable = isCouplePairAvailable(seats[4], seats);
+    expect(isAvailable).toBe(false);
   });
 
   it('3. getCouplePartner returns null for normal non-couple seat', () => {

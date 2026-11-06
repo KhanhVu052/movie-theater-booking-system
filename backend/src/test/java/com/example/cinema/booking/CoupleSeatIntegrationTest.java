@@ -308,4 +308,38 @@ public class CoupleSeatIntegrationTest extends AbstractMySqlIT {
                     assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.SEAT_NOT_AVAILABLE);
                 });
     }
+
+    @Test
+    @DisplayName("Case 4: Booking couple seat with pairGroup = null fails with 1510 (AF-04, D-07)")
+    void case4_bookingCoupleSeatWithoutPairGroup_failsWith1510() {
+        Seat orphanCoupleSeat = seatRepository.save(Seat.builder()
+                .room(testShowtime.getRoom())
+                .rowName("E")
+                .seatNumber(1)
+                .type(SeatType.COUPLE)
+                .pairGroup(null)
+                .isActive(true)
+                .build());
+
+        ShowtimeSeat ss = showtimeSeatRepository.save(ShowtimeSeat.builder()
+                .showtime(testShowtime)
+                .seat(orphanCoupleSeat)
+                .price(80000L)
+                .status(ShowtimeSeatStatus.AVAILABLE)
+                .build());
+
+        BookingCreateRequest request = new BookingCreateRequest(
+                testShowtime.getId(),
+                List.of(ss.getId()),
+                null
+        );
+
+        assertThatThrownBy(() -> bookingService.createBooking(testUser.getEmail(), request))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR);
+                    assertThat(appEx.getErrorCode().getCode()).isEqualTo(1510);
+                });
+    }
 }

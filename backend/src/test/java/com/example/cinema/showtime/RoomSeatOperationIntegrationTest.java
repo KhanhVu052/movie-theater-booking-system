@@ -317,4 +317,136 @@ public class RoomSeatOperationIntegrationTest extends AbstractMySqlIT {
                     assertThat(appEx.getErrorCode().getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
                 });
     }
+
+    @Test
+    @DisplayName("AF-04 (1): Assigning pairGroup to 3 seats fails with INVALID_COUPLE_SEAT_CONFIGURATION (1511)")
+    void batchUpdateCoupleSeats_moreThanTwoSeats_failsWith1511() {
+        Seat s1 = seatRepository.save(Seat.builder().room(testRoom).rowName("F").seatNumber(1).type(SeatType.COUPLE).isActive(true).build());
+        Seat s2 = seatRepository.save(Seat.builder().room(testRoom).rowName("F").seatNumber(2).type(SeatType.COUPLE).isActive(true).build());
+        Seat s3 = seatRepository.save(Seat.builder().room(testRoom).rowName("F").seatNumber(3).type(SeatType.COUPLE).isActive(true).build());
+
+        SeatBatchUpdateRequest req = new SeatBatchUpdateRequest(List.of(s1.getId(), s2.getId(), s3.getId()), SeatType.COUPLE, null, 10);
+        assertThatThrownBy(() -> roomService.batchUpdateSeats(testRoom.getId(), req))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.INVALID_COUPLE_SEAT_CONFIGURATION);
+                    assertThat(appEx.getErrorCode().getCode()).isEqualTo(1511);
+                });
+    }
+
+    @Test
+    @DisplayName("AF-04 (2): Assigning pairGroup to non-adjacent seats fails with 1511")
+    void batchUpdateCoupleSeats_nonAdjacentSeats_failsWith1511() {
+        Seat s1 = seatRepository.save(Seat.builder().room(testRoom).rowName("G").seatNumber(1).type(SeatType.COUPLE).isActive(true).build());
+        Seat s3 = seatRepository.save(Seat.builder().room(testRoom).rowName("G").seatNumber(3).type(SeatType.COUPLE).isActive(true).build());
+
+        SeatBatchUpdateRequest req = new SeatBatchUpdateRequest(List.of(s1.getId(), s3.getId()), SeatType.COUPLE, null, 11);
+        assertThatThrownBy(() -> roomService.batchUpdateSeats(testRoom.getId(), req))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.INVALID_COUPLE_SEAT_CONFIGURATION);
+                    assertThat(appEx.getErrorCode().getCode()).isEqualTo(1511);
+                });
+    }
+
+    @Test
+    @DisplayName("AF-04 (3): Assigning pairGroup across different rows fails with 1511")
+    void batchUpdateCoupleSeats_differentRows_failsWith1511() {
+        Seat s1 = seatRepository.save(Seat.builder().room(testRoom).rowName("H").seatNumber(1).type(SeatType.COUPLE).isActive(true).build());
+        Seat s2 = seatRepository.save(Seat.builder().room(testRoom).rowName("K").seatNumber(2).type(SeatType.COUPLE).isActive(true).build());
+
+        SeatBatchUpdateRequest req = new SeatBatchUpdateRequest(List.of(s1.getId(), s2.getId()), SeatType.COUPLE, null, 12);
+        assertThatThrownBy(() -> roomService.batchUpdateSeats(testRoom.getId(), req))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.INVALID_COUPLE_SEAT_CONFIGURATION);
+                    assertThat(appEx.getErrorCode().getCode()).isEqualTo(1511);
+                });
+    }
+
+    @Test
+    @DisplayName("AF-04 (4): Assigning pairGroup to non-COUPLE seat fails with 1511")
+    void batchUpdateCoupleSeats_nonCoupleType_failsWith1511() {
+        Seat s1 = seatRepository.save(Seat.builder().room(testRoom).rowName("L").seatNumber(1).type(SeatType.NORMAL).isActive(true).build());
+        Seat s2 = seatRepository.save(Seat.builder().room(testRoom).rowName("L").seatNumber(2).type(SeatType.NORMAL).isActive(true).build());
+
+        SeatBatchUpdateRequest req = new SeatBatchUpdateRequest(List.of(s1.getId(), s2.getId()), SeatType.NORMAL, null, 13);
+        assertThatThrownBy(() -> roomService.batchUpdateSeats(testRoom.getId(), req))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.INVALID_COUPLE_SEAT_CONFIGURATION);
+                    assertThat(appEx.getErrorCode().getCode()).isEqualTo(1511);
+                });
+    }
+
+    @Test
+    @DisplayName("AF-04 (5): Changing pairGroup fails when seat is HELD in future showtime (1504)")
+    void batchUpdateCoupleSeats_heldInFutureShowtime_failsWith1504() {
+        Seat s1 = seatRepository.save(Seat.builder().room(testRoom).rowName("M").seatNumber(1).type(SeatType.COUPLE).pairGroup(14).isActive(true).build());
+        Seat s2 = seatRepository.save(Seat.builder().room(testRoom).rowName("M").seatNumber(2).type(SeatType.COUPLE).pairGroup(14).isActive(true).build());
+
+        LocalDateTime showtimeStart = LocalDateTime.now().plusDays(2);
+        Showtime showtime = showtimeRepository.save(Showtime.builder()
+                .movie(testMovie)
+                .room(testRoom)
+                .format(ShowtimeFormat._2D)
+                .translationType(TranslationType.SUBTITLE)
+                .startTime(showtimeStart)
+                .endTime(showtimeStart.plusMinutes(120))
+                .cleaningEndTime(showtimeStart.plusMinutes(135))
+                .basePrice(80000L)
+                .status(ShowtimeStatus.SCHEDULED)
+                .build());
+
+        com.example.cinema.booking.entity.Booking holdBooking = bookingRepository.save(com.example.cinema.booking.entity.Booking.builder()
+                .bookingCode("HOLD-PAIR-" + UUID.randomUUID().toString().substring(0, 8))
+                .user(testUser)
+                .showtime(showtime)
+                .subtotalAmount(160000L)
+                .discountAmount(0L)
+                .finalAmount(160000L)
+                .status(com.example.cinema.booking.enums.BookingStatus.PENDING_PAYMENT)
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
+                .build());
+
+        showtimeSeatRepository.save(ShowtimeSeat.builder()
+                .showtime(showtime)
+                .seat(s1)
+                .price(80000L)
+                .status(ShowtimeSeatStatus.HELD)
+                .heldByBookingId(holdBooking.getId())
+                .build());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        SeatBatchUpdateRequest req = new SeatBatchUpdateRequest(List.of(s1.getId(), s2.getId()), null, null, 15);
+        assertThatThrownBy(() -> roomService.batchUpdateSeats(testRoom.getId(), req))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.SEAT_NOT_AVAILABLE);
+                    assertThat(appEx.getErrorCode().getCode()).isEqualTo(1504);
+                });
+    }
+
+    @Test
+    @DisplayName("AF-04 (6): Assigning valid adjacent pairGroup to 2 COUPLE seats succeeds")
+    void batchUpdateCoupleSeats_validAdjacentPair_succeeds() {
+        Seat s1 = seatRepository.save(Seat.builder().room(testRoom).rowName("N").seatNumber(1).type(SeatType.COUPLE).isActive(true).build());
+        Seat s2 = seatRepository.save(Seat.builder().room(testRoom).rowName("N").seatNumber(2).type(SeatType.COUPLE).isActive(true).build());
+
+        SeatBatchUpdateRequest req = new SeatBatchUpdateRequest(List.of(s1.getId(), s2.getId()), SeatType.COUPLE, null, 20);
+        var res = roomService.batchUpdateSeats(testRoom.getId(), req);
+
+        assertThat(res).hasSize(2);
+        Seat updatedS1 = seatRepository.findById(s1.getId()).orElseThrow();
+        Seat updatedS2 = seatRepository.findById(s2.getId()).orElseThrow();
+        assertThat(updatedS1.getPairGroup()).isEqualTo(20);
+        assertThat(updatedS2.getPairGroup()).isEqualTo(20);
+    }
 }

@@ -14,4 +14,6 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
     List<Seat> findByRoomIdAndIsActiveTrueOrderByRowNameAscSeatNumberAsc(Long roomId);
 
     List<Seat> findByIdInAndRoomId(List<Long> ids, Long roomId);
+
+    List<Seat> findByRoomIdAndPairGroup(Long roomId, Integer pairGroup);
 }

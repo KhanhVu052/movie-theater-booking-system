@@ -152,14 +152,15 @@ Cấu hình bật/tắt luật ghế lẻ qua `app.booking.orphan-seat-rule-enab
   - Ghế đã hết hạn giữ 10 phút dù Scheduler chưa chạy vẫn hiển thị là ghế trống.
   - Khách chọn ghế tạo ra ghế lẻ đơn độc ở mép hàng hoặc giữa các ghế đã chọn/đã chiếm bị cảnh báo ngay từ client (cảnh báo toast) và bị từ chối ở backend với mã lỗi 1509.
   - Khách chọn toàn bộ hàng hoặc để lại khoảng trống >= 2 ghế được chấp thuận bình thường.
+  - Đồng bộ chuẩn hóa giữa Client và Server (AF-05): Cả JUnit và Vitest đều đọc trực tiếp bộ fixture `docs/fixtures/seat-gap-cases.json` và vượt qua 100% các kịch bản chuẩn (mép hàng, kẹp giữa ghế đã chiếm, ghế bảo trì đóng vai trò bức tường, hàng 1 ghế, lối đi cách quãng...).
 
 FR-SEAT-02 / FR-BOOK-07
-Quy tắc ghế đôi (Couple Seats / Sofa đôi – cập nhật v3.1)
+Quy tắc ghế đôi (Couple Seats / Sofa đôi – cập nhật v3.1, v3.3)
 Ghế đôi (COUPLE) được triển khai theo Phương án A (Quyết định D-01): Mỗi sofa đôi gồm 2 bản ghi vật lý riêng biệt trong bảng `seats`, liên kết với nhau bằng trường `pair_group` (cùng phòng chiếu `room_id`, cùng hàng `row_name`, và cùng `pair_group`).
 
 1. Tính nguyên tử khi chọn ghế (Atomic Pair Selection):
    - Khách hàng không thể đặt lẻ 1 ghế trong cặp. Khi chọn hoặc bỏ chọn một ghế đôi, cả 2 ghế cấu thành cặp sẽ được tự động chọn/bỏ chọn đồng thời.
-   - Nếu client gửi request `createBooking` chỉ chứa 1 ghế của cặp đôi, hệ thống từ chối ngay với mã lỗi 1510 (`COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR: 400 Bad Request`).
+   - Nếu client gửi request `createBooking` chỉ chứa 1 ghế của cặp đôi, hoặc gửi ghế `COUPLE` chưa có `pair_group`, hệ thống từ chối ngay với mã lỗi 1510 (`COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR: 400 Bad Request`).
    - Nếu 1 trong 2 ghế đã bị giữ (HELD) hoặc đã bán (BOOKED), cả cặp ghế coi như không khả dụng và bị vô hiệu hóa trên sơ đồ ghế.
 
 2. Quy tắc tính giá chuẩn (Quyết định D-02):
@@ -169,9 +170,16 @@ Ghế đôi (COUPLE) được triển khai theo Phương án A (Quyết định 
 3. Khóa đồng thời và chống Deadlock:
    - Khi khóa ghế trong `createBooking`, cả 2 ghế trong cặp được đưa vào danh sách khóa được sắp xếp tăng dần theo ID (`ORDER BY id ASC`) và khóa trong một câu lệnh duy nhất.
 
+4. Cấu hình & Quản lý cặp ghế đôi (RoomService.batchUpdateSeats & Quyết định D-07 [ĐÃ CHỐT] - AF-04):
+   - Khi gán ghế `COUPLE` kèm `pair_group`: Bắt buộc đúng 2 ghế, cùng hàng (`row_name`), có số ghế liền kề nhau (`|seatNumber_1 - seatNumber_2| = 1`), và giá trị `pair_group` chưa từng được gán cho ghế nào khác trong phòng. Nếu vi phạm, hệ thống từ chối với mã lỗi 1511 (`INVALID_COUPLE_SEAT_CONFIGURATION: 400 Bad Request`).
+   - Chặn thay đổi loại ghế hoặc sửa/xóa `pair_group` nếu ghế đang ở trạng thái `HELD` hoặc `BOOKED` tại bất kỳ suất chiếu SCHEDULED tương lai nào (`409 Conflict`, mã 1504: `SEAT_NOT_AVAILABLE`).
+   - Ghế `COUPLE` chưa được gán `pair_group` bị khóa bán hoàn toàn (`selectable = false` trong DTO trả về, không thể click chọn).
+   - Xóa bỏ triệt để logic fallback tự ghép cặp theo số chẵn/lẻ (`% 2`). Nếu request tạo đơn chứa ghế `COUPLE` có `pair_group == null`, hệ thống từ chối với mã lỗi 1510.
+
 • Lỗi: 
-  - Gửi request chỉ chứa 1 ghế của cặp ghế đôi → 400 Bad Request (mã 1510: COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR).
-  - Một trong 2 ghế của cặp đã bị chiếm (HELD hoặc BOOKED) → 409 Conflict (mã 1504: SEAT_NOT_AVAILABLE).
+  - Gửi request chỉ chứa 1 ghế của cặp ghế đôi hoặc ghế đôi chưa gán pair_group → 400 Bad Request (mã 1510: COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR).
+  - Cấu hình ghế đôi sai quy cách (không đúng 2 ghế, khác hàng, không liền kề, trùng pairGroup) → 400 Bad Request (mã 1511: INVALID_COUPLE_SEAT_CONFIGURATION).
+  - Một trong 2 ghế của cặp đã bị chiếm (HELD hoặc BOOKED), hoặc đổi cấu hình ghế đang HELD/BOOKED → 409 Conflict (mã 1504: SEAT_NOT_AVAILABLE).
 
 • Nghiệm thu: 
   - Click vào ghế đôi trên giao diện sơ đồ tự động toggle cả 2 ghế cùng lúc.

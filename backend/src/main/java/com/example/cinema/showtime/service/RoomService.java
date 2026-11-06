@@ -27,7 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -102,7 +105,9 @@ public class RoomService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        if (request.type() != null) {
+        boolean affectsType = request.type() != null;
+        boolean affectsPairGroup = request.pairGroup() != null;
+        if (affectsType || affectsPairGroup) {
             boolean hasActiveReservations = showtimeSeatRepository.existsBySeatIdInAndShowtimeStatusAndShowtimeStartTimeAfterAndStatusIn(
                     request.seatIds(),
                     ShowtimeStatus.SCHEDULED,
@@ -111,6 +116,32 @@ public class RoomService {
             );
             if (hasActiveReservations) {
                 throw new AppException(ErrorCode.SEAT_NOT_AVAILABLE);
+            }
+        }
+
+        if (request.pairGroup() != null && request.pairGroup() > 0) {
+            if (seats.size() != 2) {
+                throw new AppException(ErrorCode.INVALID_COUPLE_SEAT_CONFIGURATION);
+            }
+            Seat s1 = seats.get(0);
+            Seat s2 = seats.get(1);
+            SeatType type1 = request.type() != null ? request.type() : s1.getType();
+            SeatType type2 = request.type() != null ? request.type() : s2.getType();
+            if (type1 != SeatType.COUPLE || type2 != SeatType.COUPLE) {
+                throw new AppException(ErrorCode.INVALID_COUPLE_SEAT_CONFIGURATION);
+            }
+            if (!Objects.equals(s1.getRowName(), s2.getRowName())) {
+                throw new AppException(ErrorCode.INVALID_COUPLE_SEAT_CONFIGURATION);
+            }
+            int n1 = s1.getSeatNumber() != null ? s1.getSeatNumber() : -99;
+            int n2 = s2.getSeatNumber() != null ? s2.getSeatNumber() : -99;
+            if (Math.abs(n1 - n2) != 1) {
+                throw new AppException(ErrorCode.INVALID_COUPLE_SEAT_CONFIGURATION);
+            }
+            List<Seat> existingWithPair = seatRepository.findByRoomIdAndPairGroup(roomId, request.pairGroup());
+            Set<Long> updatingIds = new HashSet<>(request.seatIds());
+            if (existingWithPair.stream().anyMatch(s -> !updatingIds.contains(s.getId()))) {
+                throw new AppException(ErrorCode.INVALID_COUPLE_SEAT_CONFIGURATION);
             }
         }
 
@@ -127,6 +158,8 @@ public class RoomService {
             }
             if (request.pairGroup() != null) {
                 seat.setPairGroup(request.pairGroup() <= 0 ? null : request.pairGroup());
+            } else if (request.type() != null && request.type() != SeatType.COUPLE) {
+                seat.setPairGroup(null);
             }
         }
 

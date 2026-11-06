@@ -76,7 +76,10 @@ public class ShowtimeMapper {
 
     public ShowtimeSeatResponse toSeatResponse(ShowtimeSeat showtimeSeat, ShowtimeSeatStatus effectiveStatus) {
         boolean isSeatActive = showtimeSeat.getSeat() != null && Boolean.TRUE.equals(showtimeSeat.getSeat().getIsActive());
-        boolean selectable = isSeatActive && effectiveStatus == ShowtimeSeatStatus.AVAILABLE;
+        boolean isCoupleWithoutPair = showtimeSeat.getSeat() != null
+                && showtimeSeat.getSeat().getType() == SeatType.COUPLE
+                && (showtimeSeat.getSeat().getPairGroup() == null || showtimeSeat.getSeat().getPairGroup() <= 0);
+        boolean selectable = isSeatActive && effectiveStatus == ShowtimeSeatStatus.AVAILABLE && !isCoupleWithoutPair;
         return ShowtimeSeatResponse.builder()
                 .id(showtimeSeat.getId())
                 .seatId(showtimeSeat.getSeat().getId())

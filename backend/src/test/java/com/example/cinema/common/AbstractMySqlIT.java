@@ -19,3 +19,4 @@ public abstract class AbstractMySqlIT {
             .withUrlParam("serverTimezone", "Asia/Ho_Chi_Minh")
             .withUrlParam("characterEncoding", "UTF-8");
 }
+

@@ -30,8 +30,8 @@
 | **AF-01** | 🔴 CRITICAL | `createBooking`: Lỗi nạp `ShowtimeSeat` vào Hibernate L1 Cache trước khi khóa `FOR UPDATE` gây đọc dữ liệu cũ (stale snapshot); cần khóa toàn bộ ghế trong hàng trước rồi mới validate ghế đôi & ghế lẻ. | — | `DONE` |
 | **AF-02** | 🔴 CRITICAL | `run-backend.bat` đang chứa cứng `JWT_SECRET`, `BOOTSTRAP_ADMIN_PASSWORD` và cấu hình DB trực tiếp trong file script được quản lý bởi Git. | — | `DONE` |
 | **AF-03** | 🟠 HIGH | `RoomService.batchUpdateSeats`: Gọi `ss.setPrice(...)` + `saveAll()` không khóa dòng, khiến Hibernate ghi đè toàn bộ cột (`status=AVAILABLE`, `held_by_booking_id=null`) lên ghế khách vừa giữ (`HELD`). | — | `DONE` |
-| **AF-04** | 🟠 HIGH | Kiểm tra tính hợp lệ của `pairGroup` khi cập nhật ghế và chặn bán ghế `COUPLE` bị thiếu `pairGroup` (xóa bỏ logic tự ghép chẵn/lẻ dự phòng). | D-07 | `TODO` |
-| **AF-05** | 🟠 HIGH | Logic kiểm tra ghế lẻ (Orphan Seat) bị lệch giữa Client (`isActive`) và Server (`status` thô trước khi thu hồi đơn hết hạn); cần chuẩn hóa và dùng chung bộ test fixture JSON. | — | `TODO` |
+| **AF-04** | 🟠 HIGH | Kiểm tra tính hợp lệ của `pairGroup` khi cập nhật ghế và chặn bán ghế `COUPLE` bị thiếu `pairGroup` (xóa bỏ logic tự ghép chẵn/lẻ dự phòng). | D-07 | `DONE` |
+| **AF-05** | 🟠 HIGH | Logic kiểm tra ghế lẻ (Orphan Seat) bị lệch giữa Client (`isActive`) và Server (`status` thô trước khi thu hồi đơn hết hạn); cần chuẩn hóa và dùng chung bộ test fixture JSON. | — | `DONE` |
 | **AF-06** | 🟠 HIGH | `cancelShowtime`: Xóa cứng suất chiếu khi chưa có đơn vé (vi phạm bất biến Soft Delete) và chưa chặn hủy các suất chiếu đã/đang diễn ra (`startTime <= now`). | D-08 | `TODO` |
 | **AF-07** | 🟠 HIGH | Thiếu kiểm thử đồng thời (Concurrency IT) trên MySQL thật (Testcontainers) và CI đang bỏ qua test backend (`-DskipTests`). | — | `DONE` |
 | **AF-08** | 🟡 MEDIUM | Đưa toàn bộ tham số nghiệp vụ còn hardcode (`SEAT_HOLD_MINUTES=10`, `plusMinutes(15)`, chu kỳ scheduler, giá trong enum `SeatType`) ra `@ConfigurationProperties`. | D-09 | `TODO` |

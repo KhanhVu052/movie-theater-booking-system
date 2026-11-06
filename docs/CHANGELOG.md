@@ -2,6 +2,7 @@
 
 Định dạng: `YYYY-MM-DD — ID task — Tóm tắt một câu về việc đã làm — SRS mục tương ứng (nếu có)`
 
+- 2026-11-06 — AF-05, AF-04 — Đồng bộ luật ghế lẻ giữa Client/Server qua bộ test fixture chung docs/fixtures/seat-gap-cases.json, kiểm tra nghiêm ngặt cấu hình ghế đôi (mã 1511), chặn bán ghế COUPLE thiếu pairGroup và loại bỏ triệt để logic tự ghép chẵn/lẻ dự phòng (D-07 [ĐÃ CHỐT]) — FR-BOOK-01, FR-SEAT-02
 - 2026-11-06 — AF-07, AF-01, AF-12, AF-03 — Triển khai hạ tầng test đồng thời (Testcontainers MySQL 8, AbstractMySqlIT), khắc phục stale snapshot và đảo thứ tự khóa trước validate sau trong createBooking, loại bỏ JOIN FETCH khi FOR UPDATE để tránh khóa lan sang bảng seats, chống ghi đè ghế HELD trong RoomService qua repriceIfAvailable — FR-BOOK-02, Mục 4.4, NFR-CONC-01
 - 2026-11-06 — AF-02 — Xóa secret và mật khẩu cứng trong run-backend.bat, nạp cấu hình từ .env và cập nhật hướng dẫn khởi chạy — NFR-SEC-02
 - 2026-11-06 — G3-03 — Áp dụng ma trận giá tự động (Pricing Policy) theo loại ghế, ngày cuối tuần và khung giờ — SRS v3.2 (FR-PRICE-01)

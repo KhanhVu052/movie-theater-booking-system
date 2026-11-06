@@ -31,33 +31,41 @@ public class SeatSelectionValidator {
             Integer pairGroup = seat.getPairGroup();
             var type = seat.getType();
 
-            if (pairGroup != null) {
+            if (type == com.example.cinema.showtime.enums.SeatType.COUPLE) {
+                if (pairGroup == null || pairGroup <= 0) {
+                    throw new AppException(ErrorCode.COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR);
+                }
+
                 List<ShowtimeSeat> partners = allSeatsInShowtime.stream()
                         .filter(other -> other.getSeat() != null
                                 && pairGroup.equals(other.getSeat().getPairGroup())
                                 && Objects.equals(seat.getRowName(), other.getSeat().getRowName()))
                         .toList();
 
+                if (partners.size() != 2) {
+                    throw new AppException(ErrorCode.COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR);
+                }
+
                 for (ShowtimeSeat partner : partners) {
                     if (!selectedSet.contains(partner.getId())) {
                         throw new AppException(ErrorCode.COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR);
                     }
                 }
-            } else if (type == com.example.cinema.showtime.enums.SeatType.COUPLE) {
-                int num = seat.getSeatNumber() != null ? seat.getSeatNumber() : 0;
-                int partnerNum = (num % 2 == 1) ? num + 1 : num - 1;
-
-                ShowtimeSeat partner = allSeatsInShowtime.stream()
+            } else if (pairGroup != null && pairGroup > 0) {
+                List<ShowtimeSeat> partners = allSeatsInShowtime.stream()
                         .filter(other -> other.getSeat() != null
-                                && Objects.equals(seat.getRowName(), other.getSeat().getRowName())
-                                && other.getSeat().getSeatNumber() != null
-                                && other.getSeat().getSeatNumber() == partnerNum
-                                && other.getSeat().getType() == com.example.cinema.showtime.enums.SeatType.COUPLE)
-                        .findFirst()
-                        .orElse(null);
+                                && pairGroup.equals(other.getSeat().getPairGroup())
+                                && Objects.equals(seat.getRowName(), other.getSeat().getRowName()))
+                        .toList();
 
-                if (partner != null && !selectedSet.contains(partner.getId())) {
+                if (partners.size() != 2) {
                     throw new AppException(ErrorCode.COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR);
+                }
+
+                for (ShowtimeSeat partner : partners) {
+                    if (!selectedSet.contains(partner.getId())) {
+                        throw new AppException(ErrorCode.COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR);
+                    }
                 }
             }
         }
@@ -118,6 +126,9 @@ public class SeatSelectionValidator {
 
     private void checkBlockForOrphans(List<ShowtimeSeat> block, Set<Long> selectedSet, Set<Long> orphanIds) {
         int m = block.size();
+        if (m <= 1) {
+            return;
+        }
         int k = 0;
 
         while (k < m) {

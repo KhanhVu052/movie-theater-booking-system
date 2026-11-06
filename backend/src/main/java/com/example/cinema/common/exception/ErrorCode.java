@@ -69,6 +69,7 @@ public enum ErrorCode {
     BOOKING_CANCELLATION_WINDOW_CLOSED(1508, "Booking cancellation window has closed", HttpStatus.CONFLICT),
     ORPHAN_SEAT_DETECTED(1509, "Cannot leave a single empty seat (orphan seat)", HttpStatus.BAD_REQUEST),
     COUPLE_SEAT_MUST_BE_BOOKED_IN_PAIR(1510, "Couple seats must be selected and booked together as a complete pair", HttpStatus.BAD_REQUEST),
+    INVALID_COUPLE_SEAT_CONFIGURATION(1511, "Couple seats must be configured in adjacent pairs of two seats in the same row", HttpStatus.BAD_REQUEST),
 
     // --- Payment & Refund Errors (1600 - 1699) ---
     PAYMENT_NOT_FOUND(1601, "Payment transaction not found", HttpStatus.NOT_FOUND),

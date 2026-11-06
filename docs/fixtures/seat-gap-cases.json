@@ -1,0 +1,122 @@
+[
+  {
+    "id": "CASE_1_ORPHAN_ROW_EDGE",
+    "name": "De trong 1 ghe o mep dau hang",
+    "seats": [
+      { "id": 1, "rowName": "A", "seatNumber": 1, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 2, "rowName": "A", "seatNumber": 2, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 3, "rowName": "A", "seatNumber": 3, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 4, "rowName": "A", "seatNumber": 4, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 5, "rowName": "A", "seatNumber": 5, "status": "AVAILABLE", "selectable": true, "isActive": true }
+    ],
+    "selectedSeatIds": [2, 3],
+    "expectOrphan": true,
+    "expectedNewOrphanIds": [1]
+  },
+  {
+    "id": "CASE_2_ORPHAN_BETWEEN_OCCUPIED",
+    "name": "De trong 1 ghe o giua 2 ghe da dat / dang chon",
+    "seats": [
+      { "id": 1, "rowName": "A", "seatNumber": 1, "status": "BOOKED", "selectable": false, "isActive": true },
+      { "id": 2, "rowName": "A", "seatNumber": 2, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 3, "rowName": "A", "seatNumber": 3, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 4, "rowName": "A", "seatNumber": 4, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 5, "rowName": "A", "seatNumber": 5, "status": "AVAILABLE", "selectable": true, "isActive": true }
+    ],
+    "selectedSeatIds": [3],
+    "expectOrphan": true,
+    "expectedNewOrphanIds": [2]
+  },
+  {
+    "id": "CASE_3_PRE_EXISTING_ORPHAN",
+    "name": "Hang chi con dung 1 ghe trong san tu truoc, khach khong cham vao hang do hoac chon ghe khac",
+    "seats": [
+      { "id": 1, "rowName": "A", "seatNumber": 1, "status": "BOOKED", "selectable": false, "isActive": true },
+      { "id": 2, "rowName": "A", "seatNumber": 2, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 3, "rowName": "A", "seatNumber": 3, "status": "BOOKED", "selectable": false, "isActive": true },
+      { "id": 4, "rowName": "A", "seatNumber": 4, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 5, "rowName": "A", "seatNumber": 5, "status": "AVAILABLE", "selectable": true, "isActive": true }
+    ],
+    "selectedSeatIds": [4, 5],
+    "expectOrphan": false,
+    "expectedNewOrphanIds": []
+  },
+  {
+    "id": "CASE_4_SELECT_ALL_SEATS",
+    "name": "Khach chon het toan bo ghe trong trong hang",
+    "seats": [
+      { "id": 1, "rowName": "A", "seatNumber": 1, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 2, "rowName": "A", "seatNumber": 2, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 3, "rowName": "A", "seatNumber": 3, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 4, "rowName": "A", "seatNumber": 4, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 5, "rowName": "A", "seatNumber": 5, "status": "AVAILABLE", "selectable": true, "isActive": true }
+    ],
+    "selectedSeatIds": [1, 2, 3, 4, 5],
+    "expectOrphan": false,
+    "expectedNewOrphanIds": []
+  },
+  {
+    "id": "CASE_5_MULTIPLE_EMPTY_SEATS",
+    "name": "Khoang trong tu 2 ghe lien tiep tro len",
+    "seats": [
+      { "id": 1, "rowName": "A", "seatNumber": 1, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 2, "rowName": "A", "seatNumber": 2, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 3, "rowName": "A", "seatNumber": 3, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 4, "rowName": "A", "seatNumber": 4, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 5, "rowName": "A", "seatNumber": 5, "status": "AVAILABLE", "selectable": true, "isActive": true }
+    ],
+    "selectedSeatIds": [1, 2],
+    "expectOrphan": false,
+    "expectedNewOrphanIds": []
+  },
+  {
+    "id": "CASE_6_INACTIVE_SEAT_AS_WALL",
+    "name": "Ghe canh ben bi tat bao tri dong vai tro nhu buc tuong, de kep 1 ghe trong giua ghe bao tri va ghe dang chon",
+    "seats": [
+      { "id": 1, "rowName": "A", "seatNumber": 1, "status": "AVAILABLE", "selectable": false, "isActive": false },
+      { "id": 2, "rowName": "A", "seatNumber": 2, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 3, "rowName": "A", "seatNumber": 3, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 4, "rowName": "A", "seatNumber": 4, "status": "AVAILABLE", "selectable": true, "isActive": true }
+    ],
+    "selectedSeatIds": [3, 4],
+    "expectOrphan": true,
+    "expectedNewOrphanIds": [2]
+  },
+  {
+    "id": "CASE_7_SINGLE_SEAT_ROW",
+    "name": "Hang chi co duy nhat 1 ghe",
+    "seats": [
+      { "id": 1, "rowName": "A", "seatNumber": 1, "status": "AVAILABLE", "selectable": true, "isActive": true }
+    ],
+    "selectedSeatIds": [],
+    "expectOrphan": false,
+    "expectedNewOrphanIds": []
+  },
+  {
+    "id": "CASE_8_AISLE_GAP",
+    "name": "Cach quang so ghe (loi di o giua phong chieu)",
+    "seats": [
+      { "id": 1, "rowName": "A", "seatNumber": 1, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 2, "rowName": "A", "seatNumber": 2, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 3, "rowName": "A", "seatNumber": 3, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 7, "rowName": "A", "seatNumber": 7, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 8, "rowName": "A", "seatNumber": 8, "status": "AVAILABLE", "selectable": true, "isActive": true }
+    ],
+    "selectedSeatIds": [2, 3],
+    "expectOrphan": true,
+    "expectedNewOrphanIds": [1]
+  },
+  {
+    "id": "CASE_9_ORPHAN_ROW_END",
+    "name": "De trong 1 ghe o mep cuoi hang",
+    "seats": [
+      { "id": 1, "rowName": "A", "seatNumber": 1, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 2, "rowName": "A", "seatNumber": 2, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 3, "rowName": "A", "seatNumber": 3, "status": "AVAILABLE", "selectable": true, "isActive": true },
+      { "id": 4, "rowName": "A", "seatNumber": 4, "status": "AVAILABLE", "selectable": true, "isActive": true }
+    ],
+    "selectedSeatIds": [1, 2, 3],
+    "expectOrphan": true,
+    "expectedNewOrphanIds": [4]
+  }
+]
