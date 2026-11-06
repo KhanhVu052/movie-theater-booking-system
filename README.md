@@ -59,7 +59,7 @@ movie-theater-booking-system/
 │   │   ├── utils/            # formatters, voucherUtils, bookingUtils
 │   │   └── test/             # Vitest automated business rule test suite
 └── docs/
-    └── SRS.md                # Software Requirements Specification (v3.3)
+    └── SRS.md                # Software Requirements Specification (v3.4)
 ```
 
 ---
@@ -77,6 +77,18 @@ To prevent Deadlocks under high concurrency (e.g. 50 users simultaneously reques
    - If an existing reservation holding a seat has expired (`expires_at < NOW()`), the booking is transitioned to `EXPIRED`, voucher quota is released, and the seat is made `AVAILABLE` atomically for the waiting transaction.
 3. **Automated Cleanup Scheduler**:
    - A background `@Scheduled` job sweeps every 30 seconds to reclaim unpurchased expired holds without blocking active payment callbacks.
+
+---
+
+## 🛡️ Architectural Decision D-06: JWT Storage & XSS Mitigation
+
+* **Storage Strategy**: JWT access tokens are stored in browser `localStorage` for Single-Page Application (SPA) simplicity, stateless client-side authorization header injection (`Authorization: Bearer <token>`), and frictionless local development without cross-domain cookie quirks.
+* **XSS Defense-in-Depth**:
+  1. **React JSX Auto-Escaping**: React natively escapes all variable interpolations in JSX, neutralizing DOM injection vectors.
+  2. **Strict Backend Input Validation**: Jakarta Validation constraints (`@NotBlank`, `@Size(min = 8, max = 50)`, `@Email`, regex) validate every request body and query parameter before processing.
+  3. **Short Expiration & Real-Time Account Invalidation**: Access tokens carry a bounded validity period, and backend filters/services verify account active status (`user.isActive == true`) on every critical transaction (such as `createBooking` and `loadUserByUsername`), immediately revoking compromised tokens without waiting for JWT expiry.
+  4. **Strict HTTP Headers**: Production deployments mandate Strict Content Security Policy (CSP), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and HTTPS enforcement.
+* **Production Recommendation**: For high-compliance enterprise environments, migrate to `HttpOnly`, `SameSite=Strict` secure cookies combined with rotating refresh tokens stored in a distributed Redis session store.
 
 ---
 

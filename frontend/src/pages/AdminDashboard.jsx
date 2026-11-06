@@ -1364,6 +1364,16 @@ export default function AdminDashboard() {
                                   >
                                     {p.refundStatus}
                                   </span>
+                                  {p.refundStatus === 'REFUNDED' && (p.refundedAt || p.refundNote) && (
+                                    <div className="text-[10px] text-zinc-400 mt-1 font-mono">
+                                      {p.refundedAt && <div>{formatDateTime(p.refundedAt)}</div>}
+                                      {p.refundNote && (
+                                        <div className="italic text-[#ab9a84] truncate max-w-[160px]" title={p.refundNote}>
+                                          {p.refundNote}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="py-3 px-4 font-mono text-[11px] text-[#ab9a84]">
                                   {p.payDate ? formatDateTime(p.payDate) : '-'}

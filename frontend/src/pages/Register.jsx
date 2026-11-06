@@ -151,6 +151,10 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.password || formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -322,7 +326,7 @@ export default function Register() {
                   htmlFor="password"
                   className="block text-sm font-medium text-[#d4c3ad] mb-1"
                 >
-                  Password (min 6 characters)
+                  Password (min 8 characters)
                 </label>
                 <div className="relative">
                   <input
@@ -330,7 +334,7 @@ export default function Register() {
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     required
-                    minLength={6}
+                    minLength={8}
                     maxLength={50}
                     value={formData.password}
                     onChange={handleChange}

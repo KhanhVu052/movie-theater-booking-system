@@ -41,7 +41,7 @@ public class MovieController {
             @RequestParam(required = false) MovieStatus status,
             @RequestParam(required = false) Long genreId,
             @RequestParam(defaultValue = "1") @Min(1) int page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(1000) int size
+            @RequestParam(defaultValue = "10") @Min(1) @Max(value = 100, message = "Page size must not exceed 100") int size
     ) {
         PageResponse<MovieResponse> response = movieService.getMovies(keyword, status, genreId, page, size);
         return ResponseEntity.ok(ApiResponse.success(response));

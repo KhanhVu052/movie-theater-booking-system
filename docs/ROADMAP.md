@@ -85,15 +85,15 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | G3-03 | `PricingPolicy` (cuối tuần, giờ vàng, suất sáng) | P2 | DONE |
 | G4-01 | `GlobalExceptionHandler` đủ loại lỗi (AF-16) | P3 | DONE |
 | G4-02 | `getShowtimeSeats` chỉ đọc (AF-17) | P3 | DONE |
-| G4-03 | Voucher: danh sách công khai vs admin, đơn 0 đồng | P3 | TODO |
-| G4-04 | Sơ đồ ghế tự làm mới (polling) | P3 | TODO |
-| G4-05 | Trang kết quả thanh toán có trạng thái "đang xác nhận" + lọc `vnp_*` | P3 | TODO |
-| G4-06 | Luồng "Modify seats" | P3 | TODO |
-| G4-07 | Bảo mật đăng nhập (throttle, mật khẩu ≥ 8) | P3 | BLOCKED (D-06 một phần) |
-| G4-08 | Kiểm chứng và sửa cấu hình hạ tầng | P3 | TODO |
+| G4-03 | Voucher: danh sách công khai vs admin, đơn 0 đồng | P3 | DONE |
+| G4-04 | Sơ đồ ghế tự làm mới (polling) | P3 | DONE |
+| G4-05 | Trang kết quả thanh toán có trạng thái "đang xác nhận" + lọc `vnp_*` | P3 | DONE |
+| G4-06 | Luồng "Modify seats" | P3 | DONE |
+| G4-07 | Bảo mật đăng nhập (throttle, mật khẩu ≥ 8) | P3 | DONE |
+| G4-08 | Kiểm chứng và sửa cấu hình hạ tầng | P3 | DONE |
 | G4-09 | Hiệu năng và dọn dẹp (N+1, page size, `Clock`, audit hoàn tiền - AF-17) | P3 | DONE |
 | G4-10 | Testcontainers + test đồng thời + CI chạy test (AF-07) | P3 | DONE |
-| G4-11 | Hoàn thiện tài liệu (AF-14, SRS v3.3) | P3 | DONE |
+| G4-11 | Hoàn thiện tài liệu (AF-14, SRS v3.4) | P3 | DONE |
 
 **Thứ tự đề xuất:** Phase 0 → G2-01, G2-02, G2-03, G2-06 → (sau khi chốt D-03) G2-04 → (D-05) G3-03 → G3-01 → (D-01/D-02) G3-02 → G2-05 → Nhóm 4. Mỗi task chức năng phải kèm test của nó; G4-10 là hạ tầng test dùng chung và có thể làm sớm hơn nếu muốn.
 

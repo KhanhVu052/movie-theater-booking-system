@@ -81,6 +81,15 @@ public class Payment {
     @Column(name = "raw_payload", columnDefinition = "json")
     String rawPayload;
 
+    @Column(name = "refunded_at")
+    LocalDateTime refundedAt;
+
+    @Column(name = "refunded_by")
+    Long refundedBy;
+
+    @Column(name = "refund_note", length = 255)
+    String refundNote;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     LocalDateTime createdAt;

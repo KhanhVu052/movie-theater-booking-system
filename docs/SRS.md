@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 3.3)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 3.4)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -146,6 +146,11 @@ a) Giữa 2 ghế không còn trống (đã BOOKED, đang HELD, hoặc nằm tro
 b) Giữa mép hàng (đầu hàng / cuối hàng / lối đi) và một ghế không còn trống.
 Khoảng trống từ 2 ghế trở lên (>= 2 ghế liên tiếp) là hoàn toàn hợp lệ vì nhóm khách khác vẫn có thể ngồi cạnh nhau. Nếu ghế lẻ đã tồn tại sẵn từ trước lần đặt này (do người khác để lại), khách hàng không bị từ chối oan.
 Cấu hình bật/tắt luật ghế lẻ qua `app.booking.orphan-seat-rule-enabled` (mặc định: true).
+
+Tự động làm mới sơ đồ ghế theo thời gian thực (Seat Map Polling – G4-04):
+- Client định kỳ tự động làm mới trạng thái sơ đồ ghế mỗi 8 giây (chu kỳ 8000ms qua hook `useSeatMapPolling.js`).
+- Quản lý vòng đời trình duyệt: Tạm dừng polling khi tab trình duyệt bị ẩn (`document.hidden === true`), và kích hoạt gọi lại ngay lập tức khi người dùng active tab trở lại.
+- Tự động đồng bộ ghế khách đang chọn cục bộ: Nếu một ghế khách đang chọn bị người khác giữ hoặc đặt (`status !== 'AVAILABLE'`), hệ thống tự động loại bỏ ghế đó khỏi danh sách đã chọn và hiển thị toast thông báo kịp thời ("Ghế [Tên ghế] vừa có người khác giữ").
 • Lỗi: 
   - Suất chiếu không tồn tại → 404 Not Found (mã 1301).
   - Chọn ghế để lại 1 ghế trống đơn độc → 400 Bad Request (mã 1509: ORPHAN_SEAT_DETECTED).
@@ -228,6 +233,9 @@ Khách chọn từ 1–8 ghế trong cùng một showtime_id. Trong Transaction:
 4. Thu hồi các đơn hết hạn đã khóa (chuyển sang `EXPIRED`, nhả voucher, đưa ghế về `AVAILABLE`).
 5. Thực hiện validate ghế đôi (`FR-SEAT-02`) và luật ghế lẻ (`FR-BOOK-01`) trên danh sách ghế đã được khóa và giải phóng an toàn (`lockedRowSeats`).
 6. Kiểm tra toàn bộ ghế khách yêu cầu đều `AVAILABLE` và `is_active = true`, tạo bookings (PENDING_PAYMENT, expires_at = NOW() + 10 phút), lưu cứng giá vé vào booking_items và cập nhật ghế sang HELD.
+7. Luồng đổi ghế an toàn (Modify Selected Seats – G4-06):
+   - Tại trang thanh toán (`Payment.jsx`), nếu khách hàng muốn đổi ghế ("Modify Selected Seats"), hệ thống tự động gọi API hủy đơn hàng `PENDING_PAYMENT` hiện tại (`POST /api/v1/bookings/{id}/cancel`) để giải phóng ghế và nhả hạn mức đơn chờ ngay lập tức trước khi chuyển hướng người dùng quay lại trang chọn ghế.
+   - Cơ chế này đảm bảo khách hàng không bị chặn bởi chính các ghế mình đang giữ (409 Conflict) và không bị chạm trần hạn mức 2 đơn chờ (429 Too Many Requests) khi chọn ghế mới.
    • Lỗi: Bất kỳ ghế nào đang BOOKED, đang HELD (còn hạn), không thuộc showtime_id yêu cầu, hoặc ghế vật lý bị vô hiệu hóa (is_active = false) -> Rollback toàn bộ và trả về 409 Conflict (mã 1504: SEAT_NOT_AVAILABLE); Khách hàng đã đạt giới hạn tối đa 2 đơn chờ thanh toán (max-pending-per-user) -> 429 Too Many Requests (mã 1507); Vi phạm luật ghế lẻ -> 400 Bad Request (mã 1509); Vi phạm quy tắc ghế đôi -> 400 Bad Request (mã 1510).
 
 • Nghiệm thu: 50 request đồng thời cùng giữ ghế A1 của suất chiếu S1 -> Đúng 1 booking được tạo, 49 request nhận 409 Conflict. Đổi loại ghế vật lý cập nhật giá suất tương lai nguyên tử (repriceIfAvailable) không ghi đè ghế đang HELD. Hàng có đơn hết hạn đang chiếm ghế được tự động giải phóng trước khi validate, cho phép khách mới đặt thành công không báo lỗi ghế lẻ hay ghế đã chiếm.
@@ -274,14 +282,27 @@ Khách hàng được phép tự hủy đơn đặt vé đã thanh toán (`statu
   + Khách hủy vé khi cách giờ chiếu dưới 60 phút -> Bị từ chối với HTTP 409 (Mã 1508).
   + Khách khác cố tình gửi request hủy đơn -> Nhận lỗi HTTP 403 Forbidden.
 FR-VOUC-01
-Áp dụng & Giữ hạn mức Voucher
+Áp dụng & Giữ hạn mức Voucher (cập nhật G4-03, FA-04)
 Khi khách áp dụng mã giảm giá lúc tạo booking: Khóa dòng vouchers (FOR UPDATE), kiểm tra is_active = true, thời hạn (start_at <= NOW() <= end_at), giá trị đơn tối thiểu (subtotal_amount >= min_order_value), tổng hạn mức (reserved_count + used_count < usage_limit) và giới hạn mỗi khách (COUNT(RESERVED, USED) < per_user_limit). Hợp lệ thì tăng reserved_count + 1 và tạo voucher_redemptions (RESERVED).
+- Phân tách API Voucher công khai vs Admin:
+  + `GET /api/v1/vouchers`: Endpoint công khai, chỉ trả về các voucher hợp lệ để người dùng áp dụng (`isActive = true`, `startAt <= NOW() <= endAt`, và `reservedCount + usedCount < usageLimit`).
+  + `GET /api/v1/vouchers/admin`: Yêu cầu quyền ADMIN (`@PreAuthorize("hasRole('ADMIN')")`), trả về toàn bộ voucher cho việc quản trị chiến dịch.
+- Xử lý đơn hàng 0 đồng (Zero-Amount Confirmation):
+  + Khi áp dụng voucher giảm 100% hoặc có giá trị khấu trừ >= tổng tiền vé khiến `finalAmount == 0`:
+  + Đơn hàng tự động chuyển thẳng sang trạng thái `CONFIRMED` (không qua `PENDING_PAYMENT`).
+  + Các ghế tự động chuyển thẳng sang `BOOKED` (không qua `HELD`).
+  + Voucher tự động xác nhận sử dụng `USED` (`voucherService.confirmUsage`).
+  + Bỏ qua hoàn toàn việc tạo lượt thanh toán VNPay và cấp vé điện tử (E-Ticket) ngay lập tức.
 • Lỗi: Hết lượt dùng hoặc không đủ điều kiện  400 Bad Request / 409 Conflict.
 
-• Nghiệm thu: Voucher còn 1 lượt cuối, 10 khách cùng áp dụng đồng thời  Đúng 1 đơn giữ được mã.
+• Nghiệm thu: Voucher còn 1 lượt cuối, 10 khách cùng áp dụng đồng thời  Đúng 1 đơn giữ được mã. Đơn 0 đồng được xác nhận ngay lập tức mà không cần chuyển hướng sang cổng thanh toán.
 FR-PAY-01
-Tạo lượt thanh toán VNPay & Retry
+Tạo lượt thanh toán VNPay & Retry (cập nhật G4-05)
 Với một booking đang PENDING_PAYMENT và còn hạn (expires_at > NOW()), khách được tạo tối đa 3 lượt thử thanh toán (payments ở trạng thái PENDING, refund_status = 'NONE') với mã transaction_ref (vnp_TxnRef) duy nhất và nhận URL chuyển hướng sang VNPay Sandbox.
+- Lọc tham số băm chữ ký (VnPayUtil): Khi tạo URL và xác minh chữ ký, chỉ đưa các tham số có tiền tố `vnp_` (ngoại trừ `vnp_SecureHash` và `vnp_SecureHashType`) vào chuỗi dữ liệu băm HMAC-SHA512.
+- Giao diện kết quả thanh toán & Polling theo Exponential Backoff:
+  + Trang `PaymentResult.jsx` bổ sung trạng thái "Processing" (Đang xác nhận đơn hàng...).
+  + Nếu cổng VNPay báo thành công (`vnp_ResponseCode === '00'`) nhưng đơn vẫn ở `PENDING_PAYMENT` (do mạng trễ IPN Server-to-Server), client kích hoạt cơ chế polling kiểm tra đơn qua `getBookingById` theo chu kỳ lũy thừa (2s, 4s, 8s, 16s - tối đa ~30s) đến khi đơn chuyển `CONFIRMED`.
 • Quy tắc: Nếu lần thử 1 thất bại (FAILED), booking vẫn giữ ghế đến expires_at để khách thử thanh toán lại.
 
 • Nghiệm thu: Return URL chỉ hiển thị giao diện chờ/kết quả, không tự xác nhận đơn hàng từ redirect.
@@ -333,7 +354,10 @@ Hai endpoint phục vụ demo/kiểm thử cục bộ: giả lập thanh toán t
 NFR-CONC-01 (Kiểm soát đồng thời): Sử dụng Database Transaction kết hợp Pessimistic Write Lock (SELECT ... FOR UPDATE) và thứ tự khóa chuẩn hóa để đảm bảo không bao giờ xảy ra tình trạng đặt trùng ghế hoặc vượt hạn mức voucher. Bắt buộc kiểm thử đa luồng bằng Testcontainers MySQL 8 trên CI; thời gian chờ khóa tối đa `innodb_lock_wait_timeout <= 5s` (AF-07, AF-13).
 NFR-CONF-01 (Cấu hình tham số vận hành linh hoạt - AF-08, D-09): Toàn bộ tham số nghiệp vụ vận hành (thời gian giữ ghế holdMinutes [1, 10], thời gian dọn phòng cleaningMinutes, chu kỳ quét scheduler expiryScanDelayMs, kích thước batch expiryScanBatchSize) bắt buộc cấu hình hóa qua @ConfigurationProperties (BookingProperties, ShowtimeProperties) và validate chặt chẽ lúc khởi động.
 NFR-REL-01 (Độ tin cậy & Idempotency): Luồng xử lý thanh toán IPN đảm bảo tính Idempotent, hoạt động chính xác ngay cả khi callback bị gửi lặp hoặc mất kết nối phía trình duyệt của khách hàng.
-NFR-SEC-01 (Bảo mật): Mật khẩu băm bằng BCrypt; xác thực và phân quyền bằng Spring Security + JWT (CUSTOMER, ADMIN); mọi phép tính giá vé và giảm giá voucher thực hiện hoàn toàn ở Backend.
+NFR-SEC-01 (Bảo mật & Kiểm soát truy cập – cập nhật G4-07, FA-03): Mật khẩu băm bằng BCrypt; độ dài mật khẩu đăng ký tối thiểu 8 ký tự và tối đa 50 ký tự (`RegisterRequest` và form Frontend); xác thực và phân quyền bằng Spring Security + JWT (CUSTOMER, ADMIN); mọi phép tính giá vé và giảm giá voucher thực hiện hoàn toàn ở Backend.
+- Kiểm soát Brute-force & Throttle đăng nhập (G4-07): Giới hạn tối đa 5 lần đăng nhập thất bại trong vòng 15 phút cho mỗi địa chỉ email (quản lý bởi `LoginAttemptService`). Vượt ngưỡng sẽ bị tạm khóa đăng nhập và trả về mã lỗi 1105 (`TOO_MANY_LOGIN_ATTEMPTS: 429 Too Many Requests`). Đăng nhập thành công sẽ lập tức xóa bộ đếm.
+- Kiểm tra tính hoạt động của tài khoản (Active User Enforcement - FA-03): Tài khoản bị vô hiệu hóa (`is_active = false`) bị chặn đăng nhập ngay tại `CustomUserDetailsService` và bị chặn tạo đơn giữ vé mới (`createBooking`) kể cả khi sử dụng token JWT cũ còn hạn (HTTP 401 Unauthorized).
+- Quyết định kiến trúc D-06: Lưu trữ JWT tại `localStorage` phục vụ Single-Page Application (SPA) đơn giản, đi kèm các biện pháp phòng chống XSS đa tầng (React JSX Auto-escaping, Jakarta Validation chặt chẽ, thu hồi quyền qua cờ `isActive = false` tức thì trên server). Khuyến nghị nâng cấp lên `HttpOnly`, `SameSite=Strict` Cookie và Refresh Token xoay vòng cho môi trường doanh nghiệp.
 NFR-SEC-02 (Quản lý bí mật & tài khoản quản trị đầu tiên – bổ sung v2.3, AF-02): Không lưu bí mật trong mã nguồn hay các script khởi động (.bat/.sh); bắt buộc nạp từ .env. JWT secret (JWT_SECRET, Base64, tối thiểu 32 byte) bắt buộc cấu hình qua biến môi trường và ứng dụng từ chối khởi động nếu thiếu hoặc quá yếu. Tài khoản ADMIN đầu tiên chỉ được tạo khi CSDL chưa có ADMIN và có cấu hình BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD (tối thiểu 8 ký tự); mật khẩu không được ghi cứng và không được ghi vào log.
 NFR-DATA-01 (Bảo toàn lịch sử giao dịch - AF-06): Tuyệt đối không xóa cứng (no hard delete) phim, phòng, ghế, suất chiếu và hóa đơn. cancelShowtime luôn thực hiện hủy mềm (status = CANCELLED) và chặn hủy suất chiếu đã bắt đầu (mã lỗi 1313); lưu cố định giá vé tại thời điểm mua trong booking_items.price.
 6. Thiết kế Cơ sở Dữ liệu Chi tiết – Từ điển Dữ liệu 17 Bảng (Database Schema & Data Dictionary)
@@ -984,6 +1008,18 @@ updated_at
 DATETIME
 NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 Thời điểm cập nhật kết quả từ IPN.
+refunded_at
+DATETIME
+NULL
+Thời điểm Quản trị viên (Admin) xác nhận hoàn tiền thủ công (V4__payment_refund_audit.sql).
+refunded_by
+BIGINT
+NULL, FK -> users(id)
+ID của Quản trị viên đã thực hiện xác nhận hoàn tiền thủ công.
+refund_note
+VARCHAR(255)
+NULL
+Ghi chú kiểm toán do Quản trị viên nhập khi xác nhận hoàn tiền.
 
 MODULE 7: REVIEW
 Bảng 17: reviews (Đánh giá và bình luận bộ phim)
@@ -1045,12 +1081,24 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    IT-02 (Thu hồi ghế quá hạn an toàn): Đơn A hết hạn lúc 12:10:00 nhưng Scheduler chưa chạy; lúc 12:10:01 Khách B bấm giữ ghế đó  Đơn A tự động chuyển sang EXPIRED và Khách B giữ ghế thành công.
    IT-03 (VNPay IPN gọi lặp - Idempotency): Gửi cùng một bản tin IPN thành công 5 lần liên tiếp cho 1 giao dịch  Hệ thống chỉ xác nhận lần đầu, 4 lần sau không phát sinh lỗi hay thay đổi dữ liệu.
    IT-04 (Thanh toán muộn mất ghế & Thanh toán trùng 2 lần): Khi IPN báo thành công nhưng ghế đã thuộc về khách hàng khác (hoặc đơn đã được xác nhận bởi attempt trước đó)  Bản ghi payments chuyển sang SUCCESS kèm refund_status = 'REFUND_REQUIRED', không ghi đè quyền sở hữu ghế.
-   7.3. Trạng thái Triển khai so với Kế hoạch (cập nhật v3.3)
+   7.3. Trạng thái Triển khai so với Kế hoạch (cập nhật v3.4)
    Mục này ghi lại phần nào của kế hoạch ở trên đã làm và chưa làm, để tài liệu khớp với mã nguồn hiện tại.
-   Đã triển khai: Auth/JWT, Movie, Showtime (chống trùng lịch + 15 phút dọn phòng, hủy suất chiếu & điều phối hoàn tiền tự động FR-SHOW-02), Booking (giữ ghế 10 phút bằng Pessimistic Lock, scheduler thu hồi mỗi 30 giây), Payment (VNPay Sandbox, IPN idempotent, TH1/TH2/TH3, hoàn tiền thủ công), Voucher, Review, Báo cáo doanh thu, Docker Compose (MySQL); bộ Integration Test backend (12 test suites, bao gồm kiểm thử đồng thời đa luồng qua Testcontainers MySQL 8 và AbstractMySqlIT: IT-01 SeatHoldingConcurrencyIT, OrphanSeatConcurrencyIT, SeatTypeChangeVsHoldIT); CI GitHub Actions chạy verify toàn diện (`./mvnw -B verify`); bộ Unit/Integration Test frontend (Vitest, 10 suites / 55 tests); Script QA kiểm thử tích hợp giao diện quản trị (scripts/test-admin-suite.js).
+   Đã triển khai: Toàn bộ Auth/JWT (chống brute-force 5 lần/15 phút, mật khẩu tối thiểu 8 ký tự, chặn user inactive), Movie (giới hạn size <= 100), Showtime (chống trùng lịch + 15 phút dọn phòng, hủy mềm suất chiếu & điều phối hoàn tiền tự động FR-SHOW-02), Booking (giữ ghế 10 phút bằng Pessimistic Lock, scheduler thu hồi mỗi 30 giây, luồng modify seats hủy đơn an toàn, sơ đồ ghế tự làm mới mỗi 8s), Payment (VNPay Sandbox, IPN idempotent, TH1/TH2/TH3, hoàn tiền thủ công kèm lưu vết kiểm toán V4, exponential backoff polling), Voucher (phân tách API public/admin, xác nhận đơn 0 đồng), Review, Báo cáo doanh thu chuẩn xác, Docker Compose (MySQL); bộ Integration Test backend toàn diện (17 test suites, bao gồm kiểm thử đồng thời đa luồng qua Testcontainers MySQL 8 và AbstractMySqlIT: IT-01 SeatHoldingConcurrencyIT, IT-02 OrphanSeatConcurrencyIT, SeatTypeChangeVsHoldIT, ShowtimeVsDiscontinueIT, IT-03 IpnVsCancelShowtimeIT, IT-04 CancelConfirmedVsCancelShowtimeIT, PendingCapConcurrencyIT, VoucherLimitConcurrencyIT, LockWaitTimeoutIT); CI GitHub Actions chạy verify toàn diện (`./mvnw -B verify`); bộ Unit/Integration Test frontend (Vitest, 11 suites); Script QA kiểm thử tích hợp giao diện quản trị (scripts/test-admin-suite.js).
    Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI.
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 3.4 (2026-11-06):
+  + Hoàn thiện toàn diện các hạng mục Đợt cuối và Nhóm 4 (G4-03 -> G4-11, FA-01 -> FA-04).
+  + Sửa lỗi GitHub Actions CI (FA-01): `MovieTheaterBookingSystemApplicationTests` kế thừa `AbstractMySqlIT` kết nối Testcontainers MySQL thành công, pipeline đạt chuẩn xanh tuyệt đối (2/2).
+  + Bổ sung đầy đủ 5 bài kiểm thử đồng thời & khóa tài nguyên nâng cao (FA-02): `PendingCapConcurrencyIT` (10 luồng kiểm tra trần 2 đơn chờ), `VoucherLimitConcurrencyIT` (15 luồng tranh chấp 3 lượt voucher cuối), `IpnVsCancelShowtimeIT` (race condition IPN thanh toán vs Admin hủy suất chiếu), `CancelConfirmedVsCancelShowtimeIT` (race condition khách hủy vé vs Admin hủy suất chiếu), `LockWaitTimeoutIT` (thời gian chờ khóa tối đa <= 5s ném PessimisticLockingFailureException mã 1004).
+  + Vá kẽ hở tài khoản bị khóa & Đồng bộ cấu hình hạ tầng (FA-03, G4-08): Chặn tài khoản `isActive = false` tại `CustomUserDetailsService` và `BookingService.createBooking` (mã 1001 UNAUTHORIZED); cấu hình `connection-timeout: 10000` cho HikariCP và `spring.jackson.time-zone: Asia/Ho_Chi_Minh`.
+  + Phân tách API Voucher & Xác nhận đơn hàng 0 đồng (FA-04, G4-03): Tách biệt `GET /api/v1/vouchers` (public) và `GET /api/v1/vouchers/admin` (admin); đơn hàng có `finalAmount == 0` sau giảm giá tự động chuyển `CONFIRMED`, ghế chuyển `BOOKED`, xác nhận voucher `USED` và cấp vé ngay mà không cần qua VNPay.
+  + Sơ đồ ghế tự động làm mới theo thời gian thực (G4-04): Triển khai hook `useSeatMapPolling.js` chu kỳ 8s, tạm dừng khi tab ẩn (`document.hidden`), tự động unselect ghế bị chiếm kèm toast thông báo; viết bài test `useSeatMapPolling.test.jsx`.
+  + Chuẩn hóa chữ ký số VNPay & Polling kết quả thanh toán (G4-05): Lọc tham số chỉ lấy tiền tố `vnp_*` trong `VnPayUtil.verifySignature`, bổ sung unit test `VnPayUtilTest`; trang `PaymentResult.jsx` thêm trạng thái `processing` với cơ chế Exponential Backoff polling (2s, 4s, 8s, 16s).
+  + Luồng đổi ghế an toàn (G4-06): Nút "Modify Selected Seats" tại `Payment.jsx` tự động hủy đơn PENDING_PAYMENT trước khi chuyển về trang chọn ghế để giải phóng ghế và trần đơn chờ.
+  + Chống Brute-force đăng nhập & Chuẩn hóa mật khẩu (G4-07): Tạo `LoginAttemptService` giới hạn 5 lần đăng nhập sai / 15 phút (mã 1105 `TOO_MANY_LOGIN_ATTEMPTS`); nâng độ dài mật khẩu đăng ký tối thiểu 8 ký tự trên Client và Server; bổ sung tài liệu Quyết định kiến trúc D-06 vào `README.md`.
+  + Giới hạn kích thước phân trang & Lưu vết kiểm toán hoàn tiền (G4-09): Đặt `@Max(100)` cho tham số `size` trong `MovieController`; tạo Migration `V4__payment_refund_audit.sql` bổ sung 3 cột (`refunded_at`, `refunded_by`, `refund_note`) vào bảng `payments`, cập nhật `PaymentService.confirmManualRefund` và hiển thị trên `AdminDashboard.jsx`.
+  + Đồng bộ hóa tài liệu toàn dự án (G4-11): Nâng cấp `SRS.md` lên v3.4, cập nhật `ROADMAP.md` (100% Group 4 DONE), hoàn tất `FINAL_AUDIT_AND_G4_PLAN.md` và `CHANGELOG.md`.
 - Phiên bản 3.3 (2026-11-06):
   + Toàn diện hoàn thành 17 hạng mục Audit Fixes (AF-01 -> AF-17) theo tài liệu AUDIT_FIXES.md.
   + Bổ sung AF-11 (D-10 [ĐÃ CHỐT]): Chuẩn hóa báo cáo doanh thu FR-REP-01 (tỷ lệ lấp đầy tính trên cùng cửa sổ start_time của suất SCHEDULED, chỉ tính ghế ss.seat.isActive = true, bỏ Math.min 100.0, bỏ số suất chiếu giả khi capacity = 0).

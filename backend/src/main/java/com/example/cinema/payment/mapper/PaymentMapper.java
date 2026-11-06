@@ -21,6 +21,9 @@ public class PaymentMapper {
                 .responseCode(payment.getResponseCode())
                 .transactionStatus(payment.getTransactionStatus())
                 .payDate(payment.getPayDate())
+                .refundedAt(payment.getRefundedAt())
+                .refundedBy(payment.getRefundedBy())
+                .refundNote(payment.getRefundNote())
                 .createdAt(payment.getCreatedAt())
                 .updatedAt(payment.getUpdatedAt())
                 .build();

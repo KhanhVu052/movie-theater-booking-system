@@ -25,6 +25,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(1102, "User not found", HttpStatus.NOT_FOUND),
     INVALID_CREDENTIALS(1103, "Invalid email or password", HttpStatus.UNAUTHORIZED),
     USER_INACTIVE(1104, "User account has been deactivated", HttpStatus.FORBIDDEN),
+    TOO_MANY_LOGIN_ATTEMPTS(1105, "Too many failed login attempts. Please try again after 15 minutes", HttpStatus.TOO_MANY_REQUESTS),
 
     // --- Movie, Genre & Actor Errors (1200 - 1299) ---
     GENRE_NOT_FOUND(1201, "One or more genres not found", HttpStatus.NOT_FOUND),

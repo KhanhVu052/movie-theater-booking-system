@@ -1,0 +1,4 @@
+ALTER TABLE payments
+  ADD COLUMN refunded_at DATETIME NULL,
+  ADD COLUMN refunded_by BIGINT NULL,
+  ADD COLUMN refund_note VARCHAR(255) NULL;

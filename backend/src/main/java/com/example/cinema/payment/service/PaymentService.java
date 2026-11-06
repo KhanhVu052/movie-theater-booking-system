@@ -483,7 +483,7 @@ public class PaymentService {
     }
 
     @Transactional
-    public PaymentResponse confirmManualRefund(Long paymentId) {
+    public PaymentResponse confirmManualRefund(Long paymentId, String adminEmail, String note) {
         Payment payment = paymentRepository.findByIdForUpdate(paymentId)
                 .orElseThrow(() -> new AppException(ErrorCode.PAYMENT_NOT_FOUND));
 
@@ -492,7 +492,18 @@ public class PaymentService {
         }
 
         payment.setRefundStatus(PaymentRefundStatus.REFUNDED);
+        payment.setRefundedAt(LocalDateTime.now());
+        if (adminEmail != null) {
+            userRepository.findByEmail(adminEmail).ifPresent(admin -> payment.setRefundedBy(admin.getId()));
+        }
+        payment.setRefundNote(note != null && !note.isBlank() ? note.trim() : "Manual refund confirmed by admin");
+
         return paymentMapper.toResponse(paymentRepository.save(payment));
+    }
+
+    @Transactional
+    public PaymentResponse confirmManualRefund(Long paymentId) {
+        return confirmManualRefund(paymentId, null, null);
     }
 
     @Transactional(readOnly = true)

@@ -21,6 +21,9 @@ public record PaymentResponse(
         String responseCode,
         String transactionStatus,
         LocalDateTime payDate,
+        LocalDateTime refundedAt,
+        Long refundedBy,
+        String refundNote,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

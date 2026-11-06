@@ -39,8 +39,8 @@ Qua quá trình quét toàn bộ cây thư mục trong `movie-theater-booking-sy
 | **G4-04** | 🟡 MEDIUM | Tự động làm mới sơ đồ ghế định kỳ mỗi $8\text{ giây}$ (`useSeatMapPolling.js`) | `DONE` |
 | **G4-05** | 🟡 MEDIUM | Lọc tham số `vnp_*` khi băm chữ ký VNPay & thêm trạng thái `processing` trên `PaymentResult.jsx` | `DONE` |
 | **G4-06** | 🟡 MEDIUM | Luồng *"Modify Selected Seats"* hủy đơn `PENDING_PAYMENT` trước khi quay về trang chọn ghế | `DONE` |
-| **G4-07** | 🟡 MEDIUM | Chống Brute-force đăng nhập ($5\text{ lần}/15\text{ phút}$, mã `1105`), mật khẩu $\ge 8$ ký tự & tài liệu hóa `D-06` | `TODO` |
-| **G4-09** | 🟢 LOW | Giới hạn `size <= 100` ở `MovieController` & thêm `V4__payment_refund_audit.sql` lưu vết hoàn tiền | `TODO` |
+| **G4-07** | 🟡 MEDIUM | Chống Brute-force đăng nhập ($5\text{ lần}/15\text{ phút}$, mã `1105`), mật khẩu $\ge 8$ ký tự & tài liệu hóa `D-06` | `DONE` |
+| **G4-09** | 🟢 LOW | Giới hạn `size <= 100` ở `MovieController` & thêm `V4__payment_refund_audit.sql` lưu vết hoàn tiền | `DONE` |
 
 ---
 

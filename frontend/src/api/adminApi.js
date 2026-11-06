@@ -12,8 +12,10 @@ export const adminApi = {
   },
 
   // Confirm manual refund for transactions requiring refund (FR-PAY-02)
-  confirmManualRefund: (id) => {
-    return axiosClient.patch(`/payments/${id}/refund`);
+  confirmManualRefund: (id, note = null) => {
+    return axiosClient.patch(`/payments/${id}/refund`, null, {
+      params: note ? { note } : {},
+    });
   },
 
   // Movie administration

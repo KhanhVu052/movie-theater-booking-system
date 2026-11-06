@@ -120,10 +120,15 @@ public class PaymentController {
 
     @PatchMapping("/{id}/refund")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<PaymentResponse>> confirmManualRefund(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<PaymentResponse>> confirmManualRefund(
+            Authentication authentication,
+            @PathVariable Long id,
+            @RequestParam(required = false) String note
+    ) {
+        String adminEmail = authentication != null ? authentication.getName() : null;
         PaymentResponse response = deadlockRetryExecutor.executeWithRetry(
                 "ConfirmRefund-" + id,
-                () -> paymentService.confirmManualRefund(id)
+                () -> paymentService.confirmManualRefund(id, adminEmail, note)
         );
         return ResponseEntity.ok(ApiResponse.success("Payment marked as REFUNDED successfully", response));
     }

@@ -34,6 +34,7 @@ public class AuthService {
     PasswordEncoder passwordEncoder;
     JwtService jwtService;
     AuthenticationManager authenticationManager;
+    LoginAttemptService loginAttemptService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -51,13 +52,18 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
+        String normalizedEmail = request.email().trim().toLowerCase();
+        loginAttemptService.checkLoginAllowed(normalizedEmail);
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.email().trim().toLowerCase(),
+                            normalizedEmail,
                             request.password()
                     )
             );
+
+            loginAttemptService.resetAttempts(normalizedEmail);
 
             UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
             return buildAuthResponse(principal.getUser());
@@ -65,6 +71,7 @@ public class AuthService {
         } catch (DisabledException ex) {
             throw new AppException(ErrorCode.USER_INACTIVE);
         } catch (BadCredentialsException | InternalAuthenticationServiceException ex) {
+            loginAttemptService.recordFailedAttempt(normalizedEmail);
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
     }
