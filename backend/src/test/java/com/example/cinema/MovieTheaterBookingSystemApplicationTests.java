@@ -5,8 +5,7 @@ import org.junit.jupiter.api.Test;
 
 class MovieTheaterBookingSystemApplicationTests extends AbstractMySqlIT {
 
-	@Test
-	void contextLoads() {
-	}
-
+    @Test
+    void contextLoads() {
+    }
 }

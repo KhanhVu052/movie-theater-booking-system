@@ -2,7 +2,6 @@ package com.example.cinema.booking.repository;
 
 import com.example.cinema.booking.dto.projection.MovieTicketSalesProjection;
 import com.example.cinema.booking.entity.BookingItem;
-import com.example.cinema.payment.entity.Payment;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

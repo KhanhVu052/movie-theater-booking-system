@@ -62,3 +62,4 @@ class LoginAttemptServiceTest {
         assertThat(loginAttemptService.getFailedAttempts(email)).isEqualTo(0);
     }
 }
+
