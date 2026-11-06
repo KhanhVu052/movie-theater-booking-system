@@ -2,6 +2,7 @@
 
 Định dạng: `YYYY-MM-DD — ID task — Tóm tắt một câu về việc đã làm — SRS mục tương ứng (nếu có)`
 
+- 2026-11-06 — FA-01, FA-02 — Kế thừa AbstractMySqlIT trong MovieTheaterBookingSystemApplicationTests giúp CI xanh, bổ sung đủ 5 bài test đồng thời & timeout Testcontainers (PendingCapConcurrencyIT, VoucherLimitConcurrencyIT, IpnVsCancelShowtimeIT, CancelConfirmedVsCancelShowtimeIT, LockWaitTimeoutIT) — AF-07, AF-13, G4-10, NFR-CONC-01, NFR-TEST-01
 - 2026-11-06 — AF-11, AF-13, AF-16, AF-14, AF-17 — Chuẩn hóa logic báo cáo doanh thu FR-REP-01 (tỷ lệ lấp đầy tính trên cửa sổ start_time của suất SCHEDULED, chỉ tính ghế ss.seat.isActive = true, bỏ Math.min 100.0, bỏ số suất chiếu giả khi capacity = 0 per D-10), ép innodb_lock_wait_timeout <= 5s, hoàn thiện GlobalExceptionHandler (1004, 1005, 1006), dọn dẹp getShowtimeSeats chỉ đọc và khử N+1 trong getMyBookings, nâng toàn bộ tài liệu lên SRS v3.3 — FR-REP-01, NFR-CONC-01, G4-01, G4-02, G4-09, SRS v3.3
 - 2026-11-06 — AF-08, AF-09, AF-15 — Đưa tham số hardcode ra BookingProperties (@Min(1) @Max(10) holdMinutes per D-09, scheduler) và ShowtimeProperties (cleaningMinutes), xóa logic tính giá cứng trong enum SeatType, hiển thị giá đóng băng từ kho showtime_seats qua projection và chuyển mảng priceTags DTO cho Frontend, bóc tách hàm ánh xạ sang utils/priceTags.js và chuẩn hóa test vitest — FR-BOOK-02, FR-SHOW-01, FR-PRICE-01
 
