@@ -170,7 +170,8 @@ public class RoomService {
 
     @Transactional
     public RoomResponse toggleRoomStatus(Long id, boolean isActive) {
-        Room room = findRoomWithCinemaOrThrow(id);
+        Room room = roomRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new AppException(ErrorCode.ROOM_NOT_FOUND));
         if (!isActive) {
             boolean hasFutureShowtimes = showtimeRepository.existsByRoomIdAndStatusAndStartTimeAfter(
                     id, ShowtimeStatus.SCHEDULED, LocalDateTime.now());

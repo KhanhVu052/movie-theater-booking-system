@@ -87,8 +87,6 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
 
     boolean existsByShowtimeIdAndStatusIn(Long showtimeId, List<ShowtimeSeatStatus> statuses);
 
-    void deleteByShowtimeId(Long showtimeId);
-
     @Query("""
             SELECT ss FROM ShowtimeSeat ss
             JOIN FETCH ss.showtime s

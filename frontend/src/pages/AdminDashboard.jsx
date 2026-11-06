@@ -434,7 +434,11 @@ export default function AdminDashboard() {
       showToast(`Showtime #${id} has been cancelled. Any active bookings were cancelled and queued for refund.`, 'info');
       fetchShowtimes();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to cancel showtime.', 'error');
+      if (err.response?.data?.code === 1313) {
+        showToast('Không thể hủy suất chiếu đã bắt đầu hoặc đang diễn ra.', 'error');
+      } else {
+        showToast(err.response?.data?.message || 'Failed to cancel showtime.', 'error');
+      }
     }
   };
 

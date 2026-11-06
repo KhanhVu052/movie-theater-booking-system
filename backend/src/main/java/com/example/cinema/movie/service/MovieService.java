@@ -77,7 +77,9 @@ public class MovieService {
 
     @Transactional
     public MovieResponse updateMovie(Long id, MovieRequest request) {
-        Movie movie = findMovieByIdOrThrow(id);
+        Movie movie = (request.status() == MovieStatus.ENDED)
+                ? movieRepository.findByIdForUpdate(id).orElseThrow(() -> new AppException(ErrorCode.MOVIE_NOT_FOUND))
+                : findMovieByIdOrThrow(id);
         if (request.status() == MovieStatus.ENDED && movie.getStatus() != MovieStatus.ENDED) {
             boolean hasFutureShowtimes = showtimeRepository.existsByMovieIdAndStatusAndStartTimeAfter(
                     id, ShowtimeStatus.SCHEDULED, LocalDateTime.now()
@@ -96,7 +98,8 @@ public class MovieService {
 
     @Transactional
     public void discontinueMovie(Long id) {
-        Movie movie = findMovieByIdOrThrow(id);
+        Movie movie = movieRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new AppException(ErrorCode.MOVIE_NOT_FOUND));
         boolean hasFutureShowtimes = showtimeRepository.existsByMovieIdAndStatusAndStartTimeAfter(
                 id, ShowtimeStatus.SCHEDULED, LocalDateTime.now()
         );

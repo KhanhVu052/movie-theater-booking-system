@@ -175,7 +175,7 @@ public class OrphanSeatConcurrencyIT extends AbstractMySqlIT {
                 bookingItemRepository.deleteAll(bookingItemRepository.findByBookingId(b.getId()));
                 bookingRepository.delete(b);
             }
-            showtimeSeatRepository.deleteByShowtimeId(showtime.getId());
+            showtimeSeatRepository.deleteAll(showtimeSeatRepository.findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtime.getId()));
             showtimeRepository.delete(showtime);
         }
         if (!seats.isEmpty()) seatRepository.deleteAll(seats);

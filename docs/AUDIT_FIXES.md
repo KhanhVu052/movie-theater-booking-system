@@ -32,11 +32,11 @@
 | **AF-03** | 🟠 HIGH | `RoomService.batchUpdateSeats`: Gọi `ss.setPrice(...)` + `saveAll()` không khóa dòng, khiến Hibernate ghi đè toàn bộ cột (`status=AVAILABLE`, `held_by_booking_id=null`) lên ghế khách vừa giữ (`HELD`). | — | `DONE` |
 | **AF-04** | 🟠 HIGH | Kiểm tra tính hợp lệ của `pairGroup` khi cập nhật ghế và chặn bán ghế `COUPLE` bị thiếu `pairGroup` (xóa bỏ logic tự ghép chẵn/lẻ dự phòng). | D-07 | `DONE` |
 | **AF-05** | 🟠 HIGH | Logic kiểm tra ghế lẻ (Orphan Seat) bị lệch giữa Client (`isActive`) và Server (`status` thô trước khi thu hồi đơn hết hạn); cần chuẩn hóa và dùng chung bộ test fixture JSON. | — | `DONE` |
-| **AF-06** | 🟠 HIGH | `cancelShowtime`: Xóa cứng suất chiếu khi chưa có đơn vé (vi phạm bất biến Soft Delete) và chưa chặn hủy các suất chiếu đã/đang diễn ra (`startTime <= now`). | D-08 | `TODO` |
+| **AF-06** | 🟠 HIGH | `cancelShowtime`: Xóa cứng suất chiếu khi chưa có đơn vé (vi phạm bất biến Soft Delete) và chưa chặn hủy các suất chiếu đã/đang diễn ra (`startTime <= now`). | D-08 | `DONE` |
 | **AF-07** | 🟠 HIGH | Thiếu kiểm thử đồng thời (Concurrency IT) trên MySQL thật (Testcontainers) và CI đang bỏ qua test backend (`-DskipTests`). | — | `DONE` |
 | **AF-08** | 🟡 MEDIUM | Đưa toàn bộ tham số nghiệp vụ còn hardcode (`SEAT_HOLD_MINUTES=10`, `plusMinutes(15)`, chu kỳ scheduler, giá trong enum `SeatType`) ra `@ConfigurationProperties`. | D-09 | `TODO` |
 | **AF-09** | 🟡 MEDIUM | Giá hiển thị trên sơ đồ ghế bị tính lại theo cấu hình hiện tại thay vì lấy giá đã đóng băng trong `showtime_seats`; Client còn hardcode nhãn phụ thu (`+15k`, `-10k`). | — | `TODO` |
-| **AF-10** | 🟡 MEDIUM | Race condition giữa luồng Admin tạo suất chiếu mới và luồng ngừng chiếu phim (`ENDED`) hoặc tắt phòng chiếu (`isActive=false`). | — | `TODO` |
+| **AF-10** | 🟡 MEDIUM | Race condition giữa luồng Admin tạo suất chiếu mới và luồng ngừng chiếu phim (`ENDED`) hoặc tắt phòng chiếu (`isActive=false`). | — | `DONE` |
 | **AF-11** | 🟡 MEDIUM | Báo cáo doanh thu (`getRevenueReport`): Công suất chưa lọc ghế `isActive=true`, tỷ lệ lấp đầy lệch cửa sổ thời gian phải dùng `Math.min(100.0)` che lỗi, nguy cơ NPE và nhân đôi dòng khi `JOIN Payment`. | D-10 | `TODO` |
 | **AF-12** | 🟡 MEDIUM | Câu lệnh `findByIdsForUpdateOrderByIdAsc` dùng `JOIN FETCH ss.seat` kèm `FOR UPDATE` khiến MySQL khóa lan sang bảng vật lý `seats`. | — | `DONE` |
 | **AF-13** | 🟡 MEDIUM | Kiểm chứng và ép thời gian chờ khóa tối đa (`innodb_lock_wait_timeout`) trên MySQL $\le 5$ giây. | — | `TODO` |

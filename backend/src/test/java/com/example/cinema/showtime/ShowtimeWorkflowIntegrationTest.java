@@ -191,8 +191,8 @@ class ShowtimeWorkflowIntegrationTest extends AbstractMySqlIT {
     }
 
     @Test
-    @DisplayName("Hard delete: Showtime with no bookings is completely removed with its seats")
-    void cancelEmptyShowtimeHardDeletes() {
+    @DisplayName("AF-06 / D-08: Showtime with no bookings is soft-cancelled (never hard deleted)")
+    void cancelEmptyShowtimeSoftCancels() {
         Showtime showtime = showtimeRepository.save(Showtime.builder()
                 .movie(testActiveMovie)
                 .room(testRoom)
@@ -222,8 +222,40 @@ class ShowtimeWorkflowIntegrationTest extends AbstractMySqlIT {
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(showtimeRepository.findById(showtime.getId())).isEmpty();
-        assertThat(showtimeSeatRepository.findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtime.getId())).isEmpty();
+        Showtime updatedShowtime = showtimeRepository.findById(showtime.getId()).orElseThrow();
+        assertThat(updatedShowtime.getStatus()).isEqualTo(ShowtimeStatus.CANCELLED);
+
+        var seats = showtimeSeatRepository.findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtime.getId());
+        assertThat(seats).hasSize(1);
+        assertThat(seats.get(0).getStatus()).isEqualTo(ShowtimeSeatStatus.AVAILABLE);
+        assertThat(seats.get(0).getHeldByBookingId()).isNull();
+    }
+
+    @Test
+    @DisplayName("AF-06 / D-08: Cancelling a showtime that has already started fails with SHOWTIME_ALREADY_STARTED (1313)")
+    void cancelStartedShowtimeFailsWith1313() {
+        Showtime showtime = showtimeRepository.save(Showtime.builder()
+                .movie(testActiveMovie)
+                .room(testRoom)
+                .format(ShowtimeFormat._2D)
+                .translationType(TranslationType.SUBTITLE)
+                .startTime(LocalDateTime.now().minusMinutes(10))
+                .endTime(LocalDateTime.now().plusMinutes(110))
+                .cleaningEndTime(LocalDateTime.now().plusMinutes(125))
+                .basePrice(85000L)
+                .status(ShowtimeStatus.SCHEDULED)
+                .build());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThatThrownBy(() -> showtimeService.cancelShowtime(showtime.getId()))
+                .isInstanceOf(AppException.class)
+                .satisfies(ex -> {
+                    AppException appEx = (AppException) ex;
+                    assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.SHOWTIME_ALREADY_STARTED);
+                    assertThat(appEx.getErrorCode().getCode()).isEqualTo(1313);
+                });
     }
 
     @Test

@@ -61,7 +61,7 @@ public class ShowtimeService {
 
     @Transactional
     public ShowtimeResponse createShowtime(ShowtimeRequest request) {
-        Movie movie = movieRepository.findById(request.movieId())
+        Movie movie = movieRepository.findByIdForShare(request.movieId())
                 .orElseThrow(() -> new AppException(ErrorCode.MOVIE_NOT_FOUND));
 
         if (movie.getStatus() == MovieStatus.ENDED) {
@@ -203,23 +203,23 @@ public class ShowtimeService {
             throw new AppException(ErrorCode.SHOWTIME_ALREADY_CANCELLED);
         }
 
+        if (!showtime.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.SHOWTIME_ALREADY_STARTED);
+        }
+
+        showtime.setStatus(ShowtimeStatus.CANCELLED);
+        showtimeRepository.save(showtime);
+
+        List<ShowtimeSeat> seats = showtimeSeatRepository.findByShowtimeIdForUpdate(id);
+        for (ShowtimeSeat seat : seats) {
+            seat.setStatus(ShowtimeSeatStatus.AVAILABLE);
+            seat.setHeldByBookingId(null);
+        }
+        showtimeSeatRepository.saveAll(seats);
+
         List<Long> bookingIds = bookingRepository.findIdsByShowtimeId(id);
-
-        if (bookingIds.isEmpty()) {
-            showtimeSeatRepository.deleteByShowtimeId(id);
-            showtimeRepository.delete(showtime);
-        } else {
-            showtime.setStatus(ShowtimeStatus.CANCELLED);
-            showtimeRepository.save(showtime);
-
+        if (!bookingIds.isEmpty()) {
             List<Booking> bookings = bookingRepository.findByIdsForUpdateOrderByIdAsc(bookingIds);
-            List<ShowtimeSeat> seats = showtimeSeatRepository.findByShowtimeIdForUpdate(id);
-
-            for (ShowtimeSeat seat : seats) {
-                seat.setStatus(ShowtimeSeatStatus.AVAILABLE);
-                seat.setHeldByBookingId(null);
-            }
-            showtimeSeatRepository.saveAll(seats);
 
             for (Booking booking : bookings) {
                 if (booking.getStatus() == BookingStatus.CONFIRMED) {

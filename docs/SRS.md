@@ -116,25 +116,26 @@ Do InnoDB vẫn có thể phát sinh Deadlock trên các index phụ hoặc gap 
    Mô tả quy tắc nghiệp vụ & Điều kiện xử lý
    Xử lý lỗi & Tiêu chí nghiệm thu (Acceptance Criteria)
    FR-SHOW-01
-   Tạo suất chiếu & Chống trùng lịch phòng
-   Admin tạo suất chiếu cho phim (NOW_SHOWING, COMING_SOON) tại một phòng chiếu. Hệ thống tự tính end_time = start_time + duration_minutes và cleaning_end_time = end_time + 15 phút. Bắt buộc khóa bản ghi rooms (FOR UPDATE), kiểm tra không có suất chiếu SCHEDULED nào trong cùng phòng vi phạm: existing.start_time < new.cleaning_end_time AND new.start_time < existing.cleaning_end_time. Sau khi tạo, tự động khởi tạo danh sách showtime_seats từ các ghế có is_active = true của phòng.
+   Tạo suất chiếu & Chống trùng lịch phòng (Admin Lock Ordering - AF-10)
+   Admin tạo suất chiếu cho phim (NOW_SHOWING, COMING_SOON) tại một phòng chiếu. Hệ thống tuân thủ nghiêm ngặt chuỗi khóa luồng Admin chống Race Condition: Khóa chia sẻ `movies` (PESSIMISTIC_READ / FOR SHARE), sau đó khóa độc quyền `rooms` (PESSIMISTIC_WRITE / FOR UPDATE). Hệ thống tự tính end_time = start_time + duration_minutes và cleaning_end_time = end_time + 15 phút. Bắt buộc khóa bản ghi rooms (FOR UPDATE), kiểm tra không có suất chiếu SCHEDULED nào trong cùng phòng vi phạm: existing.start_time < new.cleaning_end_time AND new.start_time < existing.cleaning_end_time. Sau khi tạo, tự động khởi tạo danh sách showtime_seats từ các ghế có is_active = true của phòng.
    • Lỗi: Trùng khung giờ hoặc phòng không hoạt động -> 409 Conflict. Vô hiệu hóa phòng khi còn suất chiếu SCHEDULED trong tương lai -> 409 Conflict (Mã lỗi 1312: ROOM_HAS_FUTURE_SHOWTIMES). Ngừng chiếu phim khi còn suất tương lai -> 409 Conflict (Mã lỗi 1207: MOVIE_HAS_FUTURE_SHOWTIMES).
 
 • Nghiệm thu: 2 Admin gửi request đồng thời xếp 2 suất chiếu giao giờ nhau trong cùng 1 phòng -> Chỉ 1 request thành công. Admin không thể tắt phòng đang có suất chiếu tương lai. Admin không thể ngừng chiếu phim khi còn suất chiếu SCHEDULED trong tương lai; phim ENDED bị chặn đặt vé hoàn toàn.
 FR-SHOW-02
-Hủy suất chiếu & Điều phối hoàn tiền tự động (Showtime Cancellation & Refund Pipeline)
+Hủy suất chiếu & Điều phối hoàn tiền tự động (Luôn hủy mềm - AF-06, D-08 [ĐÃ CHỐT])
 Admin thực hiện hủy một suất chiếu đang SCHEDULED. Hệ thống tuân thủ nghiêm ngặt thứ tự khóa tài nguyên chống Deadlock (SRS mục 4.4):
-1. Khóa suất chiếu (showtimes) bằng PESSIMISTIC_WRITE (đồng thời phía createBooking sử dụng PESSIMISTIC_READ để ngăn chặn chèn booking đồng thời trong khi đang hủy).
-2. Lấy danh sách ID các booking thuộc suất chiếu và khóa FOR UPDATE theo thứ tự booking_id ASC.
-3. Nếu không có booking nào: xóa toàn bộ showtime_seats và xóa cứng bản ghi showtimes.
-4. Nếu đã có booking (CONFIRMED, PENDING_PAYMENT, EXPIRED, CANCELLED):
-   - Chuyển trạng thái suất chiếu sang CANCELLED (Soft Cancellation để bảo đảm toàn vẹn khóa ngoại dữ liệu lịch sử).
-   - Khóa và cập nhật toàn bộ showtime_seats thuộc suất chiếu về AVAILABLE, đặt held_by_booking_id = null.
+1. Khóa suất chiếu (showtimes) bằng PESSIMISTIC_WRITE.
+2. Kiểm tra tính hợp lệ của thời điểm hủy:
+   - Nếu suất chiếu đã ở trạng thái CANCELLED -> ném mã 1310 (SHOWTIME_ALREADY_CANCELLED: 409 Conflict).
+   - Nếu suất chiếu đã bắt đầu hoặc đang diễn ra (startTime <= NOW()) -> từ chối hủy và ném mã lỗi 1313 (SHOWTIME_ALREADY_STARTED: 409 Conflict) theo Quyết định D-08 [ĐÃ CHỐT].
+3. Luôn luôn thực hiện Soft Cancellation: Chuyển trạng thái suất chiếu sang CANCELLED (`showtime.setStatus(CANCELLED)`), tuyệt đối không xóa cứng bản ghi `showtimes` và `showtime_seats` trong cơ sở dữ liệu (NFR-DATA-01).
+4. Khóa và cập nhật toàn bộ `showtime_seats` thuộc suất chiếu về `AVAILABLE`, đặt `held_by_booking_id = null`.
+5. Nếu có booking (CONFIRMED, PENDING_PAYMENT):
    - Với đơn CONFIRMED: chuyển booking sang CANCELLED, tìm các giao dịch thanh toán SUCCESS có refund_status = NONE để chuyển sang REFUND_REQUIRED, đồng thời giải phóng và hoàn lại voucher đã sử dụng (USED -> RELEASED, giảm used_count).
    - Với đơn PENDING_PAYMENT: chuyển booking sang CANCELLED, giải phóng voucher đang giữ (RESERVED -> RELEASED, giảm reserved_count).
-• Lỗi: Suất chiếu không tồn tại -> 404 Not Found. Suất chiếu đã CANCELLED -> 409 Conflict.
+• Lỗi: Suất chiếu không tồn tại -> 404 Not Found (mã 1307). Suất chiếu đã CANCELLED -> 409 Conflict (mã 1310). Suất chiếu đã hoặc đang diễn ra (startTime <= now) -> 409 Conflict (mã 1313: SHOWTIME_ALREADY_STARTED).
 
-• Nghiệm thu: Hủy suất chiếu có đơn CONFIRMED đã thanh toán -> Đơn chuyển CANCELLED, giao dịch chuyển REFUND_REQUIRED, ghế được trả về trống, voucher được hoàn lại.
+• Nghiệm thu: Hủy suất chiếu chưa có đơn đặt vé: suất chiếu và toàn bộ ghế vẫn được lưu vết lịch sử với trạng thái CANCELLED, không bị xóa cứng (ShowtimeWorkflowIntegrationTest). Hủy suất chiếu có đơn CONFIRMED đã thanh toán: Đơn chuyển CANCELLED, giao dịch chuyển REFUND_REQUIRED, ghế được trả về trống, voucher được hoàn lại. Suất chiếu đã bắt đầu không thể hủy (mã 1313).
 FR-BOOK-01
 Hiển thị sơ đồ ghế và Luật ghế lẻ (Orphan Seat Detection – cập nhật v3.0)
 Trả về danh sách ghế của suất chiếu (showtime_seats) kèm vị trí hàng/cột, hạng ghế (NORMAL, VIP, COUPLE), giá vé và trạng thái hiển thị. Nếu ghế có status = 'HELD' nhưng đơn đang giữ ghế đó đã quá hạn (bookings.expires_at < NOW()), hệ thống trả về trạng thái hiển thị là AVAILABLE.
