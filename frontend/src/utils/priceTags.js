@@ -52,3 +52,4 @@ export function resolveSeatPrices(showtime, seats = []) {
     COUPLE_PAIR: couplePair,
   };
 }
+

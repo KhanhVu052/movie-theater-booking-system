@@ -320,8 +320,8 @@ Admin truy vấn thống kê tài chính và hiệu suất hoạt động theo k
    - Doanh thu thực nhận (totalRevenue, totalRealizedRevenue, revenue): Tính tổng payments.amount của các giao dịch có status = 'SUCCESS' và refund_status = 'NONE'.
    - Số vé bán ra (ticketsSold, totalTicketsSold): Đếm chính xác số lượng vé (BookingItem) thực tế thuộc các đơn CONFIRMED có giao dịch thanh toán thành công (SUCCESS, refund_status = NONE) trong kỳ thanh toán, không đếm theo số giao dịch/đơn hàng.
 2. Cửa sổ thời gian suất chiếu diễn ra (showtimes.start_time):
-   - Tổng công suất ghế (capacity) & số suất chiếu (totalScreenings): Tính tổng số ghế thực tế (ShowtimeSeat) và số suất chiếu có status = 'SCHEDULED' diễn ra trong khoảng thời gian đã chọn. Bỏ hoàn toàn quy ước hằng số 25 ghế cũ.
-   - Tỷ lệ lấp đầy bình quân (occupancyRate): Tính theo công thức occupancy = (ticketsSold * 100.0) / totalCapacity, làm tròn 1 chữ số thập phân. Nếu totalCapacity == 0, tỷ lệ lấp đầy trả về 0.0, không xảy ra lỗi chia cho 0.
+   - Tổng công suất ghế (capacity) & số suất chiếu (totalScreenings): Tính tổng số ghế thực tế có ss.seat.isActive = true (ShowtimeSeat) và số suất chiếu có status = 'SCHEDULED' diễn ra trong khoảng thời gian đã chọn. Bỏ hoàn toàn quy ước hằng số 25 ghế cũ.
+   - Tỷ lệ lấp đầy bình quân (occupancyRate): Tính theo công thức occupancy = (ticketsByShowtimeWindow * 100.0) / totalCapacity, làm tròn 1 chữ số thập phân (với ticketsByShowtimeWindow là số vé CONFIRMED của các suất SCHEDULED diễn ra trong cùng kỳ start_time). Nếu totalCapacity == 0, tỷ lệ lấp đầy trả về 0.0, không xảy ra lỗi chia cho 0 và không gán số suất chiếu giả khi capacity = 0.
 • Nghiệm thu: Các đơn PENDING_PAYMENT, EXPIRED, CANCELLED hoặc các giao dịch có trạng thái hoàn tiền (REFUND_REQUIRED / REFUNDED) bị loại trừ hoàn toàn, không làm sai lệch doanh thu hay số vé đã phát hành. Giao diện báo cáo hiển thị chú thích rõ ràng về hai quy tắc tính toán này.
 FR-DEV-01
 Công cụ giả lập chỉ dành cho môi trường phát triển (bổ sung v2.3)
@@ -330,11 +330,12 @@ Hai endpoint phục vụ demo/kiểm thử cục bộ: giả lập thanh toán t
 • Nghiệm thu: Khi DEV_TOOLS_ENABLED=false, mọi lời gọi simulate-success đều bị từ chối và không thay đổi dữ liệu; khi bật, không thể "xác nhận" một booking đã EXPIRED hoặc CANCELLED và không ghi đè ghế đã thuộc về khách khác.
 
 5.2. Yêu cầu Phi chức năng (Non-Functional Requirements)
-NFR-CONC-01 (Kiểm soát đồng thời): Sử dụng Database Transaction kết hợp Pessimistic Write Lock (SELECT ... FOR UPDATE) và thứ tự khóa chuẩn hóa để đảm bảo không bao giờ xảy ra tình trạng đặt trùng ghế hoặc vượt hạn mức voucher.
+NFR-CONC-01 (Kiểm soát đồng thời): Sử dụng Database Transaction kết hợp Pessimistic Write Lock (SELECT ... FOR UPDATE) và thứ tự khóa chuẩn hóa để đảm bảo không bao giờ xảy ra tình trạng đặt trùng ghế hoặc vượt hạn mức voucher. Bắt buộc kiểm thử đa luồng bằng Testcontainers MySQL 8 trên CI; thời gian chờ khóa tối đa `innodb_lock_wait_timeout <= 5s` (AF-07, AF-13).
+NFR-CONF-01 (Cấu hình tham số vận hành linh hoạt - AF-08, D-09): Toàn bộ tham số nghiệp vụ vận hành (thời gian giữ ghế holdMinutes [1, 10], thời gian dọn phòng cleaningMinutes, chu kỳ quét scheduler expiryScanDelayMs, kích thước batch expiryScanBatchSize) bắt buộc cấu hình hóa qua @ConfigurationProperties (BookingProperties, ShowtimeProperties) và validate chặt chẽ lúc khởi động.
 NFR-REL-01 (Độ tin cậy & Idempotency): Luồng xử lý thanh toán IPN đảm bảo tính Idempotent, hoạt động chính xác ngay cả khi callback bị gửi lặp hoặc mất kết nối phía trình duyệt của khách hàng.
 NFR-SEC-01 (Bảo mật): Mật khẩu băm bằng BCrypt; xác thực và phân quyền bằng Spring Security + JWT (CUSTOMER, ADMIN); mọi phép tính giá vé và giảm giá voucher thực hiện hoàn toàn ở Backend.
-NFR-SEC-02 (Quản lý bí mật & tài khoản quản trị đầu tiên – bổ sung v2.3): Không lưu bí mật trong mã nguồn. JWT secret (JWT_SECRET, Base64, tối thiểu 32 byte) bắt buộc cấu hình qua biến môi trường và ứng dụng từ chối khởi động nếu thiếu hoặc quá yếu. Tài khoản ADMIN đầu tiên chỉ được tạo khi CSDL chưa có ADMIN và có cấu hình BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD (tối thiểu 8 ký tự); mật khẩu không được ghi cứng và không được ghi vào log.
-NFR-DATA-01 (Bảo toàn lịch sử giao dịch): Không sử dụng xóa dây chuyền (ON DELETE CASCADE) đối với dữ liệu đặt vé và thanh toán; lưu cố định giá vé tại thời điểm mua trong booking_items.price.
+NFR-SEC-02 (Quản lý bí mật & tài khoản quản trị đầu tiên – bổ sung v2.3, AF-02): Không lưu bí mật trong mã nguồn hay các script khởi động (.bat/.sh); bắt buộc nạp từ .env. JWT secret (JWT_SECRET, Base64, tối thiểu 32 byte) bắt buộc cấu hình qua biến môi trường và ứng dụng từ chối khởi động nếu thiếu hoặc quá yếu. Tài khoản ADMIN đầu tiên chỉ được tạo khi CSDL chưa có ADMIN và có cấu hình BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD (tối thiểu 8 ký tự); mật khẩu không được ghi cứng và không được ghi vào log.
+NFR-DATA-01 (Bảo toàn lịch sử giao dịch - AF-06): Tuyệt đối không xóa cứng (no hard delete) phim, phòng, ghế, suất chiếu và hóa đơn. cancelShowtime luôn thực hiện hủy mềm (status = CANCELLED) và chặn hủy suất chiếu đã bắt đầu (mã lỗi 1313); lưu cố định giá vé tại thời điểm mua trong booking_items.price.
 6. Thiết kế Cơ sở Dữ liệu Chi tiết – Từ điển Dữ liệu 17 Bảng (Database Schema & Data Dictionary)
    Lưu ý kỹ thuật khi khởi tạo bảng (Migration Order): Giữa bảng showtime_seats (có cột held_by_booking_id) và bảng bookings (được tham chiếu bởi booking_items) có mối quan hệ tham chiếu qua lại. Khi viết script SQL tạo bảng, bảng showtime_seats được tạo trước mà chưa khai báo khóa ngoại trên cột held_by_booking_id; sau khi tạo xong bảng bookings mới sử dụng lệnh ALTER TABLE showtime_seats ADD CONSTRAINT fk_ss_booking ... để nối khóa ngoại.
    MODULE 1: AUTH & USER
@@ -1051,11 +1052,21 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
 
 8. Lịch sử Thay đổi (Changelog)
 - Phiên bản 3.3 (2026-11-06):
+  + Toàn diện hoàn thành 17 hạng mục Audit Fixes (AF-01 -> AF-17) theo tài liệu AUDIT_FIXES.md.
+  + Bổ sung AF-11 (D-10 [ĐÃ CHỐT]): Chuẩn hóa báo cáo doanh thu FR-REP-01 (tỷ lệ lấp đầy tính trên cùng cửa sổ start_time của suất SCHEDULED, chỉ tính ghế ss.seat.isActive = true, bỏ Math.min 100.0, bỏ số suất chiếu giả khi capacity = 0).
+  + Bổ sung AF-13: Giới hạn thời gian chờ khóa MySQL innodb_lock_wait_timeout <= 5s cấu hình qua Hikari connection-init-sql (NFR-CONC-01).
+  + Bổ sung AF-16: Hoàn thiện GlobalExceptionHandler bắt DataIntegrityViolationException (1005: DATA_CONFLICT), HttpMessageNotReadableException / MethodArgumentTypeMismatchException / MissingServletRequestParameterException (1006: MALFORMED_REQUEST), PessimisticLockingFailureException (1004).
+  + Bổ sung AF-17: Dọn dẹp mã nguồn (bỏ lazy seat creation trong getShowtimeSeats, tối ưu batch query loại bỏ N+1 trong getMyBookings, xóa code thừa trong PricingService và ShowtimeMapper, hoàn thiện kiểm tra credentials trong run-all-tests.bat).
+  + Bổ sung AF-08 (D-09 [ĐÃ CHỐT]): Đưa toàn bộ tham số nghiệp vụ ra BookingProperties (@Min(1) @Max(10) holdMinutes) và ShowtimeProperties (cleaningMinutes) theo NFR-CONF-01; xóa logic tính giá cứng trong enum SeatType.
+  + Bổ sung AF-09 & AF-15: Server trả giá đóng băng từ kho showtime_seats và danh sách thẻ định giá ngữ nghĩa priceTags; frontend bóc tách sang src/utils/priceTags.js và xóa sạch hàm tự định nghĩa trong pricingPolicy.test.js.
+  + Bổ sung AF-10 & AF-06 (D-08 [ĐÃ CHỐT]): Khóa luồng Admin chống race condition (movies S/X -> rooms X -> showtimes); cancelShowtime luôn hủy mềm bảo toàn lịch sử và chặn hủy suất đã bắt đầu (mã 1313).
+  + Bổ sung AF-05 & AF-04 (D-07 [ĐÃ CHỐT]): Đồng bộ luật ghế lẻ Client/Server qua fixture docs/fixtures/seat-gap-cases.json; kiểm tra chặt chẽ pairGroup ghế đôi (mã 1511) và chặn bán ghế COUPLE thiếu pairGroup.
+  + Bổ sung AF-02: Xóa bỏ hoàn toàn secret/mật khẩu trong run-backend.bat, nạp cấu hình từ .env (NFR-SEC-02).
   + Bổ sung AF-07, AF-01, AF-12, AF-03: Triển khai hạ tầng kiểm thử đồng thời (Testcontainers MySQL 8, AbstractMySqlIT) và bật `./mvnw -B verify` trên CI GitHub Actions (NFR-CONC-01).
   + Chuẩn hóa quy trình giữ ghế createBooking (FR-BOOK-02 & Mục 4.4): Đảo thứ tự khóa trước rồi mới validate (tránh stale snapshot trên MySQL REPEATABLE READ); dùng scalar projection (findRowNamesByIds, findIdsByShowtimeAndRows) để không nạp ShowtimeSeat vào L1 Cache trước khi khóa; khóa toàn bộ ghế trong các hàng liên quan trong một câu lệnh duy nhất ORDER BY id ASC.
   + Tối ưu câu lệnh khóa ghế (AF-12): Loại bỏ JOIN FETCH ss.seat khỏi findByIdsForUpdateOrderByIdAsc để chỉ khóa bảng showtime_seats, không khóa lan sang bảng vật lý seats; bổ sung @BatchSize(size = 50) trên entity Seat.
   + Sửa lỗi ghi đè trạng thái ghế đang giữ trong RoomService (AF-03): Thay thế saveAll bằng câu lệnh cập nhật có điều kiện nguyên tử repriceIfAvailable chỉ cập nhật giá khi ghế còn ở trạng thái AVAILABLE.
-  + Bổ sung 3 bộ kiểm thử đồng thời đa luồng: SeatHoldingConcurrencyIT (50 luồng), OrphanSeatConcurrencyIT (2 luồng race condition), SeatTypeChangeVsHoldIT (Admin đổi loại ghế vs User giữ ghế).
+  + Bổ sung 4 bộ kiểm thử đồng thời đa luồng: SeatHoldingConcurrencyIT (50 luồng), OrphanSeatConcurrencyIT (2 luồng race condition), SeatTypeChangeVsHoldIT (Admin đổi loại ghế vs User giữ ghế), ShowtimeVsDiscontinueIT (Admin tạo suất vs ngừng chiếu).
 - Phiên bản 3.2 (2026-11-06):
   + Bổ sung G3-03 & FR-PRICE-01: Chính sách ma trận định giá tự động theo ngày, giờ và loại ghế (Pricing Policy Matrix) qua PricingProperties (app.pricing) và PricingService theo Quyết định D-05 [ĐÃ CHỐT].
   + Cấu hình ma trận: chuẩn cơ sở 60k, phụ thu VIP +15k, phụ thu ghế đôi +10k/ghế, phụ thu cuối tuần (T7-CN) +15k, ưu đãi suất sớm (trước 12:00) -10k, phụ thu giờ vàng (18:00-22:00) +10k, sàn giá tối thiểu 40k.

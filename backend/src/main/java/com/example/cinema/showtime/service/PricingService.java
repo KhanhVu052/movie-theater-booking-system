@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -64,10 +63,6 @@ public class PricingService {
 
         // 3. Minimum seat price threshold
         return Math.max(price, pricingProperties.getMinSeatPrice());
-    }
-
-    public BigDecimal calculateSeatPriceBigDecimal(Showtime showtime, SeatType seatType) {
-        return BigDecimal.valueOf(calculateSeatPrice(showtime, seatType));
     }
 
     public Map<SeatType, Long> calculateSeatTypePrices(Showtime showtime) {

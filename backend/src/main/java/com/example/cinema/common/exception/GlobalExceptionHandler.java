@@ -96,11 +96,45 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(apiResponse);
     }
 
-    @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
-    public ResponseEntity<ApiResponse<Void>> handlePessimisticLockingFailure(
-            org.springframework.dao.PessimisticLockingFailureException ex
-    ) {
+    @ExceptionHandler({
+            org.springframework.dao.PessimisticLockingFailureException.class,
+            org.springframework.dao.CannotAcquireLockException.class,
+            jakarta.persistence.LockTimeoutException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handlePessimisticLockingFailure(Exception ex) {
         ErrorCode errorCode = ErrorCode.CONCURRENCY_LOCK_CONFLICT;
+        return ResponseEntity
+                .status(errorCode.getStatusCode())
+                .body(ApiResponse.error(errorCode.getCode(), errorCode.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
+            org.springframework.dao.DataIntegrityViolationException ex
+    ) {
+        log.warn("Data integrity violation: {}", ex.getMessage());
+        ErrorCode errorCode = ErrorCode.DATA_CONFLICT;
+        return ResponseEntity
+                .status(errorCode.getStatusCode())
+                .body(ApiResponse.error(errorCode.getCode(), errorCode.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadable(
+            org.springframework.http.converter.HttpMessageNotReadableException ex
+    ) {
+        ErrorCode errorCode = ErrorCode.MALFORMED_REQUEST;
+        return ResponseEntity
+                .status(errorCode.getStatusCode())
+                .body(ApiResponse.error(errorCode.getCode(), errorCode.getMessage()));
+    }
+
+    @ExceptionHandler({
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleParamMismatchAndMissing(Exception ex) {
+        ErrorCode errorCode = ErrorCode.MALFORMED_REQUEST;
         return ResponseEntity
                 .status(errorCode.getStatusCode())
                 .body(ApiResponse.error(errorCode.getCode(), errorCode.getMessage()));

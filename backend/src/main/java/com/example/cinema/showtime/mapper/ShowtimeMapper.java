@@ -9,7 +9,6 @@ import com.example.cinema.showtime.entity.Showtime;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
 import com.example.cinema.showtime.enums.SeatType;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
-import com.example.cinema.showtime.service.PricingService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -23,8 +22,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ShowtimeMapper {
-
-    PricingService pricingService;
 
     public Showtime toEntity(
             ShowtimeRequest request,

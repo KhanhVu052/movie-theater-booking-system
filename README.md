@@ -59,7 +59,7 @@ movie-theater-booking-system/
 │   │   ├── utils/            # formatters, voucherUtils, bookingUtils
 │   │   └── test/             # Vitest automated business rule test suite
 └── docs/
-    └── SRS.md                # Software Requirements Specification (v3.2)
+    └── SRS.md                # Software Requirements Specification (v3.3)
 ```
 
 ---

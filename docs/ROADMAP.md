@@ -69,6 +69,11 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | AF-08 | Đưa tham số nghiệp vụ còn hardcode ra @ConfigurationProperties (D-09) | P2 | DONE |
 | AF-09 | Giá hiển thị đóng băng từ kho showtime_seats & chuẩn hóa priceTags DTO | P2 | DONE |
 | AF-15 | Bóc tách hàm ánh xạ thẻ định giá ra src/utils/priceTags.js và chuẩn hóa test vitest | P2 | DONE |
+| AF-11 | Báo cáo doanh thu: chuẩn hóa occupancyRate (cùng cửa sổ start_time, chỉ tính ghế active), bỏ Math.min 100.0, bỏ screenings giả (D-10) | P2 | DONE |
+| AF-13 | Giới hạn innodb_lock_wait_timeout <= 5s cho MySQL qua Hikari connection-init-sql | P2 | DONE |
+| AF-16 | GlobalExceptionHandler xử lý DataIntegrityViolation (1005), MalformedRequest (1006), LockConflict (1004) (= G4-01) | P2 | DONE |
+| AF-17 | Dọn dẹp mã nguồn: bỏ lazy generation trong getShowtimeSeats (= G4-02), khử N+1 trong getMyBookings (= G4-09) | P3 | DONE |
+| AF-14 | Đồng bộ hóa toàn bộ tài liệu dự án lên phiên bản SRS v3.3 | P2 | DONE |
 | G2-01 | Giới hạn số đơn chờ thanh toán / user | P1 | DONE |
 | G2-02 | Ghế/phòng không hoạt động: chặn bán + cập nhật giá | P1 | DONE |
 | G2-03 | Hạn chót đặt vé + lọc suất chiếu còn bán | P1 | DONE |
@@ -78,17 +83,17 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | G3-01 | Luật ghế lẻ (orphan seat) | P2 | DONE |
 | G3-02 | Ghế đôi (couple) | P2 | DONE |
 | G3-03 | `PricingPolicy` (cuối tuần, giờ vàng, suất sáng) | P2 | DONE |
-| G4-01 | `GlobalExceptionHandler` đủ loại lỗi | P3 | TODO |
-| G4-02 | `getShowtimeSeats` chỉ đọc | P3 | TODO |
+| G4-01 | `GlobalExceptionHandler` đủ loại lỗi (AF-16) | P3 | DONE |
+| G4-02 | `getShowtimeSeats` chỉ đọc (AF-17) | P3 | DONE |
 | G4-03 | Voucher: danh sách công khai vs admin, đơn 0 đồng | P3 | TODO |
 | G4-04 | Sơ đồ ghế tự làm mới (polling) | P3 | TODO |
 | G4-05 | Trang kết quả thanh toán có trạng thái "đang xác nhận" + lọc `vnp_*` | P3 | TODO |
 | G4-06 | Luồng "Modify seats" | P3 | TODO |
 | G4-07 | Bảo mật đăng nhập (throttle, mật khẩu ≥ 8) | P3 | BLOCKED (D-06 một phần) |
 | G4-08 | Kiểm chứng và sửa cấu hình hạ tầng | P3 | TODO |
-| G4-09 | Hiệu năng và dọn dẹp (N+1, page size, `Clock`, audit hoàn tiền) | P3 | TODO |
+| G4-09 | Hiệu năng và dọn dẹp (N+1, page size, `Clock`, audit hoàn tiền - AF-17) | P3 | DONE |
 | G4-10 | Testcontainers + test đồng thời + CI chạy test (AF-07) | P3 | DONE |
-| G4-11 | Hoàn thiện tài liệu | P3 | TODO |
+| G4-11 | Hoàn thiện tài liệu (AF-14, SRS v3.3) | P3 | DONE |
 
 **Thứ tự đề xuất:** Phase 0 → G2-01, G2-02, G2-03, G2-06 → (sau khi chốt D-03) G2-04 → (D-05) G3-03 → G3-01 → (D-01/D-02) G3-02 → G2-05 → Nhóm 4. Mỗi task chức năng phải kèm test của nó; G4-10 là hạ tầng test dùng chung và có thể làm sớm hơn nếu muốn.
 
@@ -98,7 +103,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 
 1. **Thứ tự khoá chống deadlock:** `users` (chỉ trong `createBooking`, luôn khoá đầu tiên, xem G2-01) → `showtimes` → `bookings` (ORDER BY id) → `showtime_seats` (ORDER BY id, **một câu lệnh** cho mọi ghế cần khoá) → `vouchers`. IPN và scheduler khoá `bookings → showtime_seats → vouchers` và không khoá `showtimes`.
 2. **Giá do server tính.** Request chỉ chứa ID. Giá lưu cứng vào `showtime_seats.price` và `booking_items` tại thời điểm giữ ghế; không bao giờ tin `totalAmount` từ client.
-3. **Không xoá cứng dữ liệu lịch sử.** FK `ON DELETE RESTRICT`; không dùng `CASCADE`. Suất chiếu có booking thì chuyển `CANCELLED`, chỉ suất chưa có booking nào mới xoá cứng.
+3. **Không xoá cứng dữ liệu lịch sử (No Hard Delete - NFR-DATA-01).** FK `ON DELETE RESTRICT`; không dùng `CASCADE`. `cancelShowtime` luôn thực hiện hủy mềm (`status = CANCELLED`), tuyệt đối không xóa cứng suất chiếu (D-08 [ĐÃ CHỐT]). Chặn hủy suất chiếu đã bắt đầu (`startTime <= now`, mã 1313).
 4. **Chỉ IPN (hoặc công cụ dev đã bật `DEV_TOOLS_ENABLED`) mới được xác nhận thanh toán.** Return URL chỉ hiển thị kết quả.
 5. **Không secret trong repo.** Không in mật khẩu/secret vào log. `DEV_TOOLS_ENABLED` mặc định `false`.
 6. **Idempotency của IPN** (xử lý trước và sau khi khoá) và các nhánh TH1/TH2/TH3 trong `PaymentService.processVnPayIpn` không được đổi hành vi nếu task không yêu cầu.
@@ -360,16 +365,18 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | D-07 | Ghế COUPLE chưa có pairGroup: chặn bán hay tự ghép theo số chẵn/lẻ? | Chặn bán, bắt buộc gán pairGroup | Chặn bán & bắt buộc gán pairGroup tay [ĐÃ CHỐT] |
 | D-08 | Admin hủy suất chiếu đã/đang diễn ra: chặn hay cho phép? Hủy suất chưa có đơn: hủy mềm hay xóa cứng? | Chặn hủy suất đã bắt đầu (409, mã 1313); luôn hủy mềm (CANCELLED) | Chặn hủy suất đã bắt đầu & Luôn hủy mềm [ĐÃ CHỐT] |
 | D-09 | Trần thời gian giữ ghế (`holdMinutes`) tối đa là bao nhiêu? | Cấu hình qua `BookingProperties`, kiểm tra `@Min(1) @Max(10)` (tối đa 10 phút) | Cấu hình động, trần tối đa 10 phút [ĐÃ CHỐT] |
+| D-10 | Tỷ lệ lấp đầy (`occupancyRate`) trong báo cáo doanh thu tính trên cửa sổ thời gian nào? | Cùng cửa sổ `start_time` cho tỷ lệ lấp đầy, doanh thu theo `pay_date` | Cùng cửa sổ `start_time` cho tỷ lệ lấp đầy [ĐÃ CHỐT] |
 
 ## 9. Quy trình đồng bộ tài liệu
 
 Mỗi task đổi hành vi phải làm đủ:
-1. **SRS:** thêm/sửa mục FR/NFR tương ứng theo mẫu của file (tên, mô tả, "• Lỗi:", "• Nghiệm thu:"). Mã mới theo bảng: `FR-BOOK-04` đơn chờ, `FR-BOOK-05` hạn chót, `FR-BOOK-06` ghế lẻ, `FR-BOOK-07` ghế đôi, `FR-BOOK-08` hủy vé đã thanh toán, `FR-PRICE-01` chính sách giá. Task nào sửa mục sẵn có (FR-BOOK-02, FR-REP-01, FR-VOUC-01, FR-PAY-01) thì sửa tại chỗ.
-2. Tăng số phiên bản SRS khi thêm FR/NFR (v2.4 → v2.5 …) và thêm dòng vào "Lịch sử thay đổi".
-3. Cập nhật danh sách "Specification Compliance" trong README và số phiên bản SRS.
+1. **SRS:** thêm/sửa mục FR/NFR tương ứng theo mẫu của file (tên, mô tả, "• Lỗi:", "• Nghiệm thu:"). Mã theo bảng chuẩn: `FR-BOOK-04` đơn chờ, `FR-BOOK-05` hạn chót, `FR-BOOK-01` luật ghế lẻ (mã lỗi 1509: 400 Bad Request), `FR-SEAT-02` ghế đôi (mã lỗi 1510: 400 Bad Request, mã 1511 cấu hình), `FR-BOOK-08` hủy vé đã thanh toán, `FR-PRICE-01` chính sách giá. Task nào sửa mục sẵn có (FR-BOOK-02, FR-REP-01, FR-VOUC-01, FR-PAY-01) thì sửa tại chỗ.
+2. Tăng số phiên bản SRS khi thêm FR/NFR (v2.4 → v2.5 … → v3.3) và thêm dòng vào "Lịch sử thay đổi".
+3. Cập nhật danh sách "Specification Compliance" trong README và số phiên bản SRS (v3.3).
 4. Cập nhật mục 7.3 SRS nếu trạng thái triển khai đổi.
 5. Cập nhật `docs/CHANGELOG.md`.
 6. Mã lỗi mới: ghi vào mục "• Lỗi:" của FR liên quan, đúng số trong `ErrorCode`.
+7. Tham chiếu 17 hạng mục khắc phục toàn diện sau Audit: Xem chi tiết tại `docs/AUDIT_FIXES.md` (`AF-01` đến `AF-17`).
 
 ---
 

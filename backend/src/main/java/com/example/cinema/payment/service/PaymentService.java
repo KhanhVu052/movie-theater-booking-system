@@ -539,6 +539,14 @@ public class PaymentService {
                         (existing, replacement) -> existing
                 ));
 
+        List<MovieTicketSalesProjection> showtimeTicketProjections = bookingItemRepository.countTicketsByShowtimeWindow(startDateTime, endDateTime);
+        Map<Long, Long> showtimeTicketsByMovie = showtimeTicketProjections.stream()
+                .collect(Collectors.toMap(
+                        MovieTicketSalesProjection::getMovieId,
+                        p -> p.getTicketsSold() != null ? p.getTicketsSold() : 0L,
+                        (existing, replacement) -> existing
+                ));
+
         List<MovieCapacityProjection> capacityProjections = showtimeSeatRepository.countCapacityByMovie(startDateTime, endDateTime);
         Map<Long, MovieCapacityProjection> capacityByMovie = capacityProjections.stream()
                 .collect(Collectors.toMap(
@@ -553,16 +561,14 @@ public class PaymentService {
                     long movieId = p.getMovieId();
                     long bookings = p.getTotalBookings() != null ? p.getTotalBookings() : 0L;
                     long tickets = ticketsByMovie.getOrDefault(movieId, 0L);
+                    long ticketsInShowtimeWindow = showtimeTicketsByMovie.getOrDefault(movieId, 0L);
 
                     MovieCapacityProjection cap = capacityByMovie.get(movieId);
                     long capacity = (cap != null && cap.getTotalCapacity() != null) ? cap.getTotalCapacity() : 0L;
-                    Long projScreenings = cap != null ? cap.getTotalScreenings() : p.getTotalScreenings();
-                    long screenings = (projScreenings != null && projScreenings > 0L)
-                            ? projScreenings
-                            : (bookings > 0L ? 1L : 0L);
+                    long screenings = (cap != null && cap.getTotalScreenings() != null) ? cap.getTotalScreenings() : 0L;
 
                     double occupancy = (capacity > 0L)
-                            ? Math.min(100.0, Math.round(((double) tickets * 100.0 / (double) capacity) * 10.0) / 10.0)
+                            ? Math.round(((double) ticketsInShowtimeWindow * 100.0 / (double) capacity) * 10.0) / 10.0
                             : 0.0;
 
                     return RevenueReportResponse.MovieRevenueItem.builder()
@@ -578,7 +584,7 @@ public class PaymentService {
                 .toList();
 
         long totalTransactions = dailyProjections.stream()
-                .mapToLong(DailyRevenueProjection::getTransactionCount)
+                .mapToLong(p -> p.getTransactionCount() != null ? p.getTransactionCount() : 0L)
                 .sum();
 
         return RevenueReportResponse.builder()

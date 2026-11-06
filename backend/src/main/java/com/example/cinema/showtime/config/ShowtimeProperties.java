@@ -17,3 +17,4 @@ public class ShowtimeProperties {
     @Min(0)
     private int cleaningMinutes = 15;
 }
+

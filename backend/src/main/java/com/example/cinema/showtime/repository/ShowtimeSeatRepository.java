@@ -140,6 +140,7 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
             JOIN ss.showtime s
             WHERE s.status = com.example.cinema.showtime.enums.ShowtimeStatus.SCHEDULED
               AND s.startTime BETWEEN :startDate AND :endDate
+              AND ss.seat.isActive = true
             GROUP BY s.movie.id
             """)
     List<MovieCapacityProjection> countCapacityByMovie(

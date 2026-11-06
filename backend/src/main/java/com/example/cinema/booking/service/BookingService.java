@@ -374,8 +374,20 @@ public class BookingService {
         Pageable pageable = PageRequest.of(page - 1, size);
         Page<Booking> bookingPage = bookingRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId(), pageable);
 
+        List<Booking> bookings = bookingPage.getContent();
+        List<Long> bookingIds = bookings.stream().map(Booking::getId).toList();
+
+        Map<Long, List<BookingItem>> itemsByBookingId;
+        if (bookingIds.isEmpty()) {
+            itemsByBookingId = Map.of();
+        } else {
+            List<BookingItem> allItems = bookingItemRepository.findByBookingIdInOrderByIdAsc(bookingIds);
+            itemsByBookingId = allItems.stream()
+                    .collect(Collectors.groupingBy(item -> item.getBooking().getId()));
+        }
+
         Page<BookingResponse> responsePage = bookingPage.map(booking -> {
-            List<BookingItem> items = bookingItemRepository.findByBookingIdOrderByIdAsc(booking.getId());
+            List<BookingItem> items = itemsByBookingId.getOrDefault(booking.getId(), List.of());
             return bookingMapper.toResponse(booking, items);
         });
 

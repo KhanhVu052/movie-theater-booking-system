@@ -6,3 +6,4 @@ public interface SeatTypePriceProjection {
     SeatType getSeatType();
     Long getPrice();
 }
+

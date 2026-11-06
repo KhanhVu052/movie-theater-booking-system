@@ -17,6 +17,8 @@ public enum ErrorCode {
     UNAUTHENTICATED(1002, "Unauthenticated", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(1003, "You do not have permission", HttpStatus.FORBIDDEN),
     CONCURRENCY_LOCK_CONFLICT(1004, "Resource is currently locked by another transaction, please try again", HttpStatus.CONFLICT),
+    DATA_CONFLICT(1005, "Data integrity violation or duplicate resource", HttpStatus.CONFLICT),
+    MALFORMED_REQUEST(1006, "Malformed request payload or invalid parameter type", HttpStatus.BAD_REQUEST),
 
     // --- Auth & User Errors (1100 - 1199) ---
     EMAIL_ALREADY_EXISTS(1101, "Email is already registered", HttpStatus.CONFLICT),
