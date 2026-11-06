@@ -1,5 +1,6 @@
 package com.example.cinema.showtime.repository;
 
+import com.example.cinema.booking.entity.Booking;
 import com.example.cinema.showtime.dto.projection.MovieCapacityProjection;
 import com.example.cinema.showtime.dto.projection.SeatTypePriceProjection;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
@@ -31,7 +32,7 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
 
     @Query("""
             SELECT ss.id FROM ShowtimeSeat ss
-            JOIN com.example.cinema.booking.entity.Booking b ON ss.heldByBookingId = b.id
+            JOIN Booking b ON ss.heldByBookingId = b.id
             WHERE ss.showtime.id = :showtimeId
               AND ss.status = com.example.cinema.showtime.enums.ShowtimeSeatStatus.HELD
               AND b.status = com.example.cinema.booking.enums.BookingStatus.PENDING_PAYMENT

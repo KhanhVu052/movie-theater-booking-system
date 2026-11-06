@@ -2,6 +2,7 @@ package com.example.cinema.booking.repository;
 
 import com.example.cinema.booking.entity.Booking;
 import com.example.cinema.booking.enums.BookingStatus;
+import com.example.cinema.showtime.entity.ShowtimeSeat;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
@@ -36,7 +37,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("""
             SELECT DISTINCT b.id FROM Booking b
-            JOIN com.example.cinema.showtime.entity.ShowtimeSeat ss ON ss.heldByBookingId = b.id
+            JOIN ShowtimeSeat ss ON ss.heldByBookingId = b.id
             WHERE ss.id IN :showtimeSeatIds
               AND ss.status = com.example.cinema.showtime.enums.ShowtimeSeatStatus.HELD
               AND b.status = com.example.cinema.booking.enums.BookingStatus.PENDING_PAYMENT

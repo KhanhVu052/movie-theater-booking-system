@@ -2,6 +2,7 @@ package com.example.cinema.booking.repository;
 
 import com.example.cinema.booking.dto.projection.MovieTicketSalesProjection;
 import com.example.cinema.booking.entity.BookingItem;
+import com.example.cinema.payment.entity.Payment;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -33,7 +34,7 @@ public interface BookingItemRepository extends JpaRepository<BookingItem, Long> 
             JOIN b.showtime s
             WHERE b.status = com.example.cinema.booking.enums.BookingStatus.CONFIRMED
               AND EXISTS (
-                  SELECT 1 FROM com.example.cinema.payment.entity.Payment p
+                  SELECT p.id FROM Payment p
                   WHERE p.booking = b
                     AND p.status = com.example.cinema.payment.enums.PaymentStatus.SUCCESS
                     AND p.refundStatus = com.example.cinema.payment.enums.PaymentRefundStatus.NONE
@@ -52,7 +53,7 @@ public interface BookingItemRepository extends JpaRepository<BookingItem, Long> 
             JOIN bi.booking b
             WHERE b.status = com.example.cinema.booking.enums.BookingStatus.CONFIRMED
               AND EXISTS (
-                  SELECT 1 FROM com.example.cinema.payment.entity.Payment p
+                  SELECT p.id FROM Payment p
                   WHERE p.booking = b
                     AND p.status = com.example.cinema.payment.enums.PaymentStatus.SUCCESS
                     AND p.refundStatus = com.example.cinema.payment.enums.PaymentRefundStatus.NONE
