@@ -11,6 +11,11 @@ export const bookingApi = {
     return axiosClient.post(`/bookings/${id}/cancel`);
   },
 
+  // Cancel a paid confirmed booking within refund cutoff window
+  cancelConfirmedBooking: (id) => {
+    return axiosClient.post(`/bookings/${id}/cancel-confirmed`);
+  },
+
   // Fetch booking details by ID
   getBookingById: (id) => {
     return axiosClient.get(`/bookings/${id}`);

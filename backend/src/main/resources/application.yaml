@@ -29,6 +29,7 @@ app:
   booking:
     max-pending-per-user: 2
     cutoff-minutes: 15
+    refund-cutoff-minutes: 60
   jwt:
     # Required, no default on purpose. Generate one with: openssl rand -base64 48
     secret: ${JWT_SECRET}

@@ -66,6 +66,7 @@ public enum ErrorCode {
     BOOKING_CANNOT_BE_CANCELLED(1505, "Only PENDING_PAYMENT bookings can be cancelled", HttpStatus.CONFLICT),
     BOOKING_EXPIRED(1506, "Booking hold time (10 minutes) has already expired", HttpStatus.CONFLICT),
     TOO_MANY_PENDING_BOOKINGS(1507, "Please pay or cancel your existing reservations first", HttpStatus.TOO_MANY_REQUESTS),
+    BOOKING_CANCELLATION_WINDOW_CLOSED(1508, "Booking cancellation window has closed", HttpStatus.CONFLICT),
 
     // --- Payment & Refund Errors (1600 - 1699) ---
     PAYMENT_NOT_FOUND(1601, "Payment transaction not found", HttpStatus.NOT_FOUND),

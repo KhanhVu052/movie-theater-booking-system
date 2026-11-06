@@ -9,6 +9,7 @@ app:
   booking:
     max-pending-per-user: 2
     cutoff-minutes: 15
+    refund-cutoff-minutes: 60
   jwt:
     secret: ${JWT_SECRET:dGVzdC1qd3Qtc2VjcmV0LWtleS1mb3ItY2luZW1hLXRlc3RpbmctcHVycG9zZXMtb25seQ==}
     expiration-ms: 86400000

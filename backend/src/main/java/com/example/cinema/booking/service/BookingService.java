@@ -16,6 +16,10 @@ import com.example.cinema.common.dto.PageResponse;
 import com.example.cinema.common.exception.AppException;
 import com.example.cinema.common.exception.ErrorCode;
 import com.example.cinema.movie.enums.MovieStatus;
+import com.example.cinema.payment.entity.Payment;
+import com.example.cinema.payment.enums.PaymentRefundStatus;
+import com.example.cinema.payment.enums.PaymentStatus;
+import com.example.cinema.payment.repository.PaymentRepository;
 import com.example.cinema.showtime.entity.Showtime;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
@@ -62,6 +66,7 @@ public class BookingService {
     VoucherService voucherService;
     BookingMapper bookingMapper;
     BookingProperties bookingProperties;
+    PaymentRepository paymentRepository;
 
     @Transactional
     public BookingResponse createBooking(String userEmail, BookingCreateRequest request) {
@@ -233,6 +238,59 @@ public class BookingService {
         showtimeSeatRepository.saveAll(heldSeats);
 
         voucherService.releaseVoucherIfPresent(booking);
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        Booking savedBooking = bookingRepository.save(booking);
+
+        Booking fullBooking = bookingRepository.findDetailById(savedBooking.getId()).orElse(savedBooking);
+        List<BookingItem> items = bookingItemRepository.findByBookingIdOrderByIdAsc(savedBooking.getId());
+        return bookingMapper.toResponse(fullBooking, items);
+    }
+
+    @Transactional
+    public BookingResponse cancelConfirmedBooking(String userEmail, Long bookingId) {
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        if (!booking.getUser().getId().equals(currentUser.getId()) && currentUser.getRole() != Role.ADMIN) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        if (booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new AppException(ErrorCode.BOOKING_CANNOT_BE_CANCELLED);
+        }
+
+        LocalDateTime refundCutoffTime = booking.getShowtime().getStartTime().minusMinutes(bookingProperties.getRefundCutoffMinutes());
+        if (!LocalDateTime.now().isBefore(refundCutoffTime)) {
+            throw new AppException(ErrorCode.BOOKING_CANCELLATION_WINDOW_CLOSED);
+        }
+
+        List<ShowtimeSeat> seats = showtimeSeatRepository.findByHeldByBookingIdForUpdate(booking.getId());
+        if (seats.isEmpty()) {
+            List<Long> seatIds = bookingItemRepository.findByBookingIdOrderByIdAsc(booking.getId())
+                    .stream().map(item -> item.getShowtimeSeat().getId()).toList();
+            if (!seatIds.isEmpty()) {
+                seats = showtimeSeatRepository.findByIdsForUpdateOrderByIdAsc(seatIds);
+            }
+        }
+        for (ShowtimeSeat seat : seats) {
+            seat.setStatus(ShowtimeSeatStatus.AVAILABLE);
+            seat.setHeldByBookingId(null);
+        }
+        showtimeSeatRepository.saveAll(seats);
+
+        List<Payment> payments = paymentRepository.findByBookingId(booking.getId());
+        for (Payment payment : payments) {
+            if (payment.getStatus() == PaymentStatus.SUCCESS && payment.getRefundStatus() == PaymentRefundStatus.NONE) {
+                payment.setRefundStatus(PaymentRefundStatus.REFUND_REQUIRED);
+                paymentRepository.save(payment);
+            }
+        }
+
+        voucherService.revertUsedVoucherIfPresent(booking);
 
         booking.setStatus(BookingStatus.CANCELLED);
         Booking savedBooking = bookingRepository.save(booking);

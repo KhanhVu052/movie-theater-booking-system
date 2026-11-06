@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.7)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.8)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -174,6 +174,23 @@ Khách hàng chỉ được phép đặt vé cho các suất chiếu còn cách 
   + Suất chiếu cách hiện tại 10 phút (< 15 phút cutoff): gọi đặt vé nhận lỗi 409 (mã 1502).
   + Suất chiếu cách hiện tại 20 phút (> 15 phút cutoff): gọi đặt vé thành công tạo đơn PENDING_PAYMENT.
   + Gọi `GET /api/v1/showtimes?bookableOnly=true`: các suất chiếu bắt đầu trong vòng 15 phút bị loại bỏ khỏi danh sách kết quả.
+FR-BOOK-08
+Khách tự hủy vé đã thanh toán & Cửa sổ hoàn tiền (Customer Self-Cancellation & Refund Window)
+Khách hàng được phép tự hủy đơn đặt vé đã thanh toán (`status = CONFIRMED`) nếu thời điểm hủy còn cách giờ chiếu ít nhất `refundCutoffMinutes` phút (mặc định 60 phút, cấu hình qua `app.booking.refund-cutoff-minutes: 60`, theo Quyết định D-04 [ĐÃ CHỐT]).
+- Endpoint thực hiện: `POST /api/v1/bookings/{id}/cancel-confirmed`.
+- Kiểm tra quyền: Chỉ chủ sở hữu đơn (email trùng khớp với tài khoản đăng nhập) hoặc người dùng có vai trò ADMIN mới được phép hủy đơn. Người dùng khác cố tình thao tác sẽ nhận mã lỗi 403 Forbidden (Mã 1003: UNAUTHORIZED).
+- Kiểm tra điều kiện: Đơn phải ở trạng thái `CONFIRMED`. Nếu thời gian hiện tại không trước giờ chiếu trừ đi `refundCutoffMinutes` (`!now.isBefore(startTime - refundCutoffMinutes)`), hệ thống từ chối yêu cầu với lỗi 409 Conflict (Mã 1508: BOOKING_CANCELLATION_WINDOW_CLOSED - "Booking cancellation window has closed").
+- Quy trình giải phóng & hoàn tiền (tuân thủ bất biến thứ tự khóa: `bookings` -> `showtime_seats` -> `vouchers`):
+  1. Khóa đơn hàng `bookings` bằng `findByIdForUpdate`.
+  2. Khóa và chuyển toàn bộ ghế liên quan của đơn (`showtime_seats`) về trạng thái `AVAILABLE`, đặt `held_by_booking_id = null`.
+  3. Cập nhật các giao dịch thanh toán thành công (`status == SUCCESS` và `refundStatus == NONE`) của đơn sang trạng thái `REFUND_REQUIRED`.
+  4. Thu hồi và hoàn trả voucher đã sử dụng qua `voucherService.revertUsedVoucherIfPresent(booking)` (chuyển `USED` -> `RELEASED`, giảm `used_count`).
+  5. Chuyển trạng thái đơn sang `CANCELLED`.
+• Lỗi: Quá thời hạn hủy vé -> 409 Conflict (Mã lỗi 1508). Không có quyền hủy đơn người khác -> 403 Forbidden (Mã lỗi 1003). Đơn không ở trạng thái CONFIRMED -> 409 Conflict (Mã lỗi 1505).
+• Nghiệm thu:
+  + Khách hủy vé CONFIRMED trước 60 phút -> Đơn chuyển sang CANCELLED, ghế về AVAILABLE, payment chuyển sang REFUND_REQUIRED, voucher được hoàn lượt dùng.
+  + Khách hủy vé khi cách giờ chiếu dưới 60 phút -> Bị từ chối với HTTP 409 (Mã 1508).
+  + Khách khác cố tình gửi request hủy đơn -> Nhận lỗi HTTP 403 Forbidden.
 FR-VOUC-01
 Áp dụng & Giữ hạn mức Voucher
 Khi khách áp dụng mã giảm giá lúc tạo booking: Khóa dòng vouchers (FOR UPDATE), kiểm tra is_active = true, thời hạn (start_at <= NOW() <= end_at), giá trị đơn tối thiểu (subtotal_amount >= min_order_value), tổng hạn mức (reserved_count + used_count < usage_limit) và giới hạn mỗi khách (COUNT(RESERVED, USED) < per_user_limit). Hợp lệ thì tăng reserved_count + 1 và tạo voucher_redemptions (RESERVED).
@@ -941,6 +958,10 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 2.8 (2026-11-06):
+  + Bổ sung G2-05 & FR-BOOK-08: Cho phép khách hàng tự hủy vé đã thanh toán (CONFIRMED) trước giờ chiếu tối thiểu 60 phút (app.booking.refund-cutoff-minutes: 60) theo Quyết định D-04 [ĐÃ CHỐT].
+  + Triển khai endpoint POST /api/v1/bookings/{id}/cancel-confirmed, giải phóng ghế về AVAILABLE, chuyển payment sang REFUND_REQUIRED, hoàn trả voucher USED -> RELEASED.
+  + Bổ sung mã lỗi 1508 (BOOKING_CANCELLATION_WINDOW_CLOSED) và bộ kiểm thử tích hợp BookingRefundWindowIntegrationTest.
 - Phiên bản 2.7 (2026-11-06):
   + Bổ sung G2-04 (FR-SHOW-01): Chặn thao tác kết thúc/ngừng chiếu phim khi còn suất chiếu SCHEDULED trong tương lai (Mã lỗi 1207: MOVIE_HAS_FUTURE_SHOWTIMES) theo Quyết định D-03.
   + Thêm lớp phòng thủ nhiều tầng trong BookingService.createBooking chặn đặt vé vào suất chiếu thuộc phim có trạng thái ENDED (mã lỗi 1502).

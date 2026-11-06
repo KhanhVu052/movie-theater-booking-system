@@ -59,6 +59,18 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.success("Booking cancelled and seats released successfully", response));
     }
 
+    @PostMapping("/{id}/cancel-confirmed")
+    public ResponseEntity<ApiResponse<BookingResponse>> cancelConfirmedBooking(
+            Authentication authentication,
+            @PathVariable Long id
+    ) {
+        BookingResponse response = deadlockRetryExecutor.executeWithRetry(
+                "CancelConfirmedBooking-" + id,
+                () -> bookingService.cancelConfirmedBooking(authentication.getName(), id)
+        );
+        return ResponseEntity.ok(ApiResponse.success("Booking cancelled and refund queued successfully", response));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<BookingResponse>> getBookingById(
             Authentication authentication,
