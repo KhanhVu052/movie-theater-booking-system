@@ -112,3 +112,4 @@ describe('Dynamic Pricing Matrix Policy (G3-03, FR-PRICE-01, D-05)', () => {
     expect(prices.COUPLE_PAIR).toBe(160000);
   });
 });
+

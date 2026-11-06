@@ -41,3 +41,4 @@ public class PricingProperties {
         this.morningDiscount = matineeDiscount;
     }
 }
+

@@ -144,3 +144,4 @@ public class PricingPolicyTest {
         assertThat(map.get(SeatType.COUPLE)).isEqualTo(85_000L); // 60k + 10k + 15k
     }
 }
+
