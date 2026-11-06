@@ -743,6 +743,20 @@ export default function AdminDashboard() {
                   </button>
                 </div>
 
+                {/* Calculation Windows Explanation (G2-06) */}
+                <div className="bg-[#1a130b] border border-[#3d2f1d] rounded-xl p-3.5 text-xs text-[#ab9a84] flex items-start gap-3">
+                  <AlertCircle className="w-4 h-4 text-[#e0b354] shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="text-[#f5ece0] font-medium">
+                      Quy tắc thống kê doanh thu &amp; công suất:
+                    </p>
+                    <ul className="list-disc list-inside text-[11px] text-[#ab9a84] space-y-0.5">
+                      <li>Doanh thu và số vé bán ra được tính theo ngày thanh toán thành công (pay_date).</li>
+                      <li>Tổng số ghế và tỷ lệ lấp đầy (occupancy) được tính theo thời gian suất chiếu diễn ra (start_time).</li>
+                    </ul>
+                  </div>
+                </div>
+
                 {loadingRevenue && (
                   <div className="p-12 text-center text-[#ab9a84] flex items-center justify-center gap-3">
                     <Loader2 className="w-6 h-6 animate-spin text-[#e0b354]" />
@@ -854,9 +868,7 @@ export default function AdminDashboard() {
                                     <span className="px-2 py-0.5 rounded bg-[#241a10] border border-[#3d2f1d] text-[#e6c27a] text-[11px]">
                                       {m.occupancyRate !== undefined && m.occupancyRate !== null
                                         ? `${Number(m.occupancyRate).toFixed(1)}%`
-                                        : ((m.ticketsSold || m.totalBookings || 0) > 0
-                                          ? `${Math.min(100.0, Math.round(((m.ticketsSold || m.totalBookings || 0) / 25.0 * 100.0) * 10.0) / 10.0).toFixed(1)}%`
-                                          : '0.0%')}
+                                        : '0.0%'}
                                     </span>
                                   </td>
                                   <td className="py-3 px-4 text-right font-mono font-bold text-[#f3cb62]">

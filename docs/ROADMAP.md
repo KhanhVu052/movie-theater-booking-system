@@ -62,7 +62,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | G2-03 | Hạn chót đặt vé + lọc suất chiếu còn bán | P1 | DONE |
 | G2-04 | Phim `ENDED` không còn bán được | P1 | DONE |
 | G2-05 | Khách tự hủy vé đã thanh toán (cửa sổ hoàn tiền) | P2 | DONE |
-| G2-06 | Báo cáo doanh thu: đếm đúng vé và công suất | P1 | TODO |
+| G2-06 | Báo cáo doanh thu: đếm đúng vé và công suất | P1 | DONE |
 | G3-01 | Luật ghế lẻ (orphan seat) | P2 | TODO |
 | G3-02 | Ghế đôi (couple) | P2 | BLOCKED (D-01, D-02) |
 | G3-03 | `PricingPolicy` (cuối tuần, giờ vàng, suất sáng) | P2 | BLOCKED (D-05) |

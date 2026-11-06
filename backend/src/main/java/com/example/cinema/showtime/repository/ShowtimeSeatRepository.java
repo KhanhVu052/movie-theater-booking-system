@@ -1,5 +1,6 @@
 package com.example.cinema.showtime.repository;
 
+import com.example.cinema.showtime.dto.projection.MovieCapacityProjection;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
 import com.example.cinema.showtime.enums.ShowtimeStatus;
@@ -112,5 +113,21 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
             @Param("showtimeStatus") ShowtimeStatus showtimeStatus,
             @Param("now") LocalDateTime now,
             @Param("statuses") Collection<ShowtimeSeatStatus> statuses
+    );
+
+    @Query("""
+            SELECT 
+                s.movie.id AS movieId,
+                COUNT(ss.id) AS totalCapacity,
+                COUNT(DISTINCT s.id) AS totalScreenings
+            FROM ShowtimeSeat ss
+            JOIN ss.showtime s
+            WHERE s.status = com.example.cinema.showtime.enums.ShowtimeStatus.SCHEDULED
+              AND s.startTime BETWEEN :startDate AND :endDate
+            GROUP BY s.movie.id
+            """)
+    List<MovieCapacityProjection> countCapacityByMovie(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
     );
 }

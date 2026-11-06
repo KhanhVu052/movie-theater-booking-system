@@ -3,6 +3,7 @@ package com.example.cinema.payment.service;
 import com.example.cinema.auth.entity.User;
 import com.example.cinema.auth.enums.Role;
 import com.example.cinema.auth.repository.UserRepository;
+import com.example.cinema.booking.dto.projection.MovieTicketSalesProjection;
 import com.example.cinema.booking.entity.Booking;
 import com.example.cinema.booking.entity.BookingItem;
 import com.example.cinema.booking.enums.BookingStatus;
@@ -28,6 +29,7 @@ import com.example.cinema.payment.enums.PaymentRefundStatus;
 import com.example.cinema.payment.enums.PaymentStatus;
 import com.example.cinema.payment.mapper.PaymentMapper;
 import com.example.cinema.payment.repository.PaymentRepository;
+import com.example.cinema.showtime.dto.projection.MovieCapacityProjection;
 import com.example.cinema.showtime.repository.ShowtimeRepository;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
@@ -56,6 +58,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -510,34 +513,64 @@ public class PaymentService {
         LocalDateTime endDateTime = toDate.atTime(LocalTime.MAX);
 
         Long totalRevenue = paymentRepository.calculateTotalNetRevenue(startDateTime, endDateTime);
+        if (totalRevenue == null) {
+            totalRevenue = 0L;
+        }
+
+        Long totalTicketsSold = bookingItemRepository.countTotalTicketsSold(startDateTime, endDateTime);
+        if (totalTicketsSold == null) {
+            totalTicketsSold = 0L;
+        }
 
         List<DailyRevenueProjection> dailyProjections = paymentRepository.getDailyRevenueStatistics(startDateTime, endDateTime);
         List<RevenueReportResponse.DailyRevenueItem> dailyItems = dailyProjections.stream()
                 .map(p -> RevenueReportResponse.DailyRevenueItem.builder()
                         .date(p.getReportDate())
-                        .revenue(p.getTotalRevenue())
-                        .transactionCount(p.getTransactionCount())
+                        .revenue(p.getTotalRevenue() != null ? p.getTotalRevenue() : 0L)
+                        .transactionCount(p.getTransactionCount() != null ? p.getTransactionCount() : 0L)
                         .build())
                 .toList();
+
+        List<MovieTicketSalesProjection> ticketProjections = bookingItemRepository.countTicketsSoldByMovie(startDateTime, endDateTime);
+        Map<Long, Long> ticketsByMovie = ticketProjections.stream()
+                .collect(Collectors.toMap(
+                        MovieTicketSalesProjection::getMovieId,
+                        p -> p.getTicketsSold() != null ? p.getTicketsSold() : 0L,
+                        (existing, replacement) -> existing
+                ));
+
+        List<MovieCapacityProjection> capacityProjections = showtimeSeatRepository.countCapacityByMovie(startDateTime, endDateTime);
+        Map<Long, MovieCapacityProjection> capacityByMovie = capacityProjections.stream()
+                .collect(Collectors.toMap(
+                        MovieCapacityProjection::getMovieId,
+                        p -> p,
+                        (existing, replacement) -> existing
+                ));
 
         List<MovieRevenueProjection> movieProjections = paymentRepository.getRevenueByMovie(startDateTime, endDateTime);
         List<RevenueReportResponse.MovieRevenueItem> movieItems = movieProjections.stream()
                 .map(p -> {
                     long movieId = p.getMovieId();
                     long bookings = p.getTotalBookings() != null ? p.getTotalBookings() : 0L;
-                    Long projScreenings = p.getTotalScreenings();
+                    long tickets = ticketsByMovie.getOrDefault(movieId, 0L);
+
+                    MovieCapacityProjection cap = capacityByMovie.get(movieId);
+                    long capacity = (cap != null && cap.getTotalCapacity() != null) ? cap.getTotalCapacity() : 0L;
+                    Long projScreenings = cap != null ? cap.getTotalScreenings() : p.getTotalScreenings();
                     long screenings = (projScreenings != null && projScreenings > 0L)
                             ? projScreenings
                             : (bookings > 0L ? 1L : 0L);
-                    double occupancy = screenings > 0L
-                            ? Math.min(100.0, Math.round(((double) bookings / (screenings * 25.0) * 100.0) * 10.0) / 10.0)
+
+                    double occupancy = (capacity > 0L)
+                            ? Math.min(100.0, Math.round(((double) tickets * 100.0 / (double) capacity) * 10.0) / 10.0)
                             : 0.0;
+
                     return RevenueReportResponse.MovieRevenueItem.builder()
                             .movieId(movieId)
                             .movieTitle(p.getMovieTitle())
-                            .revenue(p.getTotalRevenue())
+                            .revenue(p.getTotalRevenue() != null ? p.getTotalRevenue() : 0L)
                             .totalBookings(bookings)
-                            .ticketsSold(bookings)
+                            .ticketsSold(tickets)
                             .totalScreenings(screenings)
                             .occupancyRate(occupancy)
                             .build();
@@ -553,7 +586,7 @@ public class PaymentService {
                 .totalSuccessfulTransactions(totalTransactions)
                 .totalRealizedRevenue(totalRevenue)
                 .totalSuccessPayments(totalTransactions)
-                .totalTicketsSold(totalTransactions)
+                .totalTicketsSold(totalTicketsSold)
                 .totalPendingRefunds(paymentRepository.countByRefundStatus(com.example.cinema.payment.enums.PaymentRefundStatus.REFUND_REQUIRED))
                 .dailyBreakdowns(dailyItems)
                 .movieBreakdowns(movieItems)

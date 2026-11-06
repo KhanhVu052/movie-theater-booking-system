@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.8)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.9)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -232,9 +232,15 @@ FR-REV-01
 Khách hàng gửi điểm (1..5) và bình luận cho bộ phim. Hệ thống kiểm tra tài khoản có ít nhất 1 booking thuộc phim đó ở trạng thái CONFIRMED và thời điểm hiện tại đã qua giờ kết thúc suất chiếu (NOW() > showtimes.end_time). Mỗi khách chỉ đánh giá 1 lần trên mỗi phim (UNIQUE(user_id, movie_id)).
 • Lỗi: Chưa mua vé hoặc suất chiếu chưa kết thúc  403 Forbidden.
 FR-REP-01
-Báo cáo doanh thu thực tế
-Admin truy vấn thống kê doanh thu theo ngày/tháng hoặc theo phim dựa trên cột payments.pay_date. Doanh thu thực nhận chỉ tính tổng payments.amount của các giao dịch có status = 'SUCCESS' và refund_status = 'NONE'.
-• Nghiệm thu: Các đơn PENDING_PAYMENT, EXPIRED hoặc giao dịch cần hoàn tiền (REFUND_REQUIRED / REFUNDED) không làm sai lệch doanh thu.
+Báo cáo doanh thu và công suất ghế thực tế (cập nhật v2.9)
+Admin truy vấn thống kê tài chính và hiệu suất hoạt động theo khoảng thời gian [startDate 00:00:00, endDate 23:59:59] (múi giờ Asia/Ho_Chi_Minh). Hệ thống phân định rõ ràng hai cửa sổ thời gian tính toán:
+1. Cửa sổ ngày thanh toán (payments.pay_date):
+   - Doanh thu thực nhận (totalRevenue, totalRealizedRevenue, revenue): Tính tổng payments.amount của các giao dịch có status = 'SUCCESS' và refund_status = 'NONE'.
+   - Số vé bán ra (ticketsSold, totalTicketsSold): Đếm chính xác số lượng vé (BookingItem) thực tế thuộc các đơn CONFIRMED có giao dịch thanh toán thành công (SUCCESS, refund_status = NONE) trong kỳ thanh toán, không đếm theo số giao dịch/đơn hàng.
+2. Cửa sổ thời gian suất chiếu diễn ra (showtimes.start_time):
+   - Tổng công suất ghế (capacity) & số suất chiếu (totalScreenings): Tính tổng số ghế thực tế (ShowtimeSeat) và số suất chiếu có status = 'SCHEDULED' diễn ra trong khoảng thời gian đã chọn. Bỏ hoàn toàn quy ước hằng số 25 ghế cũ.
+   - Tỷ lệ lấp đầy bình quân (occupancyRate): Tính theo công thức occupancy = (ticketsSold * 100.0) / totalCapacity, làm tròn 1 chữ số thập phân. Nếu totalCapacity == 0, tỷ lệ lấp đầy trả về 0.0, không xảy ra lỗi chia cho 0.
+• Nghiệm thu: Các đơn PENDING_PAYMENT, EXPIRED, CANCELLED hoặc các giao dịch có trạng thái hoàn tiền (REFUND_REQUIRED / REFUNDED) bị loại trừ hoàn toàn, không làm sai lệch doanh thu hay số vé đã phát hành. Giao diện báo cáo hiển thị chú thích rõ ràng về hai quy tắc tính toán này.
 FR-DEV-01
 Công cụ giả lập chỉ dành cho môi trường phát triển (bổ sung v2.3)
 Hai endpoint phục vụ demo/kiểm thử cục bộ: giả lập thanh toán thành công (POST /api/v1/payments/simulate-success) và tua nhanh suất chiếu để thử đánh giá phim (PATCH /api/v1/reviews/showtime/{showtimeId}/simulate-ended, chỉ Admin). Mặc định TẮT; chỉ hoạt động khi cấu hình app.dev-tools.enabled = true (biến môi trường DEV_TOOLS_ENABLED=true). Khi bật, giả lập thanh toán phải tuân thủ đúng điều kiện của nhánh IPN TH1 trong FR-PAY-02: booking đang PENDING_PAYMENT, còn hạn (expires_at > NOW()) và mọi ghế vẫn HELD bởi chính booking đó; sau đó mới chuyển booking = CONFIRMED, ghế = BOOKED, voucher = USED. Giao dịch giả lập mang transaction_ref bắt đầu bằng "SIM-". Giao diện chỉ hiển thị lựa chọn này ở bản chạy chế độ phát triển (npm run dev), không có trong bản build production.
@@ -958,6 +964,11 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 2.9 (2026-11-06):
+  + Bổ sung G2-06 & hoàn thiện FR-REP-01: Báo cáo doanh thu chuẩn xác KPI (đếm đúng số vé bán ra BookingItem và tính công suất ghế thực tế ShowtimeSeat).
+  + Phân định rõ hai cửa sổ thời gian: Doanh thu & số vé bán theo ngày thanh toán (payments.pay_date); Tổng số ghế & tỷ lệ lấp đầy theo thời gian suất chiếu diễn ra (showtimes.start_time).
+  + Loại bỏ quy ước hằng số 25 ghế, tính occupancy = (tickets / capacity) * 100 làm tròn 1 chữ số thập phân, gán 0.0 nếu capacity = 0.
+  + Bổ sung chú thích quy tắc tính toán trên giao diện AdminDashboard và bộ kiểm thử tích hợp RevenueReportIntegrationTest.
 - Phiên bản 2.8 (2026-11-06):
   + Bổ sung G2-05 & FR-BOOK-08: Cho phép khách hàng tự hủy vé đã thanh toán (CONFIRMED) trước giờ chiếu tối thiểu 60 phút (app.booking.refund-cutoff-minutes: 60) theo Quyết định D-04 [ĐÃ CHỐT].
   + Triển khai endpoint POST /api/v1/bookings/{id}/cancel-confirmed, giải phóng ghế về AVAILABLE, chuyển payment sang REFUND_REQUIRED, hoàn trả voucher USED -> RELEASED.
