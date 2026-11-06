@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.4)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.5)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -99,10 +99,11 @@ RESERVED, USED, RELEASED
 
 4.4. Quy tắc Thứ tự Khóa (Lock Ordering) & Xử lý Deadlock
 Để triệt tiêu nguy cơ Deadlock khi nhiều luồng (Giữ ghế, Hủy suất chiếu, Scheduler quét đơn hết hạn, Xử lý IPN) cùng truy cập cơ sở dữ liệu, các Transaction bắt buộc thực hiện khóa bản ghi theo thứ tự nhất quán:
-1. Khóa bảng showtimes: PESSIMISTIC_WRITE (khi Hủy suất chiếu) hoặc PESSIMISTIC_READ / FOR SHARE (khi tạo đơn đặt vé createBooking để ngăn chặn chèn booking đồng thời trong khi đang hủy).
-2. Khóa bảng bookings (SELECT ... FOR UPDATE theo thứ tự id ASC).
-3. Khóa bảng showtime_seats (SELECT ... FOR UPDATE theo thứ tự id ASC).
-4. Khóa bảng vouchers (SELECT ... FOR UPDATE).
+1. Khóa bảng users: PESSIMISTIC_WRITE (chỉ trong createBooking, luôn khóa đầu tiên để kiểm tra hạn mức đơn chờ và chống đặt vé đồng thời trên cùng tài khoản).
+2. Khóa bảng showtimes: PESSIMISTIC_WRITE (khi Hủy suất chiếu) hoặc PESSIMISTIC_READ / FOR SHARE (khi tạo đơn đặt vé createBooking để ngăn chặn chèn booking đồng thời trong khi đang hủy).
+3. Khóa bảng bookings (SELECT ... FOR UPDATE theo thứ tự id ASC).
+4. Khóa bảng showtime_seats (SELECT ... FOR UPDATE theo thứ tự id ASC).
+5. Khóa bảng vouchers (SELECT ... FOR UPDATE).
 Do InnoDB vẫn có thể phát sinh Deadlock trên các index phụ hoặc gap lock, tầng Service bắt buộc cấu hình bắt lỗi CannotAcquireLockException / DeadlockLoserDataAccessException để tự động rollback và retry tối đa 2 lần (đối với IPN và tác vụ nền) hoặc trả về mã 409 Conflict rõ ràng cho người dùng.
 5. Đặc tả Yêu cầu Chức năng (FR) & Phi chức năng (NFR)
    5.1. Yêu cầu Chức năng (Functional Requirements)
@@ -145,7 +146,7 @@ Khách chọn từ 1–8 ghế trong cùng một showtime_id. Trong Transaction:
 2. Sắp xếp showtime_seat_id tăng dần và khóa FOR UPDATE kèm điều kiện showtime_id.
 
 3. Nếu tất cả ghế đều AVAILABLE, tạo bookings (PENDING_PAYMENT, expires_at = NOW() + 10 phút), lưu cứng giá vé vào booking_items và cập nhật ghế sang HELD.
-   • Lỗi: Bất kỳ ghế nào đang BOOKED, đang HELD (còn hạn) hoặc không thuộc showtime_id yêu cầu  Rollback toàn bộ và trả về 409 Conflict.
+   • Lỗi: Bất kỳ ghế nào đang BOOKED, đang HELD (còn hạn) hoặc không thuộc showtime_id yêu cầu -> Rollback toàn bộ và trả về 409 Conflict; Khách hàng đã đạt giới hạn tối đa 2 đơn chờ thanh toán (max-pending-per-user) -> 429 Too Many Requests (mã 1507).
 
 • Nghiệm thu: 50 request đồng thời cùng giữ ghế A1 của suất chiếu S1  Đúng 1 booking được tạo, 49 request nhận 409 Conflict.
 FR-BOOK-03
@@ -154,6 +155,14 @@ Tác vụ nền (@Scheduled chạy mỗi 30 giây) tìm các đơn PENDING_PAYME
 • Quy tắc: Không thay đổi trạng thái của các bản ghi payments đang PENDING.
 
 • Nghiệm thu: Sau 10 phút không thanh toán, ghế và hạn mức voucher được giải phóng chính xác.
+FR-BOOK-04
+Giới hạn đơn chờ thanh toán / tài khoản (Pending Reservation Limit)
+Mỗi tài khoản khách hàng chỉ được phép duy trì tối đa 2 đơn giữ vé ở trạng thái PENDING_PAYMENT còn hiệu lực (expires_at > NOW()).
+Khi tạo booking (createBooking), hệ thống thực hiện khóa bi quan bản ghi users (FOR UPDATE) đầu tiên trong chuỗi giao dịch và đếm số lượng đơn PENDING_PAYMENT còn hạn của user. Nếu số lượng >= maxPendingPerUser (mặc định cấu hình app.booking.max-pending-per-user: 2), hệ thống từ chối tạo đơn mới.
+• Lỗi: Vượt quá giới hạn đơn chờ -> 429 Too Many Requests (Mã lỗi 1507: "Please pay or cancel your existing reservations first").
+• Nghiệm thu:
+  + Khách đã có 2 đơn PENDING_PAYMENT còn hạn -> Yêu cầu đặt đơn thứ 3 bị từ chối với HTTP 429 (mã 1507).
+  + Đơn PENDING_PAYMENT đã quá hạn (expires_at < NOW()) không bị tính vào giới hạn, khách tiếp tục đặt được vé mới.
 FR-VOUC-01
 Áp dụng & Giữ hạn mức Voucher
 Khi khách áp dụng mã giảm giá lúc tạo booking: Khóa dòng vouchers (FOR UPDATE), kiểm tra is_active = true, thời hạn (start_at <= NOW() <= end_at), giá trị đơn tối thiểu (subtotal_amount >= min_order_value), tổng hạn mức (reserved_count + used_count < usage_limit) và giới hạn mỗi khách (COUNT(RESERVED, USED) < per_user_limit). Hợp lệ thì tăng reserved_count + 1 và tạo voucher_redemptions (RESERVED).
@@ -921,6 +930,10 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 2.5 (2026-11-06):
+  + Bổ sung FR-BOOK-04: Giới hạn tối đa 2 đơn giữ vé PENDING_PAYMENT còn hiệu lực trên mỗi tài khoản khách hàng, trả về HTTP 429 (Mã 1507) khi vượt hạn mức.
+  + Bổ sung mã lỗi 1507 vào FR-BOOK-02 và hoàn thiện khóa bi quan bảng users ở đầu chuỗi giao dịch createBooking.
+  + Cập nhật mục 4.4: Bổ sung khóa bảng users (FOR UPDATE) đầu tiên trong chuỗi khóa chống Deadlock.
 - Phiên bản 2.4 (2026-11-06):
   + Bổ sung FR-SHOW-02: Quy trình Hủy suất chiếu & Điều phối hoàn tiền tự động (chống deadlock, hoàn tiền tự động cho đơn CONFIRMED, thu hồi/hoàn voucher phù hợp).
   + Cập nhật mục 4.4 (Thứ tự khóa): Bổ sung khóa bảng showtimes (X ở hủy suất, S ở tạo booking) vào đầu chuỗi khóa tài nguyên chống Deadlock.

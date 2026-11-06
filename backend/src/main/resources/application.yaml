@@ -26,6 +26,8 @@ spring:
     locations: classpath:db/migration
 
 app:
+  booking:
+    max-pending-per-user: 2
   jwt:
     # Required, no default on purpose. Generate one with: openssl rand -base64 48
     secret: ${JWT_SECRET}

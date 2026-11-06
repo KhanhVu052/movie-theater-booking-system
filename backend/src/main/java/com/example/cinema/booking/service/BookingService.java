@@ -3,6 +3,7 @@ package com.example.cinema.booking.service;
 import com.example.cinema.auth.entity.User;
 import com.example.cinema.auth.enums.Role;
 import com.example.cinema.auth.repository.UserRepository;
+import com.example.cinema.booking.config.BookingProperties;
 import com.example.cinema.booking.dto.request.BookingCreateRequest;
 import com.example.cinema.booking.dto.response.BookingResponse;
 import com.example.cinema.booking.entity.Booking;
@@ -59,6 +60,7 @@ public class BookingService {
     UserRepository userRepository;
     VoucherService voucherService;
     BookingMapper bookingMapper;
+    BookingProperties bookingProperties;
 
     @Transactional
     public BookingResponse createBooking(String userEmail, BookingCreateRequest request) {
@@ -69,8 +71,14 @@ public class BookingService {
             throw new AppException(ErrorCode.SEAT_SELECTION_INVALID);
         }
 
-        User user = userRepository.findByEmail(userEmail)
+        User user = userRepository.findByEmailForUpdate(userEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        long pendingCount = bookingRepository.countByUserIdAndStatusAndExpiresAtAfter(
+                user.getId(), BookingStatus.PENDING_PAYMENT, now);
+        if (pendingCount >= bookingProperties.getMaxPendingPerUser()) {
+            throw new AppException(ErrorCode.TOO_MANY_PENDING_BOOKINGS);
+        }
 
         Showtime showtime = showtimeRepository.findByIdForShare(request.showtimeId())
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));

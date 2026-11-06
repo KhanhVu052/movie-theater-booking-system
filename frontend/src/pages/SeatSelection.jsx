@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import { useToast } from '../context/ToastContext';
 import { movieApi } from '../api/movieApi';
 import { bookingApi } from '../api/bookingApi';
 
@@ -25,6 +26,7 @@ import { formatCurrency, formatHour, formatDate } from '../utils/formatters';
 export default function SeatSelection() {
   const { showtimeId } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // Data states
   const [showtime, setShowtime] = useState(null);
@@ -269,7 +271,14 @@ export default function SeatSelection() {
       }
     } catch (err) {
       const resData = err.response?.data;
-      if (resData?.message) {
+      const status = err.response?.status;
+      const code = resData?.code;
+
+      if (code === 1507 || status === 429) {
+        const msg = resData?.message || 'Please pay or cancel your existing reservations first';
+        setBookingError(msg);
+        showToast(msg, 'error');
+      } else if (resData?.message) {
         setBookingError(resData.message);
       } else {
         setBookingError(
@@ -719,9 +728,20 @@ export default function SeatSelection() {
 
                 {/* Booking Error Display */}
                 {bookingError && (
-                  <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/60 text-xs text-red-200 flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                    <span>{bookingError}</span>
+                  <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/60 text-xs text-red-200 flex flex-col gap-1.5">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      <span>{bookingError}</span>
+                    </div>
+                    {(bookingError.toLowerCase().includes('reservations') ||
+                      bookingError.toLowerCase().includes('pending')) && (
+                      <Link
+                        to="/my-bookings"
+                        className="text-[#e6c27a] hover:underline font-semibold text-xs ml-6 inline-flex items-center gap-1"
+                      >
+                        Go to My Bookings &rarr;
+                      </Link>
+                    )}
                   </div>
                 )}
 

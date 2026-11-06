@@ -57,7 +57,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | R-08 | Dọn: `BookingMapper`, xoá `SHOWTIME_HAS_ACTIVE_BOOKINGS` | P0 | DONE |
 | R-09 | Xoá `[cite: …]` trong SRS | P0 | DONE |
 | R-10 | README: hướng dẫn chạy test, biến môi trường cho DB test | P0 | DONE |
-| G2-01 | Giới hạn số đơn chờ thanh toán / user | P1 | TODO |
+| G2-01 | Giới hạn số đơn chờ thanh toán / user | P1 | DONE |
 | G2-02 | Ghế/phòng không hoạt động: chặn bán + cập nhật giá | P1 | TODO |
 | G2-03 | Hạn chót đặt vé + lọc suất chiếu còn bán | P1 | TODO |
 | G2-04 | Phim `ENDED` không còn bán được | P1 | BLOCKED (D-03) |

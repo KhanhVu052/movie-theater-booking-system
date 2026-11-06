@@ -59,7 +59,7 @@ movie-theater-booking-system/
 │   │   ├── utils/            # formatters, voucherUtils, bookingUtils
 │   │   └── test/             # Vitest automated business rule test suite
 └── docs/
-    └── SRS.md                # Software Requirements Specification (v2.4)
+    └── SRS.md                # Software Requirements Specification (v2.5)
 ```
 
 ---
@@ -68,10 +68,11 @@ movie-theater-booking-system/
 
 To prevent Deadlocks under high concurrency (e.g. 50 users simultaneously requesting the same seat):
 1. **Lock Ordering Hierarchy**:
-   1. `showtimes` table (`SELECT ... FOR UPDATE` when cancelling showtime, or `SELECT ... FOR SHARE` when creating booking)
-   2. `bookings` table (`SELECT ... FOR UPDATE ORDER BY id ASC`)
-   3. `showtime_seats` table (`SELECT ... FOR UPDATE ORDER BY id ASC`)
-   4. `vouchers` table (`SELECT ... FOR UPDATE`)
+   1. `users` table (`SELECT ... FOR UPDATE` in `createBooking` to lock user row first and enforce pending limit)
+   2. `showtimes` table (`SELECT ... FOR UPDATE` when cancelling showtime, or `SELECT ... FOR SHARE` when creating booking)
+   3. `bookings` table (`SELECT ... FOR UPDATE ORDER BY id ASC`)
+   4. `showtime_seats` table (`SELECT ... FOR UPDATE ORDER BY id ASC`)
+   5. `vouchers` table (`SELECT ... FOR UPDATE`)
 2. **Expired Hold Recovery**:
    - If an existing reservation holding a seat has expired (`expires_at < NOW()`), the booking is transitioned to `EXPIRED`, voucher quota is released, and the seat is made `AVAILABLE` atomically for the waiting transaction.
 3. **Automated Cleanup Scheduler**:
@@ -206,6 +207,7 @@ This project strictly implements and fulfills the software specification outline
 * **FR-BOOK-01**: Real-time seat inventory projection based on hold expiration state.
 * **FR-BOOK-02**: Concurrency-safe seat holding for up to 8 seats per order.
 * **FR-BOOK-03**: Background hold reclamation scheduler every 30 seconds.
+* **FR-BOOK-04**: Pending reservation ceiling enforcement (max 2 active holds per user, HTTP 429).
 * **FR-VOUC-01**: Voucher validation, quota reservation, and ceiling caps.
 * **FR-PAY-01**: VNPAY payment attempt generation with retry limit of 3.
 * **FR-PAY-02**: Server-to-Server IPN verification and `REFUND_REQUIRED` handling.

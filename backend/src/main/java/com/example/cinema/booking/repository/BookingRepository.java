@@ -71,4 +71,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @EntityGraph(attributePaths = {"showtime", "showtime.movie", "showtime.room", "showtime.room.cinema", "voucher"})
     Page<Booking> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    long countByUserIdAndStatusAndExpiresAtAfter(Long userId, BookingStatus status, LocalDateTime now);
 }
