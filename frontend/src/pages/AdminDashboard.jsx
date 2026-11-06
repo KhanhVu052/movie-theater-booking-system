@@ -34,7 +34,12 @@ import { useToast } from '../context/ToastContext';
 
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { toLocalDateStr, localDateStrFromToday } from '../utils/dates';
-import { filterShowtimes, getScreeningPhase } from '../utils/showtimeFilters';
+import {
+  filterShowtimes,
+  getScreeningPhase,
+  onSearchTextChange,
+  onMovieFilterChange,
+} from '../utils/showtimeFilters';
 
 export default function AdminDashboard() {
   const { showToast, confirm } = useToast();
@@ -920,9 +925,9 @@ export default function AdminDashboard() {
                     <select
                       value={filterShowtimeMovie}
                       onChange={(e) => {
-                        const val = e.target.value;
-                        setFilterShowtimeMovie(val);
-                        if (showtimeSearchText) setShowtimeSearchText('');
+                        const sync = onMovieFilterChange(e.target.value);
+                        setFilterShowtimeMovie(sync.movieFilter);
+                        setShowtimeSearchText(sync.searchText);
                       }}
                       className="bg-[#120d09] border border-[#3d2f1d] rounded-lg px-3 py-1.5 text-xs text-[#f5ece0]"
                     >
@@ -957,10 +962,10 @@ export default function AdminDashboard() {
                       placeholder="Search showtime by movie, cinema, hall..."
                       value={showtimeSearchText}
                       onChange={(e) => {
-                        const val = e.target.value;
-                        setShowtimeSearchText(val);
-                        if (filterShowtimeMovie) {
-                          setFilterShowtimeMovie('');
+                        const sync = onSearchTextChange(e.target.value, filterShowtimeMovie);
+                        setShowtimeSearchText(sync.searchText);
+                        if (sync.movieFilter !== filterShowtimeMovie) {
+                          setFilterShowtimeMovie(sync.movieFilter);
                           fetchShowtimes({ movieId: undefined, page: 1 });
                         }
                       }}

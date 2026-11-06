@@ -1,24 +1,24 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.3)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.4)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
-   Trọng tâm cốt lõi của hệ thống là giải quyết bài toán tranh chấp đồng thời (Concurrency) khi nhiều khách hàng cùng giữ một ghế, kiểm soát chặt chẽ vòng đời đơn hàng (10 phút giữ ghế) và đảm bảo tính nhất quán dữ liệu (Idempotency & Data Consistency) trong giao dịch thanh toán trực tuyến[cite: 2, 3, 4].
+   Trọng tâm cốt lõi của hệ thống là giải quyết bài toán tranh chấp đồng thời (Concurrency) khi nhiều khách hàng cùng giữ một ghế, kiểm soát chặt chẽ vòng đời đơn hàng (10 phút giữ ghế) và đảm bảo tính nhất quán dữ liệu (Idempotency & Data Consistency) trong giao dịch thanh toán trực tuyến.
    1.2. Quy ước Kỹ thuật Chung
    Múi giờ chuẩn: Toàn bộ tầng ứng dụng (Spring Boot) và cơ sở dữ liệu (MySQL 8+) thống nhất sử dụng múi giờ Asia/Ho_Chi_Minh (GMT+7) để đồng bộ khi so sánh hạn giữ ghế (expires_at) với thời gian thanh toán của VNPay (vnp_PayDate).
    Đơn vị tiền tệ: Lưu trữ bằng kiểu số nguyên lớn (BIGINT) theo đơn vị Đồng (VND), không sử dụng kiểu số thực dấu phẩy động để tránh sai số làm tròn.
 2. Kiến trúc Hệ thống & Cấu trúc Module (System Architecture)
    2.1. Kiến trúc Tổng thể (Modular Monolith kết hợp Layered Architecture)
-   Hệ thống triển khai theo kiến trúc Modular Monolith trên nền tảng Spring Boot REST API (Java 21), giao tiếp với Frontend và sử dụng Relational Database (MySQL 8+) làm nguồn dữ liệu chuẩn duy nhất (Single Source of Truth)[cite: 2, 5].
+   Hệ thống triển khai theo kiến trúc Modular Monolith trên nền tảng Spring Boot REST API (Java 21), giao tiếp với Frontend và sử dụng Relational Database (MySQL 8+) làm nguồn dữ liệu chuẩn duy nhất (Single Source of Truth).
    Các module nghiệp vụ trong hệ thống bao gồm:
    Auth Module: Quản lý đăng ký, đăng nhập (JWT) và phân quyền người dùng với Relational Database.
-   Movie Module: Quản lý danh mục phim, thể loại, diễn viên trong Relational Database[cite: 2, 5].
-   Showtime Module: Quản lý rạp, phòng chiếu, sơ đồ ghế vật lý và lịch chiếu trong Relational Database[cite: 2, 5].
-   Booking Module: Xử lý sơ đồ ghế theo suất chiếu, giữ ghế 10 phút, thu hồi ghế quá hạn với Relational Database, kết hợp Redis hỗ trợ caching và kết nối sang Notification[cite: 2, 3, 5].
-   Payment Module: Tích hợp cổng thanh toán VNPay Sandbox, quản lý các lượt thử thanh toán (payment attempts), xử lý IPN callback và đối soát hoàn tiền với Relational Database[cite: 2, 4, 5].
-   Voucher Module: Quản lý mã khuyến mãi và kiểm soát hạn mức sử dụng trong Relational Database[cite: 2, 5].
-   Review Module: Quản lý đánh giá và chấm điểm phim từ khách hàng đã mua vé trong Relational Database[cite: 2, 5].
-   Notification Module: Gửi thông báo xác nhận đặt vé và vé điện tử, hỗ trợ mở rộng bất đồng bộ qua RabbitMQ[cite: 2, 5].
+   Movie Module: Quản lý danh mục phim, thể loại, diễn viên trong Relational Database.
+   Showtime Module: Quản lý rạp, phòng chiếu, sơ đồ ghế vật lý và lịch chiếu trong Relational Database.
+   Booking Module: Xử lý sơ đồ ghế theo suất chiếu, giữ ghế 10 phút, thu hồi ghế quá hạn với Relational Database, kết hợp Redis hỗ trợ caching và kết nối sang Notification.
+   Payment Module: Tích hợp cổng thanh toán VNPay Sandbox, quản lý các lượt thử thanh toán (payment attempts), xử lý IPN callback và đối soát hoàn tiền với Relational Database.
+   Voucher Module: Quản lý mã khuyến mãi và kiểm soát hạn mức sử dụng trong Relational Database.
+   Review Module: Quản lý đánh giá và chấm điểm phim từ khách hàng đã mua vé trong Relational Database.
+   Notification Module: Gửi thông báo xác nhận đặt vé và vé điện tử, hỗ trợ mở rộng bất đồng bộ qua RabbitMQ.
    2.2. Tổ chức Package (Package by Feature + 3-Layer bên trong)
    Plaintext
    com.example.cinema
@@ -33,7 +33,7 @@ Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System
    └── notification            # Module gửi thông báo & email xác nhận
 
 3. Vai trò Người dùng (Actors)
-   Customer (Khách hàng): Xem thông tin chi tiết phim và lịch chiếu, xem sơ đồ ghế theo suất chiếu, thực hiện giữ ghế tạm thời trong 10 phút, áp dụng mã giảm giá (Voucher), thanh toán trực tuyến qua cổng VNPay Sandbox, xem lịch sử đặt vé và viết đánh giá (Review/Rating) sau khi suất chiếu kết thúc[cite: 2, 3, 4].
+   Customer (Khách hàng): Xem thông tin chi tiết phim và lịch chiếu, xem sơ đồ ghế theo suất chiếu, thực hiện giữ ghế tạm thời trong 10 phút, áp dụng mã giảm giá (Voucher), thanh toán trực tuyến qua cổng VNPay Sandbox, xem lịch sử đặt vé và viết đánh giá (Review/Rating) sau khi suất chiếu kết thúc.
    Admin (Quản trị viên): Quản lý thông tin phim, đạo diễn, diễn viên, thể loại; quản lý phòng chiếu và cấu hình ghế vật lý; xếp lịch chiếu (có kiểm soát chống trùng giờ); quản lý chương trình khuyến mãi; tra cứu lịch sử giao dịch thanh toán, xác nhận hoàn tiền thủ công và xem báo cáo thống kê doanh thu.
 4. Quy trình Nghiệp vụ Cốt lõi & Vòng đời Trạng thái (Core Flows & State Machines)
    4.1. Luồng Giữ ghế Đồng thời (Seat Hold Concurrency Flow)
@@ -59,13 +59,13 @@ Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System
    AVAILABLE, HELD, BOOKED
    • AVAILABLE  HELD: Khi tạo booking mới, gán held_by_booking_id = booking.id.
 
-• HELD  BOOKED: Khi nhận IPN thanh toán thành công hợp lệ[cite: 2, 4].
+• HELD  BOOKED: Khi nhận IPN thanh toán thành công hợp lệ.
 
 • HELD  AVAILABLE: Khi booking chuyển sang EXPIRED hoặc CANCELLED (xóa held_by_booking_id = NULL).
 bookings
 status
 PENDING_PAYMENT, CONFIRMED, CANCELLED, EXPIRED
-• Khởi tạo ở PENDING_PAYMENT kèm mốc thời hạn chuẩn expires_at = NOW() + 10 phút[cite: 2, 4].
+• Khởi tạo ở PENDING_PAYMENT kèm mốc thời hạn chuẩn expires_at = NOW() + 10 phút.
 
 • PENDING_PAYMENT  CONFIRMED: Khi IPN hợp lệ báo thanh toán thành công trong hạn.
 
@@ -98,10 +98,11 @@ RESERVED, USED, RELEASED
 • RESERVED (khi tạo booking PENDING_PAYMENT)  USED (khi booking CONFIRMED) hoặc  RELEASED (khi booking EXPIRED hoặc CANCELLED).
 
 4.4. Quy tắc Thứ tự Khóa (Lock Ordering) & Xử lý Deadlock
-Để giảm thiểu nguy cơ Deadlock khi nhiều luồng (Giữ ghế, Scheduler quét đơn hết hạn, Xử lý IPN) cùng truy cập cơ sở dữ liệu, các Transaction bắt buộc thực hiện khóa bản ghi theo thứ tự nhất quán:
-Khóa bảng bookings (SELECT ... FOR UPDATE).
-Khóa bảng showtime_seats (SELECT ... FOR UPDATE theo thứ tự id ASC).
-Khóa bảng vouchers (SELECT ... FOR UPDATE).
+Để triệt tiêu nguy cơ Deadlock khi nhiều luồng (Giữ ghế, Hủy suất chiếu, Scheduler quét đơn hết hạn, Xử lý IPN) cùng truy cập cơ sở dữ liệu, các Transaction bắt buộc thực hiện khóa bản ghi theo thứ tự nhất quán:
+1. Khóa bảng showtimes: PESSIMISTIC_WRITE (khi Hủy suất chiếu) hoặc PESSIMISTIC_READ / FOR SHARE (khi tạo đơn đặt vé createBooking để ngăn chặn chèn booking đồng thời trong khi đang hủy).
+2. Khóa bảng bookings (SELECT ... FOR UPDATE theo thứ tự id ASC).
+3. Khóa bảng showtime_seats (SELECT ... FOR UPDATE theo thứ tự id ASC).
+4. Khóa bảng vouchers (SELECT ... FOR UPDATE).
 Do InnoDB vẫn có thể phát sinh Deadlock trên các index phụ hoặc gap lock, tầng Service bắt buộc cấu hình bắt lỗi CannotAcquireLockException / DeadlockLoserDataAccessException để tự động rollback và retry tối đa 2 lần (đối với IPN và tác vụ nền) hoặc trả về mã 409 Conflict rõ ràng cho người dùng.
 5. Đặc tả Yêu cầu Chức năng (FR) & Phi chức năng (NFR)
    5.1. Yêu cầu Chức năng (Functional Requirements)
@@ -126,7 +127,6 @@ Admin thực hiện hủy một suất chiếu đang SCHEDULED. Hệ thống tu�
    - Khóa và cập nhật toàn bộ showtime_seats thuộc suất chiếu về AVAILABLE, đặt held_by_booking_id = null.
    - Với đơn CONFIRMED: chuyển booking sang CANCELLED, tìm các giao dịch thanh toán SUCCESS có refund_status = NONE để chuyển sang REFUND_REQUIRED, đồng thời giải phóng và hoàn lại voucher đã sử dụng (USED -> RELEASED, giảm used_count).
    - Với đơn PENDING_PAYMENT: chuyển booking sang CANCELLED, giải phóng voucher đang giữ (RESERVED -> RELEASED, giảm reserved_count).
-Lưu ý: Mã lỗi SHOWTIME_HAS_ACTIVE_BOOKINGS không còn được sử dụng để chặn hủy; toàn bộ đơn đặt vé được điều phối vào luồng hoàn tiền và giải phóng tự động.
 • Lỗi: Suất chiếu không tồn tại -> 404 Not Found. Suất chiếu đã CANCELLED -> 409 Conflict.
 
 • Nghiệm thu: Hủy suất chiếu có đơn CONFIRMED đã thanh toán -> Đơn chuyển CANCELLED, giao dịch chuyển REFUND_REQUIRED, ghế được trả về trống, voucher được hoàn lại.
@@ -144,7 +144,7 @@ Khách chọn từ 1–8 ghế trong cùng một showtime_id. Trong Transaction:
 
 2. Sắp xếp showtime_seat_id tăng dần và khóa FOR UPDATE kèm điều kiện showtime_id.
 
-3. Nếu tất cả ghế đều AVAILABLE, tạo bookings (PENDING_PAYMENT, expires_at = NOW() + 10 phút), lưu cứng giá vé vào booking_items và cập nhật ghế sang HELD[cite: 2, 3, 4].
+3. Nếu tất cả ghế đều AVAILABLE, tạo bookings (PENDING_PAYMENT, expires_at = NOW() + 10 phút), lưu cứng giá vé vào booking_items và cập nhật ghế sang HELD.
    • Lỗi: Bất kỳ ghế nào đang BOOKED, đang HELD (còn hạn) hoặc không thuộc showtime_id yêu cầu  Rollback toàn bộ và trả về 409 Conflict.
 
 • Nghiệm thu: 50 request đồng thời cùng giữ ghế A1 của suất chiếu S1  Đúng 1 booking được tạo, 49 request nhận 409 Conflict.
@@ -162,7 +162,7 @@ Khi khách áp dụng mã giảm giá lúc tạo booking: Khóa dòng vouchers (
 • Nghiệm thu: Voucher còn 1 lượt cuối, 10 khách cùng áp dụng đồng thời  Đúng 1 đơn giữ được mã.
 FR-PAY-01
 Tạo lượt thanh toán VNPay & Retry
-Với một booking đang PENDING_PAYMENT và còn hạn (expires_at > NOW()), khách được tạo tối đa 3 lượt thử thanh toán (payments ở trạng thái PENDING, refund_status = 'NONE') với mã transaction_ref (vnp_TxnRef) duy nhất và nhận URL chuyển hướng sang VNPay Sandbox[cite: 2, 4].
+Với một booking đang PENDING_PAYMENT và còn hạn (expires_at > NOW()), khách được tạo tối đa 3 lượt thử thanh toán (payments ở trạng thái PENDING, refund_status = 'NONE') với mã transaction_ref (vnp_TxnRef) duy nhất và nhận URL chuyển hướng sang VNPay Sandbox.
 • Quy tắc: Nếu lần thử 1 thất bại (FAILED), booking vẫn giữ ghế đến expires_at để khách thử thanh toán lại.
 
 • Nghiệm thu: Return URL chỉ hiển thị giao diện chờ/kết quả, không tự xác nhận đơn hàng từ redirect.
@@ -205,9 +205,9 @@ Hai endpoint phục vụ demo/kiểm thử cục bộ: giả lập thanh toán t
 • Nghiệm thu: Khi DEV_TOOLS_ENABLED=false, mọi lời gọi simulate-success đều bị từ chối và không thay đổi dữ liệu; khi bật, không thể "xác nhận" một booking đã EXPIRED hoặc CANCELLED và không ghi đè ghế đã thuộc về khách khác.
 
 5.2. Yêu cầu Phi chức năng (Non-Functional Requirements)
-NFR-CONC-01 (Kiểm soát đồng thời): Sử dụng Database Transaction kết hợp Pessimistic Write Lock (SELECT ... FOR UPDATE) và thứ tự khóa chuẩn hóa để đảm bảo không bao giờ xảy ra tình trạng đặt trùng ghế hoặc vượt hạn mức voucher[cite: 2, 3].
+NFR-CONC-01 (Kiểm soát đồng thời): Sử dụng Database Transaction kết hợp Pessimistic Write Lock (SELECT ... FOR UPDATE) và thứ tự khóa chuẩn hóa để đảm bảo không bao giờ xảy ra tình trạng đặt trùng ghế hoặc vượt hạn mức voucher.
 NFR-REL-01 (Độ tin cậy & Idempotency): Luồng xử lý thanh toán IPN đảm bảo tính Idempotent, hoạt động chính xác ngay cả khi callback bị gửi lặp hoặc mất kết nối phía trình duyệt của khách hàng.
-NFR-SEC-01 (Bảo mật): Mật khẩu băm bằng BCrypt; xác thực và phân quyền bằng Spring Security + JWT (CUSTOMER, ADMIN); mọi phép tính giá vé và giảm giá voucher thực hiện hoàn toàn ở Backend[cite: 2, 5].
+NFR-SEC-01 (Bảo mật): Mật khẩu băm bằng BCrypt; xác thực và phân quyền bằng Spring Security + JWT (CUSTOMER, ADMIN); mọi phép tính giá vé và giảm giá voucher thực hiện hoàn toàn ở Backend.
 NFR-SEC-02 (Quản lý bí mật & tài khoản quản trị đầu tiên – bổ sung v2.3): Không lưu bí mật trong mã nguồn. JWT secret (JWT_SECRET, Base64, tối thiểu 32 byte) bắt buộc cấu hình qua biến môi trường và ứng dụng từ chối khởi động nếu thiếu hoặc quá yếu. Tài khoản ADMIN đầu tiên chỉ được tạo khi CSDL chưa có ADMIN và có cấu hình BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD (tối thiểu 8 ký tự); mật khẩu không được ghi cứng và không được ghi vào log.
 NFR-DATA-01 (Bảo toàn lịch sử giao dịch): Không sử dụng xóa dây chuyền (ON DELETE CASCADE) đối với dữ liệu đặt vé và thanh toán; lưu cố định giá vé tại thời điểm mua trong booking_items.price.
 6. Thiết kế Cơ sở Dữ liệu Chi tiết – Từ điển Dữ liệu 17 Bảng (Database Schema & Data Dictionary)
@@ -553,7 +553,7 @@ NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 Thời điểm cập nhật lịch chiếu.
 
 MODULE 4: BOOKING & SEAT INVENTORY
-Bảng 11: showtime_seats (Trạng thái ghế theo từng suất chiếu – Bảng khóa đồng thời)[cite: 2, 3]
+Bảng 11: showtime_seats (Trạng thái ghế theo từng suất chiếu – Bảng khóa đồng thời)
 Thuộc tính (Column)
 Kiểu dữ liệu
 Ràng buộc / Mặc định
@@ -577,7 +577,7 @@ Giá bán thực tế của ghế trong suất chiếu này (VND).
 status
 VARCHAR(20)
 NOT NULL, DEFAULT 'AVAILABLE', CHECK (status IN ('AVAILABLE', 'HELD', 'BOOKED'))
-Trạng thái ghế hiện tại: Trống, Đang giữ 10 phút, hoặc Đã đặt thành công[cite: 2, 3].
+Trạng thái ghế hiện tại: Trống, Đang giữ 10 phút, hoặc Đã đặt thành công.
 held_by_booking_id
 BIGINT
 NULL, FK -> bookings(id)
@@ -637,7 +637,7 @@ Tổng số tiền thực tế khách phải thanh toán (VND).
 status
 VARCHAR(25)
 NOT NULL, DEFAULT 'PENDING_PAYMENT', CHECK (status IN ('PENDING_PAYMENT', 'CONFIRMED', 'CANCELLED', 'EXPIRED'))
-Trạng thái vòng đời của đơn đặt vé[cite: 2, 4].
+Trạng thái vòng đời của đơn đặt vé.
 expires_at
 DATETIME
 NOT NULL
@@ -793,7 +793,7 @@ NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 Thời điểm cập nhật trạng thái lượt dùng.
 
 MODULE 6: PAYMENT
-Bảng 16: payments (Lịch sử các lần thử thanh toán & Đối soát hoàn tiền)[cite: 2, 4]
+Bảng 16: payments (Lịch sử các lần thử thanh toán & Đối soát hoàn tiền)
 Thuộc tính (Column)
 Kiểu dữ liệu
 Ràng buộc / Mặc định
@@ -809,7 +809,7 @@ NOT NULL, FK -> bookings(id)
 provider
 VARCHAR(20)
 NOT NULL, DEFAULT 'VNPAY', CHECK (provider IN ('VNPAY'))
-Cổng thanh toán sử dụng[cite: 2, 4].
+Cổng thanh toán sử dụng.
 transaction_ref
 VARCHAR(100)
 NOT NULL, UNIQUE
@@ -825,7 +825,7 @@ Số tiền của giao dịch thanh toán (VND).
 status
 VARCHAR(20)
 NOT NULL, DEFAULT 'PENDING', CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED'))
-Trạng thái thanh toán của lần thử này[cite: 2, 4].
+Trạng thái thanh toán của lần thử này.
 refund_status
 VARCHAR(25)
 NOT NULL, DEFAULT 'NONE', CHECK (refund_status IN ('NONE', 'REFUND_REQUIRED', 'REFUNDED'))
@@ -905,19 +905,32 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
 
 7. Kế hoạch Triển khai & Kịch bản Kiểm thử Trọng tâm (Roadmap & Test Plan)
    7.1. Thứ tự Triển khai 5 Giai đoạn
-   Giai đoạn 1 — Nền tảng nghiệp vụ: Khởi tạo project Spring Boot, kết nối MySQL, chạy Migration 17 bảng, xây dựng Authentication/JWT, phân quyền Admin/Customer và CRUD Phim, Phòng, Ghế, Suất chiếu[cite: 2, 5].
-   Giai đoạn 2 — Booking & Concurrency: Triển khai xem sơ đồ ghế, giữ ghế 10 phút với Pessimistic Locking, thu hồi ghế quá hạn và viết Integration Test kiểm chứng đồng thời[cite: 2, 3].
-   Giai đoạn 3 — Thanh toán VNPay: Tích hợp VNPay Sandbox, tách biệt Return URL và IPN Handler, xác minh chữ ký số, xử lý callback trùng, thanh toán trễ và đối soát hoàn tiền[cite: 2, 4, 5].
-   Giai đoạn 4 — Hoàn thiện nghiệp vụ: Triển khai áp dụng Voucher, Đánh giá phim, Báo cáo doanh thu; bổ sung Redis caching và gửi thông báo qua RabbitMQ[cite: 2, 5].
+   Giai đoạn 1 — Nền tảng nghiệp vụ: Khởi tạo project Spring Boot, kết nối MySQL, chạy Migration 17 bảng, xây dựng Authentication/JWT, phân quyền Admin/Customer và CRUD Phim, Phòng, Ghế, Suất chiếu.
+   Giai đoạn 2 — Booking & Concurrency: Triển khai xem sơ đồ ghế, giữ ghế 10 phút với Pessimistic Locking, thu hồi ghế quá hạn và viết Integration Test kiểm chứng đồng thời.
+   Giai đoạn 3 — Thanh toán VNPay: Tích hợp VNPay Sandbox, tách biệt Return URL và IPN Handler, xác minh chữ ký số, xử lý callback trùng, thanh toán trễ và đối soát hoàn tiền.
+   Giai đoạn 4 — Hoàn thiện nghiệp vụ: Triển khai áp dụng Voucher, Đánh giá phim, Báo cáo doanh thu; bổ sung Redis caching và gửi thông báo qua RabbitMQ.
    Giai đoạn 5 — Đóng gói & Tài liệu hóa: Hoàn thiện bộ Integration Test, cấu hình Swagger/OpenAPI, Docker Compose và viết README.md phục vụ phỏng vấn.
    7.2. Danh sách Kịch bản Kiểm thử Tích hợp (Key Integration Tests)
    IT-01 (Đặt ghế đồng thời): Giả lập 50 luồng gửi yêu cầu giữ cùng ghế A1 của suất chiếu S1 tại một thời điểm  Chỉ đúng 1 booking PENDING_PAYMENT được tạo, 49 yêu cầu nhận mã 409 Conflict.
    IT-02 (Thu hồi ghế quá hạn an toàn): Đơn A hết hạn lúc 12:10:00 nhưng Scheduler chưa chạy; lúc 12:10:01 Khách B bấm giữ ghế đó  Đơn A tự động chuyển sang EXPIRED và Khách B giữ ghế thành công.
    IT-03 (VNPay IPN gọi lặp - Idempotency): Gửi cùng một bản tin IPN thành công 5 lần liên tiếp cho 1 giao dịch  Hệ thống chỉ xác nhận lần đầu, 4 lần sau không phát sinh lỗi hay thay đổi dữ liệu.
    IT-04 (Thanh toán muộn mất ghế & Thanh toán trùng 2 lần): Khi IPN báo thành công nhưng ghế đã thuộc về khách hàng khác (hoặc đơn đã được xác nhận bởi attempt trước đó)  Bản ghi payments chuyển sang SUCCESS kèm refund_status = 'REFUND_REQUIRED', không ghi đè quyền sở hữu ghế.
-   7.3. Trạng thái Triển khai so với Kế hoạch (cập nhật v2.3)
+   7.3. Trạng thái Triển khai so với Kế hoạch (cập nhật v2.4)
    Mục này ghi lại phần nào của kế hoạch ở trên đã làm và chưa làm, để tài liệu khớp với mã nguồn hiện tại.
-   Đã triển khai: Auth/JWT, Movie, Showtime (chống trùng lịch + 15 phút dọn phòng), Booking (giữ ghế 10 phút bằng Pessimistic Lock, scheduler thu hồi mỗi 30 giây), Payment (VNPay Sandbox, IPN idempotent, TH1/TH2/TH3, hoàn tiền thủ công), Voucher, Review, Báo cáo doanh thu, Docker Compose (MySQL).
-   Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test IT-01 → IT-04 (phía backend mới có test khởi động ngữ cảnh Spring; phía frontend có test Vitest cho các quy tắc nghiệp vụ phía giao diện).
+   Đã triển khai: Auth/JWT, Movie, Showtime (chống trùng lịch + 15 phút dọn phòng, hủy suất chiếu & điều phối hoàn tiền tự động FR-SHOW-02), Booking (giữ ghế 10 phút bằng Pessimistic Lock, scheduler thu hồi mỗi 30 giây), Payment (VNPay Sandbox, IPN idempotent, TH1/TH2/TH3, hoàn tiền thủ công), Voucher, Review, Báo cáo doanh thu, Docker Compose (MySQL); bộ Integration Test backend cho quy trình suất chiếu (ShowtimeWorkflowIntegrationTest với 5 ca kiểm thử cô lập); bộ Unit/Integration Test frontend (Vitest) cho các quy tắc giao diện và lọc suất chiếu; Script QA kiểm thử tích hợp giao diện quản trị (scripts/test-admin-suite.js).
+   Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
+
+8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 2.4 (2026-11-06):
+  + Bổ sung FR-SHOW-02: Quy trình Hủy suất chiếu & Điều phối hoàn tiền tự động (chống deadlock, hoàn tiền tự động cho đơn CONFIRMED, thu hồi/hoàn voucher phù hợp).
+  + Cập nhật mục 4.4 (Thứ tự khóa): Bổ sung khóa bảng showtimes (X ở hủy suất, S ở tạo booking) vào đầu chuỗi khóa tài nguyên chống Deadlock.
+  + Loại bỏ mã lỗi deprecated SHOWTIME_HAS_ACTIVE_BOOKINGS (1311).
+  + Cập nhật mục 7.3: Bổ sung bộ Integration Test backend (ShowtimeWorkflowIntegrationTest) và bộ test frontend/QA script.
+- Phiên bản 2.3 (2026-11-05):
+  + Bổ sung FR-DEV-01 (Môi trường Dev Tools giả lập thanh toán & quản lý suất chiếu).
+  + Bổ sung NFR-SEC-02 (Bảo mật cấu hình & biến môi trường JWT / VNPay / Seeded Admin).
+  + Bổ sung mục 7.3 (Trạng thái triển khai thực tế so với kế hoạch).
+- Phiên bản 2.2 (2026-11-04):
+  + Bổ sung quy tắc hủy suất chiếu và dọn phòng 15 phút.
 
 

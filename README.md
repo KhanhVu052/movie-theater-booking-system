@@ -59,7 +59,7 @@ movie-theater-booking-system/
 │   │   ├── utils/            # formatters, voucherUtils, bookingUtils
 │   │   └── test/             # Vitest automated business rule test suite
 └── docs/
-    └── SRS.md                # Software Requirements Specification (v2.3)
+    └── SRS.md                # Software Requirements Specification (v2.4)
 ```
 
 ---
@@ -68,9 +68,10 @@ movie-theater-booking-system/
 
 To prevent Deadlocks under high concurrency (e.g. 50 users simultaneously requesting the same seat):
 1. **Lock Ordering Hierarchy**:
-   1. `bookings` table (`SELECT ... FOR UPDATE`)
-   2. `showtime_seats` table (`SELECT ... FOR UPDATE ORDER BY id ASC`)
-   3. `vouchers` table (`SELECT ... FOR UPDATE`)
+   1. `showtimes` table (`SELECT ... FOR UPDATE` when cancelling showtime, or `SELECT ... FOR SHARE` when creating booking)
+   2. `bookings` table (`SELECT ... FOR UPDATE ORDER BY id ASC`)
+   3. `showtime_seats` table (`SELECT ... FOR UPDATE ORDER BY id ASC`)
+   4. `vouchers` table (`SELECT ... FOR UPDATE`)
 2. **Expired Hold Recovery**:
    - If an existing reservation holding a seat has expired (`expires_at < NOW()`), the booking is transitioned to `EXPIRED`, voucher quota is released, and the seat is made `AVAILABLE` atomically for the waiting transaction.
 3. **Automated Cleanup Scheduler**:
@@ -157,14 +158,16 @@ The development server will launch at `http://localhost:5173`.
 ## 🧪 Testing & Code Quality
 
 ### Comprehensive Test Suite (Frontend + API QA)
-To execute all frontend unit/integration tests and backend QA API checks in one go:
+To execute all frontend unit/integration tests and backend QA API checks in one go, ensure the backend is running and provide administrator credentials:
 ```bash
 # On Windows command prompt:
+set ADMIN_EMAIL=admin@cinema.com
+set ADMIN_PASSWORD=YourPassword
 run-all-tests.bat
 
 # Or via npm inside frontend directory:
 cd frontend
-npm run test:all
+ADMIN_EMAIL=admin@cinema.com ADMIN_PASSWORD=YourPassword npm run test:all
 ```
 
 ### Frontend Automated Testing (Vitest)
@@ -189,7 +192,10 @@ npm run lint
 cd backend
 ./mvnw test
 ```
-> MySQL must be running for integration tests to verify database constraints. Use `-DDB_URL=...` if running on a custom port.
+> Backend integration tests (such as `ShowtimeWorkflowIntegrationTest`) run with Spring profile `test` (`@ActiveProfiles("test")`, configuring `application-test.yaml`). MySQL must be running to verify database constraints and concurrency locks. Connection parameters default to `localhost:3306`, `root`, blank password, but can be customized using environment variables:
+> - `DB_URL` (default: `jdbc:mysql://localhost:3306/cinema_booking_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true`)
+> - `DB_USERNAME` (default: `root`)
+> - `DB_PASSWORD` (default: empty)
 
 ---
 
@@ -208,7 +214,7 @@ This project strictly implements and fulfills the software specification outline
 * **FR-DEV-01**: Demo-only payment simulation and showtime fast-forward, off by default (`DEV_TOOLS_ENABLED`).
 * **NFR-SEC-02**: No secrets in the repository; JWT secret and first-admin credentials come from environment variables.
 
-For the parts of the SRS roadmap that are not built yet (Notification/RabbitMQ, Redis caching, Swagger, backend integration tests) see SRS section 7.3.
+For the parts of the SRS roadmap that are not built yet (Notification/RabbitMQ, Redis caching, Swagger, high-concurrency stress tests IT-01 through IT-04) see SRS section 7.3.
 
 ---
 

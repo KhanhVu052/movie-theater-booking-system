@@ -211,7 +211,7 @@ public class ShowtimeService {
                             paymentRepository.save(payment);
                         }
                     }
-                    voucherService.releaseVoucherIfPresent(booking);
+                    voucherService.revertUsedVoucherIfPresent(booking);
                 } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
                     booking.setStatus(BookingStatus.CANCELLED);
                     bookingRepository.save(booking);

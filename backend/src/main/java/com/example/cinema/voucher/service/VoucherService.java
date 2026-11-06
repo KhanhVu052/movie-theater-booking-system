@@ -137,7 +137,21 @@ public class VoucherService {
                     lockedVoucher.setReservedCount(lockedVoucher.getReservedCount() - 1);
                     voucherRepository.save(lockedVoucher);
                 }
-            } else if (redemption.getStatus() == VoucherRedemptionStatus.USED) {
+            }
+        });
+    }
+
+    @Transactional
+    public void revertUsedVoucherIfPresent(Booking booking) {
+        if (booking.getVoucher() == null) {
+            return;
+        }
+
+        Voucher lockedVoucher = voucherRepository.findByIdForUpdate(booking.getVoucher().getId())
+                .orElse(null);
+
+        voucherRedemptionRepository.findByBookingId(booking.getId()).ifPresent(redemption -> {
+            if (redemption.getStatus() == VoucherRedemptionStatus.USED) {
                 redemption.setStatus(VoucherRedemptionStatus.RELEASED);
                 voucherRedemptionRepository.save(redemption);
 

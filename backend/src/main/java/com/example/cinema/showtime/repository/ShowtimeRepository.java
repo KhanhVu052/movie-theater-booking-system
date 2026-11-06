@@ -23,9 +23,8 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     Optional<Showtime> findByIdForUpdate(@Param("id") Long id);
 
     @Lock(LockModeType.PESSIMISTIC_READ)
-    @EntityGraph(attributePaths = {"movie", "room", "room.cinema"})
     @Query("SELECT s FROM Showtime s WHERE s.id = :id")
-    Optional<Showtime> findByIdForReadLock(@Param("id") Long id);
+    Optional<Showtime> findByIdForShare(@Param("id") Long id);
 
     @Query("""
             SELECT COUNT(s) > 0 FROM Showtime s

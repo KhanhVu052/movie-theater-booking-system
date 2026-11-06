@@ -1,0 +1,65 @@
+WORKSPACE RULES & CODING GUIDELINES
+0. QUY TRÌNH BẮT BUỘC CHO MỌI TASK (ROADMAP-DRIVEN)
+Thứ tự đọc trước khi làm bất cứ việc gì: (1) file này → (2) docs/SRS.md → (3) docs/ROADMAP.md. Không bắt đầu viết code khi chưa đọc cả ba.
+Làm đúng một task mỗi lần. Chỉ làm task có ID trong docs/ROADMAP.md (ví dụ R-02, G2-01). Người dùng nêu ID thì làm ID đó; không nêu thì chọn task TODO đầu tiên theo thứ tự ở mục 2 của ROADMAP. Không "tiện tay" sửa việc của task khác.
+Task BLOCKED thì dừng: nếu task phụ thuộc quyết định ở mục 8 của ROADMAP (D-01…D-06) mà cột "Chốt" còn trống, KHÔNG tự chọn. Hỏi người dùng và chờ.
+Đọc các file ở mục "ĐỌC TRƯỚC" của task trước khi sửa. Nếu code thực tế khác với mô tả trong ROADMAP, dừng lại và báo sự khác biệt thay vì tự suy diễn.
+Làm theo các bước, tiêu chí nghiệm thu, test và tài liệu ghi trong task. Không bỏ bước "Test" và "Tài liệu".
+Khi xong: chạy các lệnh kiểm tra ở mục 10 của ROADMAP, đánh dấu trạng thái trong bảng ROADMAP, thêm dòng vào docs/CHANGELOG.md, rồi báo cáo theo mẫu ở mục 4 bên dưới.
+Bất biến (mục 3 của ROADMAP) không được phá, đặc biệt: thứ tự khoá users → showtimes → bookings → showtime_seats → vouchers, giá do server tính, không xoá cứng dữ liệu lịch sử, không secret trong repo.
+1. NGUYÊN TẮC BẮT BUỘC TRƯỚC KHI VIẾT CODE FRONTEND
+Đọc tài liệu đặc tả: Trước khi làm bất kỳ tính năng nào, PHẢI đọc file docs/SRS.md để nắm rõ luồng nghiệp vụ (user story, validation, quyền hạn, trạng thái dữ liệu).
+Đọc và khớp Backend 100%:
+Đọc file Controller và DTO/Response/Request tương ứng trong backend/src/main/java/com/example/cinema/<feature>/ (ví dụ: movie, booking, showtime, auth...).
+Đối chiếu với file cơ sở dữ liệu backend/src/main/resources/db/migration/V1__init_schema.sql để hiểu kiểu dữ liệu, các ràng buộc (nullable, enum, default).
+Đảm bảo tên trường (field names), kiểu dữ liệu (data types), format ngày giờ (ISO strings / timestamp), và cấu trúc payload JSON gửi/nhận giữa Frontend và Backend phải khớp nhau 100%, tuyệt đối không tự bịa tên field hoặc tự suy diễn logic API.
+Tuân thủ quy chuẩn UI:
+Tham khảo phong cách thiết kế, typography, animation, bảng màu trong .reference/DESIGN (hoặc DESIGN.md) và quy chuẩn cấu trúc component trong .reference/CLAUDE.md.
+2. QUY CHUẨN VIẾT CODE FRONTEND (React + Vite + Tailwind CSS)
+Tổ chức code: Tách biệt rõ ràng giữa UI Component, Custom Hooks và API Service calls.
+Trạng thái UI: Mọi thao tác lấy dữ liệu hoặc gửi form đều phải có:
+Skeleton loading (hoặc Spinner) khi đang fetch dữ liệu.
+Xử lý Empty State (khi danh sách rỗng).
+Xử lý Error State (bắt lỗi từ Backend và hiển thị thông báo thân thiện qua toast/alert).
+Styling: Sử dụng utility classes của Tailwind CSS, thiết kế mobile-first và responsive mượt mà trên desktop/tablet/mobile.
+2.1. Bổ sung cho Frontend (theo các task trong ROADMAP)
+Schema thay đổi: nếu task đổi cấu trúc DB, đọc thêm các migration V3+ trong backend/src/main/resources/db/migration/ ngoài V1__init_schema.sql.
+Ngày giờ: KHÔNG dùng date.toISOString().split('T')[0] để lấy ngày. Dùng frontend/src/utils/dates.js. Backend trả LocalDateTime ISO không có offset (múi giờ Asia/Ho_Chi_Minh).
+Logic dùng chung: đặt hàm thuần (lọc, tính toán, định dạng) vào frontend/src/utils/ hoặc frontend/src/hooks/ rồi import vào cả component và test. Không định nghĩa lại hàm bên trong file test.
+Mã lỗi backend: hiển thị thông báo thân thiện theo code trong response (ví dụ 1502, 1504, 1507, 1509), không hiển thị nguyên văn lỗi kỹ thuật.
+Điều hướng đăng nhập: dùng getSafeRedirect trong utils/navigation.js cho ?redirect=.
+Công cụ dev (simulate payment): chỉ hiển thị khi import.meta.env.DEV; không đưa vào bản build production.
+3. QUY CHUẨN BACKEND (Spring Boot 3 / Java 21 / MySQL / Flyway)
+Lỗi nghiệp vụ: throw new AppException(ErrorCode.X). Mã mới = số trống kế tiếp trong đúng dải của common/exception/ErrorCode.java (xem mục 1 của ROADMAP), kèm HTTP status phù hợp. Không đánh lại số cũ.
+Cấu hình: dùng @Configuration @ConfigurationProperties(prefix = "app.xxx") có getter/setter (mẫu VnPayProperties, DevToolsProperties). Không dùng @Value trên field của class có @RequiredArgsConstructor + @FieldDefaults(makeFinal = true).
+Khoá và đồng thời: mọi truy vấn khoá dòng dùng @Lock(PESSIMISTIC_WRITE) + @QueryHints(jakarta.persistence.lock.timeout) theo mẫu có sẵn; khoá nhiều dòng phải ORDER BY id và dùng một câu lệnh. Tôn trọng thứ tự khoá ở mục 3 của ROADMAP.
+Giao dịch: nghiệp vụ nhiều bước nằm gọn trong một @Transactional ở service; không gọi gateway thanh toán bên trong transaction DB.
+Migration: thêm file mới V<n>__mo_ta.sql (bắt đầu từ V3). KHÔNG sửa V1/V2. FK luôn ON DELETE RESTRICT, không CASCADE. Hibernate ddl-auto: validate nên entity phải khớp migration.
+DTO/Mapper: response dùng record + @Builder, thêm trường mới ở cuối nhóm liên quan và giữ tương thích với frontend; cập nhật mapper và frontend trong cùng task.
+Thời gian: LocalDateTime theo Asia/Ho_Chi_Minh; nếu task đã có bean Clock thì dùng Clock, không gọi LocalDateTime.now() mới.
+4. TEST & HOÀN THÀNH (DEFINITION OF DONE)
+Mỗi task có test đi kèm. Backend: JUnit 5 + AssertJ (integration dùng profile test); test hành vi đồng thời dùng nhiều luồng thật, không gắn @Transactional ở cấp class. Frontend: Vitest, import code thật từ src/, không sao chép logic vào test.
+Test không được: ghi dữ liệu cố định vào DB thật, phụ thuộc dữ liệu có sẵn (không findAll() trên bảng movies), hoặc tạo tài khoản có mật khẩu mặc định.
+Trước khi báo hoàn thành, phải chạy và dán kết quả tóm tắt: cd backend && ./mvnw clean verify và cd frontend && npm test && npm run lint && npm run build. Nếu không chạy được lệnh nào, nói rõ lệnh nào chưa chạy và vì sao; không khẳng định "đã test" khi chưa chạy.
+Mẫu báo cáo cuối mỗi task:
+ID task và mục tiêu.
+Danh sách file đã tạo/sửa (kèm lý do một dòng).
+Kết quả từng tiêu chí nghiệm thu (đạt / chưa đạt).
+Lệnh đã chạy và kết quả.
+Phần SRS/README/CHANGELOG đã cập nhật.
+Việc còn tồn đọng hoặc quyết định cần người dùng chốt.
+5. ĐỒNG BỘ TÀI LIỆU
+Mọi thay đổi hành vi (API, trạng thái, quy tắc, mã lỗi) PHẢI được phản ánh trong docs/SRS.md theo đúng mẫu (tên mục, mô tả, "• Lỗi:", "• Nghiệm thu:") và đúng ID FR/NFR đã cấp trong mục 9 của ROADMAP.
+Khi thêm FR/NFR: tăng số phiên bản SRS, thêm vào "Lịch sử thay đổi", cập nhật "Specification Compliance" và số phiên bản trong README.md, cập nhật mục 7.3 của SRS nếu trạng thái triển khai đổi.
+SRS, README và code phải nói cùng một điều. Không ghi vào tài liệu tính năng chưa làm; tính năng chưa làm chỉ được nằm ở mục 7.3 "Chưa triển khai".
+6. BẢO MẬT & CẤU HÌNH
+Không đưa secret, mật khẩu, token vào code, test, tài liệu hay log. Cấu hình bí mật đi qua biến môi trường (.env.example là mẫu duy nhất được commit).
+DEV_TOOLS_ENABLED mặc định false; công cụ giả lập chỉ dành cho demo cục bộ.
+Không tin dữ liệu giá/tổng tiền từ client; giá do server tính và lưu cứng.
+Không log mật khẩu, JWT, hoặc dữ liệu thẻ/ngân hàng.
+7. KHÔNG ĐƯỢC LÀM
+Không sửa nhiều task cùng lúc, không refactor ngoài phạm vi task.
+Không tự chọn phương án cho task BLOCKED.
+Không sửa migration đã có, không đổi thứ tự khoá, không đổi hành vi IPN (TH1/TH2/TH3) nếu task không yêu cầu.
+Không đổi tên field/endpoint đã được frontend dùng mà không cập nhật cả hai phía trong cùng task.
+Không để tính năng mới thiếu test hoặc thiếu cập nhật SRS.

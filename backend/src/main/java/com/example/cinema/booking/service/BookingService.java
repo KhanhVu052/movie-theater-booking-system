@@ -72,12 +72,15 @@ public class BookingService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        Showtime showtime = showtimeRepository.findByIdForReadLock(request.showtimeId())
+        Showtime showtime = showtimeRepository.findByIdForShare(request.showtimeId())
                 .orElseThrow(() -> new AppException(ErrorCode.SHOWTIME_NOT_FOUND));
 
         if (showtime.getStatus() != ShowtimeStatus.SCHEDULED || !showtime.getStartTime().isAfter(now)) {
             throw new AppException(ErrorCode.SHOWTIME_NOT_AVAILABLE_FOR_BOOKING);
         }
+
+        showtime = showtimeRepository.findDetailById(showtime.getId())
+                .orElse(showtime);
 
         List<Long> expiredBookingIds = bookingRepository.findExpiredBookingIdsHoldingSeats(uniqueRequestedSeatIds, now);
         List<Booking> lockedExpiredBookings = List.of();

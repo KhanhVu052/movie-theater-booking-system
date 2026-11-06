@@ -4,12 +4,33 @@
  * Executes all core test cases from the comprehensive specification
  * and verifies API contracts, domain validation, and business pipelines.
  *
- * Run with: node scripts/test-admin-suite.js
+ * Run with: ADMIN_EMAIL=... ADMIN_PASSWORD=... node scripts/test-admin-suite.js
  */
 
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080/api/v1';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@cinema.com';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123@Password';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  console.error('\x1b[31m[ERROR] Missing required environment variables: ADMIN_EMAIL and ADMIN_PASSWORD\x1b[0m');
+  console.error('Usage: ADMIN_EMAIL=admin@cinema.com ADMIN_PASSWORD=<password> node scripts/test-admin-suite.js');
+  process.exit(2);
+}
+
+class SkipError extends Error {
+  constructor(reason) {
+    super(reason);
+    this.name = 'SkipError';
+    this.reason = reason;
+  }
+}
+
+function localDateStr(d = new Date()) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 let authToken = '';
 const results = [];
@@ -64,7 +85,7 @@ async function runTest(tc, name, fn) {
     await fn();
     pass(tc, name, Date.now() - start);
   } catch (err) {
-    if (err && err.isSkip) {
+    if (err instanceof SkipError) {
       skip(tc, name, err.reason);
     } else {
       fail(tc, name, err, Date.now() - start);
@@ -97,10 +118,10 @@ async function main() {
   // TC-REP-01: Revenue Reports
   await runTest('TC-REP-01', 'Fetch Realized Revenue Reports & Metrics (FR-REP-01)', async () => {
     const now = new Date();
-    const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const future7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const startDate = `${past30.toISOString().slice(0, 10)}T00:00:00`;
-    const endDate = `${future7.toISOString().slice(0, 10)}T23:59:59`;
+    const past30 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+    const future7 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+    const startDate = `${localDateStr(past30)}T00:00:00`;
+    const endDate = `${localDateStr(future7)}T23:59:59`;
 
     const res = await apiRequest(`/payments/reports/revenue?startDate=${startDate}&endDate=${endDate}`);
     if (!res.ok) throw new Error(`Revenue fetch failed: ${res.status}`);
@@ -134,7 +155,7 @@ async function main() {
 
   // TC-SHOW-02: Date Window Filtering
   await runTest('TC-SHOW-02', 'Filter showtimes by date window (Sync with customer calendar)', async () => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = localDateStr();
     const res = await apiRequest(`/showtimes?fromTime=${todayStr}T00:00:00&toTime=${todayStr}T23:59:59&size=100`);
     if (!res.ok) throw new Error(`Showtimes date filter failed: ${res.status}`);
 
@@ -153,7 +174,7 @@ async function main() {
     const moviesRes = await apiRequest('/movies?status=ENDED&size=5');
     const endedList = moviesRes.data?.items || moviesRes.data || [];
     if (endedList.length === 0) {
-      throw { isSkip: true, reason: 'No ended movie found in database seed to test' };
+      throw new SkipError('No ended movie found in database seed to test');
     }
     const endedMovieId = endedList[0].id;
 
@@ -161,18 +182,20 @@ async function main() {
     const cinemasRes = await apiRequest('/cinemas');
     const cinemas = cinemasRes.data || [];
     if (cinemas.length === 0) {
-      throw { isSkip: true, reason: 'No cinemas found in database seed to test' };
+      throw new SkipError('No cinemas found in database seed to test');
     }
 
     const roomsRes = await apiRequest(`/rooms?cinemaId=${cinemas[0].id}`);
     const rooms = roomsRes.data || [];
     if (rooms.length === 0) {
-      throw { isSkip: true, reason: 'No rooms found in cinema to test' };
+      throw new SkipError('No rooms found in cinema to test');
     }
     const roomId = rooms[0].id;
 
     // 3. Attempt to schedule showtime for ended movie
-    const futureDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19);
+    const now = new Date();
+    const futureD = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+    const futureDate = `${localDateStr(futureD)}T10:00:00`;
     const createRes = await apiRequest('/showtimes', {
       method: 'POST',
       body: JSON.stringify({

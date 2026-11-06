@@ -40,6 +40,7 @@ import com.example.cinema.voucher.enums.DiscountType;
 import com.example.cinema.voucher.enums.VoucherRedemptionStatus;
 import com.example.cinema.voucher.repository.VoucherRedemptionRepository;
 import com.example.cinema.voucher.repository.VoucherRepository;
+import com.example.cinema.voucher.service.VoucherService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,7 +52,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,6 +64,9 @@ class ShowtimeWorkflowIntegrationTest {
 
     @Autowired
     ShowtimeService showtimeService;
+
+    @Autowired
+    VoucherService voucherService;
 
     @Autowired
     ShowtimeRepository showtimeRepository;
@@ -101,101 +104,75 @@ class ShowtimeWorkflowIntegrationTest {
     @Autowired
     EntityManager entityManager;
 
+    private Cinema testCinema;
     private Room testRoom;
+    private User testUser;
+    private Movie testActiveMovie;
+    private Movie testEndedMovie;
 
     @BeforeEach
     void setUpTestData() {
-        if (roomRepository.count() == 0) {
-            Cinema cinema = cinemaRepository.save(Cinema.builder()
-                    .name("Hanoi Central Cinema")
-                    .address("123 Hoan Kiem, Hanoi")
-                    .build());
-            testRoom = roomRepository.save(Room.builder()
-                    .cinema(cinema)
-                    .name("Hall 1")
-                    .totalRows(5)
-                    .totalColumns(5)
-                    .isActive(true)
-                    .build());
-            for (int r = 0; r < 5; r++) {
-                String row = String.valueOf((char) ('A' + r));
-                for (int c = 1; c <= 5; c++) {
-                    seatRepository.save(Seat.builder()
-                            .room(testRoom)
-                            .rowName(row)
-                            .seatNumber(c)
-                            .type(SeatType.NORMAL)
-                            .isActive(true)
-                            .build());
-                }
-            }
-        } else {
-            testRoom = roomRepository.findAll().getFirst();
-        }
+        String testId = UUID.randomUUID().toString().substring(0, 8);
 
-        List<Seat> seats = seatRepository.findByRoomIdOrderByRowNameAscSeatNumberAsc(testRoom.getId());
-        if (seats.isEmpty()) {
-            for (int r = 0; r < 5; r++) {
-                String row = String.valueOf((char) ('A' + r));
-                for (int c = 1; c <= 5; c++) {
-                    seatRepository.save(Seat.builder()
-                            .room(testRoom)
-                            .rowName(row)
-                            .seatNumber(c)
-                            .type(SeatType.NORMAL)
-                            .isActive(true)
-                            .build());
-                }
+        testCinema = cinemaRepository.save(Cinema.builder()
+                .name("Cinema Test " + testId)
+                .address("123 Test Street " + testId)
+                .build());
+
+        testRoom = roomRepository.save(Room.builder()
+                .cinema(testCinema)
+                .name("Hall " + testId)
+                .totalRows(5)
+                .totalColumns(5)
+                .isActive(true)
+                .build());
+
+        for (int r = 0; r < 5; r++) {
+            String row = String.valueOf((char) ('A' + r));
+            for (int c = 1; c <= 5; c++) {
+                seatRepository.save(Seat.builder()
+                        .room(testRoom)
+                        .rowName(row)
+                        .seatNumber(c)
+                        .type(SeatType.NORMAL)
+                        .isActive(true)
+                        .build());
             }
         }
 
-        if (!userRepository.existsByEmail("admin@cinema.com")) {
-            userRepository.save(User.builder()
-                    .email("admin@cinema.com")
-                    .passwordHash("hashed")
-                    .fullName("Admin")
-                    .phone("0999999999")
-                    .role(Role.ADMIN)
-                    .isActive(true)
-                    .build());
-        }
-    }
+        testUser = userRepository.save(User.builder()
+                .email("test-" + testId + "@cinema.com")
+                .passwordHash("hashed")
+                .fullName("Test Admin")
+                .phone("099" + testId.replaceAll("[^0-9]", "1").substring(0, Math.min(6, testId.length())) + "999")
+                .role(Role.ADMIN)
+                .isActive(true)
+                .build());
 
-    private Movie getOrCreateActiveMovie() {
-        return movieRepository.findAll().stream()
-                .filter(m -> m.getStatus() == MovieStatus.NOW_SHOWING)
-                .findFirst()
-                .orElseGet(() -> movieRepository.save(Movie.builder()
-                        .title("Active Test Movie " + UUID.randomUUID().toString().substring(0, 5))
-                        .durationMinutes(120)
-                        .releaseDate(LocalDate.now())
-                        .ageRating(AgeRating.P)
-                        .originalLanguage("English")
-                        .status(MovieStatus.NOW_SHOWING)
-                        .build()));
-    }
+        testActiveMovie = movieRepository.save(Movie.builder()
+                .title("Active Movie " + testId)
+                .durationMinutes(120)
+                .releaseDate(LocalDate.now().minusDays(10))
+                .ageRating(AgeRating.P)
+                .originalLanguage("English")
+                .status(MovieStatus.NOW_SHOWING)
+                .build());
 
-    private Movie getOrCreateEndedMovie() {
-        return movieRepository.findAll().stream()
-                .filter(m -> m.getStatus() == MovieStatus.ENDED)
-                .findFirst()
-                .orElseGet(() -> movieRepository.save(Movie.builder()
-                        .title("Ended Test Movie " + UUID.randomUUID().toString().substring(0, 5))
-                        .durationMinutes(120)
-                        .releaseDate(LocalDate.now().minusMonths(6))
-                        .ageRating(AgeRating.P)
-                        .originalLanguage("English")
-                        .status(MovieStatus.ENDED)
-                        .build()));
+        testEndedMovie = movieRepository.save(Movie.builder()
+                .title("Ended Movie " + testId)
+                .durationMinutes(110)
+                .releaseDate(LocalDate.now().minusMonths(6))
+                .ageRating(AgeRating.P)
+                .originalLanguage("English")
+                .status(MovieStatus.ENDED)
+                .build());
     }
 
     @Test
     @DisplayName("TC-SHOW-03: Cannot schedule a showtime for an ENDED movie")
     void cannotCreateShowtimeForEndedMovie() {
-        Movie endedMovie = getOrCreateEndedMovie();
-
         ShowtimeRequest request = new ShowtimeRequest(
-                endedMovie.getId(),
+                testEndedMovie.getId(),
                 testRoom.getId(),
                 ShowtimeFormat._2D,
                 TranslationType.SUBTITLE,
@@ -214,16 +191,14 @@ class ShowtimeWorkflowIntegrationTest {
     @Test
     @DisplayName("Hard delete: Showtime with no bookings is completely removed with its seats")
     void cancelEmptyShowtimeHardDeletes() {
-        Movie activeMovie = getOrCreateActiveMovie();
-
         Showtime showtime = showtimeRepository.save(Showtime.builder()
-                .movie(activeMovie)
+                .movie(testActiveMovie)
                 .room(testRoom)
                 .format(ShowtimeFormat._2D)
                 .translationType(TranslationType.SUBTITLE)
                 .startTime(LocalDateTime.now().plusDays(5))
-                .endTime(LocalDateTime.now().plusDays(5).plusMinutes(activeMovie.getDurationMinutes()))
-                .cleaningEndTime(LocalDateTime.now().plusDays(5).plusMinutes(activeMovie.getDurationMinutes() + 15))
+                .endTime(LocalDateTime.now().plusDays(5).plusMinutes(testActiveMovie.getDurationMinutes()))
+                .cleaningEndTime(LocalDateTime.now().plusDays(5).plusMinutes(testActiveMovie.getDurationMinutes() + 15))
                 .basePrice(85000L)
                 .status(ShowtimeStatus.SCHEDULED)
                 .build());
@@ -250,11 +225,8 @@ class ShowtimeWorkflowIntegrationTest {
     }
 
     @Test
-    @DisplayName("TC-SHOW-05: Cancelling showtime with confirmed bookings transitions booking to CANCELLED and triggers REFUND_REQUIRED, releases voucher")
+    @DisplayName("TC-SHOW-05: Cancelling showtime with confirmed bookings transitions booking to CANCELLED and triggers REFUND_REQUIRED, reverts used voucher")
     void cancelShowtimeWithBookingsTriggersRefundPipeline() {
-        Movie activeMovie = getOrCreateActiveMovie();
-        User user = userRepository.findByEmail("admin@cinema.com").orElseThrow();
-
         Voucher voucher = voucherRepository.save(Voucher.builder()
                 .code("DISC10-" + UUID.randomUUID().toString().substring(0, 5).toUpperCase())
                 .discountType(DiscountType.FIXED_AMOUNT)
@@ -270,20 +242,20 @@ class ShowtimeWorkflowIntegrationTest {
                 .build());
 
         Showtime showtime = showtimeRepository.save(Showtime.builder()
-                .movie(activeMovie)
+                .movie(testActiveMovie)
                 .room(testRoom)
                 .format(ShowtimeFormat._2D)
                 .translationType(TranslationType.SUBTITLE)
                 .startTime(LocalDateTime.now().plusDays(3))
-                .endTime(LocalDateTime.now().plusDays(3).plusMinutes(activeMovie.getDurationMinutes()))
-                .cleaningEndTime(LocalDateTime.now().plusDays(3).plusMinutes(activeMovie.getDurationMinutes() + 15))
+                .endTime(LocalDateTime.now().plusDays(3).plusMinutes(testActiveMovie.getDurationMinutes()))
+                .cleaningEndTime(LocalDateTime.now().plusDays(3).plusMinutes(testActiveMovie.getDurationMinutes() + 15))
                 .basePrice(90000L)
                 .status(ShowtimeStatus.SCHEDULED)
                 .build());
 
         Booking booking = bookingRepository.save(Booking.builder()
                 .bookingCode("BK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                .user(user)
+                .user(testUser)
                 .showtime(showtime)
                 .voucher(voucher)
                 .subtotalAmount(90000L)
@@ -295,7 +267,7 @@ class ShowtimeWorkflowIntegrationTest {
 
         voucherRedemptionRepository.save(VoucherRedemption.builder()
                 .voucher(voucher)
-                .user(user)
+                .user(testUser)
                 .booking(booking)
                 .discountApplied(10000L)
                 .status(VoucherRedemptionStatus.USED)
@@ -353,24 +325,21 @@ class ShowtimeWorkflowIntegrationTest {
     @Test
     @DisplayName("Foreign Key safe: Showtime with past EXPIRED booking soft-cancels without FK 500 error")
     void cancelShowtimeWithOnlyExpiredBookingsSoftCancels() {
-        Movie activeMovie = getOrCreateActiveMovie();
-        User user = userRepository.findByEmail("admin@cinema.com").orElseThrow();
-
         Showtime showtime = showtimeRepository.save(Showtime.builder()
-                .movie(activeMovie)
+                .movie(testActiveMovie)
                 .room(testRoom)
                 .format(ShowtimeFormat._2D)
                 .translationType(TranslationType.SUBTITLE)
                 .startTime(LocalDateTime.now().plusDays(4))
-                .endTime(LocalDateTime.now().plusDays(4).plusMinutes(activeMovie.getDurationMinutes()))
-                .cleaningEndTime(LocalDateTime.now().plusDays(4).plusMinutes(activeMovie.getDurationMinutes() + 15))
+                .endTime(LocalDateTime.now().plusDays(4).plusMinutes(testActiveMovie.getDurationMinutes()))
+                .cleaningEndTime(LocalDateTime.now().plusDays(4).plusMinutes(testActiveMovie.getDurationMinutes() + 15))
                 .basePrice(80000L)
                 .status(ShowtimeStatus.SCHEDULED)
                 .build());
 
         Booking expiredBooking = bookingRepository.save(Booking.builder()
                 .bookingCode("BK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                .user(user)
+                .user(testUser)
                 .showtime(showtime)
                 .subtotalAmount(80000L)
                 .discountAmount(0L)
@@ -410,9 +379,6 @@ class ShowtimeWorkflowIntegrationTest {
     @Test
     @DisplayName("Pending cancellation: Showtime with PENDING_PAYMENT booking cancels booking and releases held voucher")
     void cancelShowtimeWithPendingBookingReleasesVoucher() {
-        Movie activeMovie = getOrCreateActiveMovie();
-        User user = userRepository.findByEmail("admin@cinema.com").orElseThrow();
-
         Voucher voucher = voucherRepository.save(Voucher.builder()
                 .code("PENDING-" + UUID.randomUUID().toString().substring(0, 5).toUpperCase())
                 .discountType(DiscountType.FIXED_AMOUNT)
@@ -428,20 +394,20 @@ class ShowtimeWorkflowIntegrationTest {
                 .build());
 
         Showtime showtime = showtimeRepository.save(Showtime.builder()
-                .movie(activeMovie)
+                .movie(testActiveMovie)
                 .room(testRoom)
                 .format(ShowtimeFormat._2D)
                 .translationType(TranslationType.SUBTITLE)
                 .startTime(LocalDateTime.now().plusDays(2))
-                .endTime(LocalDateTime.now().plusDays(2).plusMinutes(activeMovie.getDurationMinutes()))
-                .cleaningEndTime(LocalDateTime.now().plusDays(2).plusMinutes(activeMovie.getDurationMinutes() + 15))
+                .endTime(LocalDateTime.now().plusDays(2).plusMinutes(testActiveMovie.getDurationMinutes()))
+                .cleaningEndTime(LocalDateTime.now().plusDays(2).plusMinutes(testActiveMovie.getDurationMinutes() + 15))
                 .basePrice(90000L)
                 .status(ShowtimeStatus.SCHEDULED)
                 .build());
 
         Booking pendingBooking = bookingRepository.save(Booking.builder()
                 .bookingCode("BK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                .user(user)
+                .user(testUser)
                 .showtime(showtime)
                 .voucher(voucher)
                 .subtotalAmount(90000L)
@@ -453,7 +419,7 @@ class ShowtimeWorkflowIntegrationTest {
 
         voucherRedemptionRepository.save(VoucherRedemption.builder()
                 .voucher(voucher)
-                .user(user)
+                .user(testUser)
                 .booking(pendingBooking)
                 .discountApplied(15000L)
                 .status(VoucherRedemptionStatus.RESERVED)
@@ -491,5 +457,71 @@ class ShowtimeWorkflowIntegrationTest {
 
         VoucherRedemption updatedRedemption = voucherRedemptionRepository.findByBookingId(pendingBooking.getId()).orElseThrow();
         assertThat(updatedRedemption.getStatus()).isEqualTo(VoucherRedemptionStatus.RELEASED);
+    }
+
+    @Test
+    @DisplayName("R-02: releaseVoucherIfPresent does NOT touch USED redemptions (leaves usedCount intact)")
+    void releaseVoucherDoesNotRevertUsedVoucher() {
+        Voucher voucher = voucherRepository.save(Voucher.builder()
+                .code("USED-" + UUID.randomUUID().toString().substring(0, 5).toUpperCase())
+                .discountType(DiscountType.FIXED_AMOUNT)
+                .discountValue(20000L)
+                .minOrderValue(50000L)
+                .usageLimit(10)
+                .reservedCount(0)
+                .usedCount(1)
+                .perUserLimit(1)
+                .startAt(LocalDateTime.now().minusDays(1))
+                .endAt(LocalDateTime.now().plusDays(10))
+                .isActive(true)
+                .build());
+
+        Showtime showtime = showtimeRepository.save(Showtime.builder()
+                .movie(testActiveMovie)
+                .room(testRoom)
+                .format(ShowtimeFormat._2D)
+                .translationType(TranslationType.SUBTITLE)
+                .startTime(LocalDateTime.now().plusDays(2))
+                .endTime(LocalDateTime.now().plusDays(2).plusMinutes(testActiveMovie.getDurationMinutes()))
+                .cleaningEndTime(LocalDateTime.now().plusDays(2).plusMinutes(testActiveMovie.getDurationMinutes() + 15))
+                .basePrice(80000L)
+                .status(ShowtimeStatus.SCHEDULED)
+                .build());
+
+        Booking booking = bookingRepository.save(Booking.builder()
+                .bookingCode("BK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .user(testUser)
+                .showtime(showtime)
+                .voucher(voucher)
+                .subtotalAmount(80000L)
+                .discountAmount(20000L)
+                .finalAmount(60000L)
+                .status(BookingStatus.CONFIRMED)
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
+                .build());
+
+        voucherRedemptionRepository.save(VoucherRedemption.builder()
+                .voucher(voucher)
+                .user(testUser)
+                .booking(booking)
+                .discountApplied(20000L)
+                .status(VoucherRedemptionStatus.USED)
+                .build());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // Calling releaseVoucherIfPresent directly on a booking that has USED redemption
+        voucherService.releaseVoucherIfPresent(booking);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // Verify usedCount remains 1, and redemption remains USED
+        Voucher afterVoucher = voucherRepository.findById(voucher.getId()).orElseThrow();
+        assertThat(afterVoucher.getUsedCount()).isEqualTo(1);
+
+        VoucherRedemption afterRedemption = voucherRedemptionRepository.findByBookingId(booking.getId()).orElseThrow();
+        assertThat(afterRedemption.getStatus()).isEqualTo(VoucherRedemptionStatus.USED);
     }
 }
