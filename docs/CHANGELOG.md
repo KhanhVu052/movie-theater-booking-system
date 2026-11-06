@@ -2,6 +2,7 @@
 
 Định dạng: `YYYY-MM-DD — ID task — Tóm tắt một câu về việc đã làm — SRS mục tương ứng (nếu có)`
 
+- 2026-11-06 — AF-02 — Xóa secret và mật khẩu cứng trong run-backend.bat, nạp cấu hình từ .env và cập nhật hướng dẫn khởi chạy — NFR-SEC-02
 - 2026-11-06 — G3-03 — Áp dụng ma trận giá tự động (Pricing Policy) theo loại ghế, ngày cuối tuần và khung giờ — SRS v3.2 (FR-PRICE-01)
 - 2026-11-06 — G3-02 — Ghế đôi (Couple Seats): bắt buộc chọn nguyên cặp & tính giá chuẩn theo pair_group — SRS v3.1 (FR-SEAT-02, FR-BOOK-07)
 - 2026-11-06 — G3-01 — Luật ghế lẻ (Orphan Seat Detection): chặn đặt vé để lại 1 ghế trống đơn độc — SRS v3.0 (FR-BOOK-01)

@@ -105,7 +105,7 @@ Defaults match `docker-compose.yml` (`root` / `root` on `localhost:3306`). Overr
 ---
 
 ### 2. Configure Secrets (environment variables)
-Secrets are **not** stored in the repository. Copy `.env.example` to `.env` and fill it in:
+Secrets are **not** stored in the repository. **Bắt buộc** phải tạo file `.env` từ `.env.example` trước khi khởi động dự án:
 ```bash
 cp .env.example .env
 # JWT secret (required): paste the output into JWT_SECRET in .env
@@ -116,24 +116,22 @@ openssl rand -base64 48
 | `JWT_SECRET` | yes | Base64 signing key for JWT, at least 32 bytes. The app refuses to start without it. |
 | `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` | for first run | Creates the first `ADMIN` account when the database has none (password min 8 chars). |
 | `DEV_TOOLS_ENABLED` | no (default `false`) | `true` enables the demo-only "simulate payment" endpoint (SRS FR-DEV-01). |
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | no | Database connection overrides. |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | no | Database connection overrides (default: `localhost:3306`). |
 | `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` | no | VNPay sandbox credentials. |
 
-Load the file into your shell before starting the backend:
-```bash
-set -a; source .env; set +a
-```
+> **Lưu ý bảo mật:** Script `run-backend.bat` trên Windows sẽ tự động kiểm tra sự tồn tại của `.env` và nạp toàn bộ biến môi trường trước khi chạy `mvnw`. Nếu chưa tạo `.env`, script sẽ dừng ngay với thông báo lỗi và thoát mã `2`.
 
 ---
 
 ### 3. Run the Backend
 ```bash
-cd backend
-# Linux / macOS
-./mvnw spring-boot:run
+# Windows (khuyến nghị - tự động nạp .env)
+run-backend.bat
 
-# Windows
-mvnw.cmd spring-boot:run
+# Linux / macOS (nạp .env rồi chạy)
+set -a; source .env; set +a
+cd backend
+./mvnw spring-boot:run
 ```
 The REST API will launch at `http://localhost:8080`.
 

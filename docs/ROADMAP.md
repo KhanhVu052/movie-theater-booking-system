@@ -57,6 +57,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | R-08 | Dọn: `BookingMapper`, xoá `SHOWTIME_HAS_ACTIVE_BOOKINGS` | P0 | DONE |
 | R-09 | Xoá `[cite: …]` trong SRS | P0 | DONE |
 | R-10 | README: hướng dẫn chạy test, biến môi trường cho DB test | P0 | DONE |
+| AF-02 | `run-backend.bat`: xóa secret cứng, nạp cấu hình từ `.env` | P0 | DONE |
 | G2-01 | Giới hạn số đơn chờ thanh toán / user | P1 | DONE |
 | G2-02 | Ghế/phòng không hoạt động: chặn bán + cập nhật giá | P1 | DONE |
 | G2-03 | Hạn chót đặt vé + lọc suất chiếu còn bán | P1 | DONE |
@@ -97,7 +98,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 ## 4. PHASE 0 — Tồn đọng từ lần review thứ 2 (làm trước)
 
 ### R-01 — Test không được tạo admin trong DB thật
-- **Vấn đề:** `AdminSeeder` là `CommandLineRunner`, chạy khi Spring context khởi động *kể cả trong test*, nằm ngoài transaction của test. `application-test.yaml` đang có `bootstrap-admin` với mật khẩu `Admin123@Password`, nên chạy test sẽ ghi một admin có mật khẩu công khai vào DB mà test đang trỏ tới. `scripts/test-admin-suite.js` cũng đặt mặc định `Admin123@Password`.
+- **Vấn đề:** `AdminSeeder` là `CommandLineRunner`, chạy khi Spring context khởi động *kể cả trong test*, nằm ngoài transaction của test. `application-test.yaml` từng có `bootstrap-admin` với mật khẩu công khai cố định, nên chạy test sẽ ghi một admin có mật khẩu công khai vào DB mà test đang trỏ tới. `scripts/test-admin-suite.js` cũng từng đặt mật khẩu mặc định.
 - **ĐỌC TRƯỚC:** `backend/src/test/resources/application-test.yaml`, `auth/component/AdminSeeder.java`, `scripts/test-admin-suite.js`.
 - **Bước:**
   1. Xoá khối `bootstrap-admin` khỏi `application-test.yaml` (hoặc đặt `email: ""`, `password: ""`). Test tự tạo user cần thiết trong transaction của nó.
@@ -371,6 +372,6 @@ cd frontend && npm ci && npm run lint && npm test && npm run build
 ADMIN_EMAIL=... ADMIN_PASSWORD=... node scripts/test-admin-suite.js
 
 # Kiểm tra không còn secret / mã chết
-grep -rn "Admin123" --include=* . | grep -v node_modules
+grep -rn "BOOTSTRAP_ADMIN_PASSWORD" --include=* . | grep -v node_modules
 grep -rn "SHOWTIME_HAS_ACTIVE_BOOKINGS" backend/src
 ```

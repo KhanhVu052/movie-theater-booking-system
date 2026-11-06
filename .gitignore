@@ -36,6 +36,7 @@ build/
 .env
 .env.*
 !.env.example
+run-backend.local.bat
 backend/src/main/resources/application-local.yaml
 backend/src/main/resources/application-secret*.yaml
 
