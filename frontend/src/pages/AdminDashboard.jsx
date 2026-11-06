@@ -285,7 +285,7 @@ export default function AdminDashboard() {
   const fetchVouchers = useCallback(async () => {
     setLoadingVouchers(true);
     try {
-      const res = await movieApi.getAllVouchers();
+      const res = await adminApi.getAllVouchers();
       const raw = res?.data?.data ?? res?.data;
       setVouchersList(Array.isArray(raw) ? raw : []);
     } catch {

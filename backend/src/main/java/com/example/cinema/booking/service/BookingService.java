@@ -81,6 +81,10 @@ public class BookingService {
         User user = userRepository.findByEmailForUpdate(userEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
         long pendingCount = bookingRepository.countByUserIdAndStatusAndExpiresAtAfter(
                 user.getId(), BookingStatus.PENDING_PAYMENT, now);
         if (pendingCount >= bookingProperties.getMaxPendingPerUser()) {
@@ -205,6 +209,9 @@ public class BookingService {
         long finalAmount = subtotalAmount - discountAmount;
         LocalDateTime expiresAt = now.plusMinutes(bookingProperties.getHoldMinutes());
 
+        BookingStatus initialStatus = (finalAmount == 0L) ? BookingStatus.CONFIRMED : BookingStatus.PENDING_PAYMENT;
+        ShowtimeSeatStatus seatStatus = (finalAmount == 0L) ? ShowtimeSeatStatus.BOOKED : ShowtimeSeatStatus.HELD;
+
         Booking booking = Booking.builder()
                 .bookingCode(generateUniqueBookingCode())
                 .user(user)
@@ -213,7 +220,7 @@ public class BookingService {
                 .subtotalAmount(subtotalAmount)
                 .discountAmount(discountAmount)
                 .finalAmount(finalAmount)
-                .status(BookingStatus.PENDING_PAYMENT)
+                .status(initialStatus)
                 .expiresAt(expiresAt)
                 .build();
 
@@ -221,11 +228,14 @@ public class BookingService {
 
         if (appliedVoucher != null) {
             voucherService.createReservedRedemption(appliedVoucher, user, savedBooking, discountAmount);
+            if (finalAmount == 0L) {
+                voucherService.confirmVoucherIfPresent(savedBooking);
+            }
         }
 
         List<BookingItem> bookingItems = new ArrayList<>(requestedSeats.size());
         for (ShowtimeSeat seat : requestedSeats) {
-            seat.setStatus(ShowtimeSeatStatus.HELD);
+            seat.setStatus(seatStatus);
             seat.setHeldByBookingId(savedBooking.getId());
 
             bookingItems.add(BookingItem.builder()

@@ -34,8 +34,8 @@ Qua quá trình quét toàn bộ cây thư mục trong `movie-theater-booking-sy
 |---|---|---|---|
 | **FA-01** | 🔴 CRITICAL | Sửa `MovieTheaterBookingSystemApplicationTests` kế thừa `AbstractMySqlIT` để GitHub CI xanh `2/2` | `DONE` |
 | **FA-02** | 🟠 HIGH | Bổ sung 5 bài test đồng thời còn thiếu (`PendingCapConcurrencyIT`, `VoucherLimitConcurrencyIT`, `IpnVsCancelShowtimeIT`, `CancelConfirmedVsCancelShowtimeIT`, `LockWaitTimeoutIT`) | `DONE` |
-| **FA-03** | 🟠 HIGH | Kiểm tra `user.isActive` trong Security Filter, cấu hình Hikari `connection-timeout: 10000` & chuẩn hóa cấu hình (`G4-08`) | `TODO` |
-| **FA-04** | 🟠 HIGH | `G4-03`: Tách API Voucher Public vs Admin, khóa Voucher cuối chuỗi và tự động xác nhận đơn $0\text{ đ}$ (`finalAmount == 0`) | `TODO` |
+| **FA-03** | 🟠 HIGH | Kiểm tra `user.isActive` trong Security Filter, cấu hình Hikari `connection-timeout: 10000` & chuẩn hóa cấu hình (`G4-08`) | `DONE` |
+| **FA-04** | 🟠 HIGH | `G4-03`: Tách API Voucher Public vs Admin, khóa Voucher cuối chuỗi và tự động xác nhận đơn $0\text{ đ}$ (`finalAmount == 0`) | `DONE` |
 | **G4-04** | 🟡 MEDIUM | Tự động làm mới sơ đồ ghế định kỳ mỗi $8\text{ giây}$ (`useSeatMapPolling.js`) | `TODO` |
 | **G4-05** | 🟡 MEDIUM | Lọc tham số `vnp_*` khi băm chữ ký VNPay & thêm trạng thái `processing` trên `PaymentResult.jsx` | `TODO` |
 | **G4-06** | 🟡 MEDIUM | Luồng *"Modify Selected Seats"* hủy đơn `PENDING_PAYMENT` trước khi quay về trang chọn ghế | `TODO` |

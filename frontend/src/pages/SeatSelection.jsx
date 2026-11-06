@@ -319,8 +319,13 @@ export default function SeatSelection() {
       const bookingData = res?.data?.data ?? res?.data;
 
       if (bookingData?.id) {
-        // Direct to payment checkout page
-        navigate(`/payment/${bookingData.id}`);
+        if (bookingData?.status === 'CONFIRMED' || bookingData?.finalAmount === 0) {
+          showToast('Booking placed successfully (100% Free Discount)!', 'success');
+          navigate('/my-bookings');
+        } else {
+          // Direct to payment checkout page
+          navigate(`/payment/${bookingData.id}`);
+        }
       }
     } catch (err) {
       const resData = err.response?.data;

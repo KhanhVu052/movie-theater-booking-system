@@ -31,8 +31,14 @@ public class VoucherController {
     VoucherService voucherService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<VoucherResponse>>> getAllVouchers() {
-        return ResponseEntity.ok(ApiResponse.success(voucherService.getAllVouchers()));
+    public ResponseEntity<ApiResponse<List<VoucherResponse>>> getPublicVouchers() {
+        return ResponseEntity.ok(ApiResponse.success(voucherService.getPublicVouchers()));
+    }
+
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<VoucherResponse>>> getAllVouchersForAdmin() {
+        return ResponseEntity.ok(ApiResponse.success(voucherService.getAllVouchersForAdmin()));
     }
 
     @GetMapping("/code/{code}")

@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login").permitAll()
+                        .requestMatchers("/api/v1/vouchers/admin/**").hasRole("ADMIN")
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/genres/**",
@@ -50,7 +51,8 @@ public class SecurityConfig {
                                 "/api/v1/cinemas/**",
                                 "/api/v1/rooms/**",
                                 "/api/v1/showtimes/**",
-                                "/api/v1/vouchers/**",
+                                "/api/v1/vouchers",
+                                "/api/v1/vouchers/code/**",
                                 "/api/v1/payments/vnpay-return",
                                 "/api/v1/payments/vnpay-ipn"
                         ).permitAll()

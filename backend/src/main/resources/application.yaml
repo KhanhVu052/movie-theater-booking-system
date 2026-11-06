@@ -12,6 +12,10 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       connection-init-sql: SET SESSION innodb_lock_wait_timeout = 5
+      connection-timeout: 10000
+
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
 
   jpa:
     hibernate:

@@ -28,4 +28,14 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")})
     @Query("SELECT v FROM Voucher v WHERE v.id = :id")
     Optional<Voucher> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("""
+            SELECT v FROM Voucher v
+            WHERE v.isActive = true
+              AND v.startAt <= :now
+              AND v.endAt >= :now
+              AND (v.usageLimit IS NULL OR (v.reservedCount + v.usedCount) < v.usageLimit)
+            ORDER BY v.createdAt DESC
+            """)
+    List<Voucher> findPublicVouchers(@Param("now") LocalDateTime now);
 }

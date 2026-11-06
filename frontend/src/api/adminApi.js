@@ -30,6 +30,10 @@ export const adminApi = {
   },
 
   // Voucher administration
+  getAllVouchers: () => {
+    return axiosClient.get('/vouchers/admin');
+  },
+
   createVoucher: (data) => {
     return axiosClient.post('/vouchers', data);
   },

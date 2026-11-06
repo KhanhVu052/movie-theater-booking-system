@@ -51,10 +51,23 @@ public class VoucherService {
     }
 
     @Transactional(readOnly = true)
-    public List<VoucherResponse> getAllVouchers() {
+    public List<VoucherResponse> getPublicVouchers() {
+        LocalDateTime now = LocalDateTime.now();
+        return voucherRepository.findPublicVouchers(now).stream()
+                .map(voucherMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<VoucherResponse> getAllVouchersForAdmin() {
         return voucherRepository.findAll().stream()
                 .map(voucherMapper::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<VoucherResponse> getAllVouchers() {
+        return getAllVouchersForAdmin();
     }
 
     @Transactional(readOnly = true)
