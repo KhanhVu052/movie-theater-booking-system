@@ -50,3 +50,4 @@ backend/src/main/resources/application-secret*.yaml
 data-seed/*.jsonl
 
 repomix-output.xml
+*.zip

@@ -44,13 +44,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.cinema.common.AbstractMySqlIT;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-public class RoomSeatOperationIntegrationTest {
+public class RoomSeatOperationIntegrationTest extends AbstractMySqlIT {
 
     @Autowired
     RoomService roomService;

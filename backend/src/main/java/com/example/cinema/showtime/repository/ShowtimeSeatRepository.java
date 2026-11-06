@@ -46,11 +46,25 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
     List<Long> findIdsByHeldByBookingIdIn(@Param("bookingIds") Collection<Long> bookingIds);
 
 
+    @Query("SELECT DISTINCT ss.seat.rowName FROM ShowtimeSeat ss WHERE ss.showtime.id = :sid AND ss.id IN :ids")
+    Set<String> findRowNamesByIds(@Param("sid") Long showtimeId, @Param("ids") Collection<Long> ids);
+
+    @Query("SELECT ss.id FROM ShowtimeSeat ss WHERE ss.showtime.id = :sid AND ss.seat.rowName IN :rows ORDER BY ss.id ASC")
+    List<Long> findIdsByShowtimeAndRows(@Param("sid") Long showtimeId, @Param("rows") Collection<String> rows);
+
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE ShowtimeSeat ss
+            SET ss.price = :price
+            WHERE ss.id = :id
+              AND ss.status = com.example.cinema.showtime.enums.ShowtimeSeatStatus.AVAILABLE
+            """)
+    int repriceIfAvailable(@Param("id") Long id, @Param("price") long price);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")})
     @Query("""
             SELECT ss FROM ShowtimeSeat ss
-            JOIN FETCH ss.seat
             WHERE ss.id IN :seatIds
             ORDER BY ss.id ASC
             """)

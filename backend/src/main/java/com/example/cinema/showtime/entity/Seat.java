@@ -31,6 +31,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@org.hibernate.annotations.BatchSize(size = 50)
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class Seat {
 

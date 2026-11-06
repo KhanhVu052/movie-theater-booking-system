@@ -58,5 +58,5 @@ jobs:
       - name: Grant Execute Permission to Maven Wrapper
         run: chmod +x mvnw
 
-      - name: Compile and Package Spring Boot Application
-        run: ./mvnw clean package -DskipTests
+      - name: Build and Verify Spring Boot Application
+        run: ./mvnw -B verify

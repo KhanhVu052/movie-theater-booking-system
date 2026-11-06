@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 3.2)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 3.3)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -102,7 +102,11 @@ RESERVED, USED, RELEASED
 1. Khóa bảng users: PESSIMISTIC_WRITE (chỉ trong createBooking, luôn khóa đầu tiên để kiểm tra hạn mức đơn chờ và chống đặt vé đồng thời trên cùng tài khoản).
 2. Khóa bảng showtimes: PESSIMISTIC_WRITE (khi Hủy suất chiếu) hoặc PESSIMISTIC_READ / FOR SHARE (khi tạo đơn đặt vé createBooking để ngăn chặn chèn booking đồng thời trong khi đang hủy).
 3. Khóa bảng bookings (SELECT ... FOR UPDATE theo thứ tự id ASC).
-4. Khóa bảng showtime_seats (SELECT ... FOR UPDATE theo thứ tự id ASC).
+4. Khóa bảng showtime_seats (SELECT ... FOR UPDATE theo thứ tự id ASC). Bất biến cốt tử (AF-01, AF-12):
+   - Tuyệt đối không nạp trước entity `ShowtimeSeat` vào Hibernate Persistence Context (L1 Cache) trước khi thực thi `FOR UPDATE` (sử dụng các câu truy vấn scalar projection như `findRowNamesByIds`, `findIdsByShowtimeAndRows`).
+   - Khóa toàn bộ ghế thuộc các hàng liên quan trong **đúng một** câu lệnh duy nhất `findByIdsForUpdateOrderByIdAsc` theo thứ tự `id ASC`.
+   - Câu lệnh `findByIdsForUpdateOrderByIdAsc` không sử dụng `JOIN FETCH ss.seat` để MySQL InnoDB chỉ đặt khóa độc quyền trên bảng `showtime_seats`, không khóa lan sang bảng vật lý `seats`. Entity `Seat` được gắn `@BatchSize(size = 50)` để chống N+1.
+   - Giải phóng các đơn hết hạn trước khi chạy các validator (ghế đôi `validateCoupleSeats`, ghế lẻ `validateOrphanSeats`) trên tập ghế đã khóa an toàn (`lockedRowSeats`).
 5. Khóa bảng vouchers (SELECT ... FOR UPDATE).
 Do InnoDB vẫn có thể phát sinh Deadlock trên các index phụ hoặc gap lock, tầng Service bắt buộc cấu hình bắt lỗi CannotAcquireLockException / DeadlockLoserDataAccessException để tự động rollback và retry tối đa 2 lần (đối với IPN và tác vụ nền) hoặc trả về mã 409 Conflict rõ ràng cho người dùng.
 5. Đặc tả Yêu cầu Chức năng (FR) & Phi chức năng (NFR)
@@ -206,17 +210,18 @@ Hệ thống tính toán giá vé theo ma trận phụ thu và giảm giá độ
   - Giao diện `SeatSelection` hiển thị các badge trực quan theo đúng lịch chiếu ("Cuối tuần (+15k)", "Ưu đãi suất sớm (-10k)", "Giờ vàng (+10k)") và bảng chú thích giá (Legend) phản ánh đúng giá vé động.
 
 FR-BOOK-02
-Giữ ghế đồng thời & Thu hồi có điều kiện
+Giữ ghế đồng thời & Thu hồi có điều kiện (Khóa trước, Validate sau - AF-01, AF-12)
 Khách chọn từ 1–8 ghế trong cùng một showtime_id. Trong Transaction:
 
-1. Nếu có ghế đang HELD bởi booking cũ đã quá hạn (expires_at < NOW()), hệ thống khóa booking cũ, chuyển booking cũ sang EXPIRED, nhả voucher của booking cũ (nếu có) và đưa các ghế thuộc booking cũ về AVAILABLE.
+1. Xác định danh sách hàng (`rows`) chứa các ghế cần đặt và lấy ID toàn bộ ghế trong các hàng đó (`rowSeatIds`) bằng scalar projection (tuyệt đối không nạp trước entity `ShowtimeSeat` vào Persistence Context để tránh stale snapshot dưới mức cô lập MySQL REPEATABLE READ).
+2. Tìm và khóa các `bookings` đã quá hạn (`expires_at < NOW()`) đang giữ ghế trong các hàng liên quan theo thứ tự `id ASC`.
+3. Khóa toàn bộ các ghế thuộc các hàng liên quan và các ghế thuộc đơn hết hạn trong **đúng một** câu lệnh duy nhất `findByIdsForUpdateOrderByIdAsc` theo thứ tự `id ASC` (chỉ khóa bảng `showtime_seats`, không `JOIN FETCH seats` để tránh khóa lan).
+4. Thu hồi các đơn hết hạn đã khóa (chuyển sang `EXPIRED`, nhả voucher, đưa ghế về `AVAILABLE`).
+5. Thực hiện validate ghế đôi (`FR-SEAT-02`) và luật ghế lẻ (`FR-BOOK-01`) trên danh sách ghế đã được khóa và giải phóng an toàn (`lockedRowSeats`).
+6. Kiểm tra toàn bộ ghế khách yêu cầu đều `AVAILABLE` và `is_active = true`, tạo bookings (PENDING_PAYMENT, expires_at = NOW() + 10 phút), lưu cứng giá vé vào booking_items và cập nhật ghế sang HELD.
+   • Lỗi: Bất kỳ ghế nào đang BOOKED, đang HELD (còn hạn), không thuộc showtime_id yêu cầu, hoặc ghế vật lý bị vô hiệu hóa (is_active = false) -> Rollback toàn bộ và trả về 409 Conflict (mã 1504: SEAT_NOT_AVAILABLE); Khách hàng đã đạt giới hạn tối đa 2 đơn chờ thanh toán (max-pending-per-user) -> 429 Too Many Requests (mã 1507); Vi phạm luật ghế lẻ -> 400 Bad Request (mã 1509); Vi phạm quy tắc ghế đôi -> 400 Bad Request (mã 1510).
 
-2. Sắp xếp showtime_seat_id tăng dần và khóa FOR UPDATE kèm điều kiện showtime_id.
-
-3. Nếu tất cả ghế đều AVAILABLE, tạo bookings (PENDING_PAYMENT, expires_at = NOW() + 10 phút), lưu cứng giá vé vào booking_items và cập nhật ghế sang HELD.
-   • Lỗi: Bất kỳ ghế nào đang BOOKED, đang HELD (còn hạn), không thuộc showtime_id yêu cầu, hoặc ghế vật lý bị vô hiệu hóa (is_active = false) -> Rollback toàn bộ và trả về 409 Conflict (mã 1504: SEAT_NOT_AVAILABLE); Khách hàng đã đạt giới hạn tối đa 2 đơn chờ thanh toán (max-pending-per-user) -> 429 Too Many Requests (mã 1507).
-
-• Nghiệm thu: 50 request đồng thời cùng giữ ghế A1 của suất chiếu S1 -> Đúng 1 booking được tạo, 49 request nhận 409 Conflict. Ghế có is_active = false không thể đặt và hiển thị vô hiệu hóa trên sơ đồ ghế. Đổi loại ghế vật lý tự động cập nhật lại giá cho các suất chiếu SCHEDULED tương lai ở trạng thái AVAILABLE.
+• Nghiệm thu: 50 request đồng thời cùng giữ ghế A1 của suất chiếu S1 -> Đúng 1 booking được tạo, 49 request nhận 409 Conflict. Đổi loại ghế vật lý cập nhật giá suất tương lai nguyên tử (repriceIfAvailable) không ghi đè ghế đang HELD. Hàng có đơn hết hạn đang chiếm ghế được tự động giải phóng trước khi validate, cho phép khách mới đặt thành công không báo lỗi ghế lẻ hay ghế đã chiếm.
 FR-BOOK-03
 Giải phóng tự động đơn giữ ghế quá hạn
 Tác vụ nền (@Scheduled chạy mỗi 30 giây) tìm các đơn PENDING_PAYMENT có expires_at < NOW(). Với từng đơn, khóa theo thứ tự bookings  showtime_seats  vouchers, chuyển đơn sang EXPIRED, giải phóng các ghế đang gắn với held_by_booking_id = booking.id về AVAILABLE, và chuyển voucher_redemptions sang RELEASED (giảm reserved_count).
@@ -1030,12 +1035,18 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    IT-02 (Thu hồi ghế quá hạn an toàn): Đơn A hết hạn lúc 12:10:00 nhưng Scheduler chưa chạy; lúc 12:10:01 Khách B bấm giữ ghế đó  Đơn A tự động chuyển sang EXPIRED và Khách B giữ ghế thành công.
    IT-03 (VNPay IPN gọi lặp - Idempotency): Gửi cùng một bản tin IPN thành công 5 lần liên tiếp cho 1 giao dịch  Hệ thống chỉ xác nhận lần đầu, 4 lần sau không phát sinh lỗi hay thay đổi dữ liệu.
    IT-04 (Thanh toán muộn mất ghế & Thanh toán trùng 2 lần): Khi IPN báo thành công nhưng ghế đã thuộc về khách hàng khác (hoặc đơn đã được xác nhận bởi attempt trước đó)  Bản ghi payments chuyển sang SUCCESS kèm refund_status = 'REFUND_REQUIRED', không ghi đè quyền sở hữu ghế.
-   7.3. Trạng thái Triển khai so với Kế hoạch (cập nhật v2.4)
+   7.3. Trạng thái Triển khai so với Kế hoạch (cập nhật v3.3)
    Mục này ghi lại phần nào của kế hoạch ở trên đã làm và chưa làm, để tài liệu khớp với mã nguồn hiện tại.
-   Đã triển khai: Auth/JWT, Movie, Showtime (chống trùng lịch + 15 phút dọn phòng, hủy suất chiếu & điều phối hoàn tiền tự động FR-SHOW-02), Booking (giữ ghế 10 phút bằng Pessimistic Lock, scheduler thu hồi mỗi 30 giây), Payment (VNPay Sandbox, IPN idempotent, TH1/TH2/TH3, hoàn tiền thủ công), Voucher, Review, Báo cáo doanh thu, Docker Compose (MySQL); bộ Integration Test backend cho quy trình suất chiếu (ShowtimeWorkflowIntegrationTest với 5 ca kiểm thử cô lập); bộ Unit/Integration Test frontend (Vitest) cho các quy tắc giao diện và lọc suất chiếu; Script QA kiểm thử tích hợp giao diện quản trị (scripts/test-admin-suite.js).
-   Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
+   Đã triển khai: Auth/JWT, Movie, Showtime (chống trùng lịch + 15 phút dọn phòng, hủy suất chiếu & điều phối hoàn tiền tự động FR-SHOW-02), Booking (giữ ghế 10 phút bằng Pessimistic Lock, scheduler thu hồi mỗi 30 giây), Payment (VNPay Sandbox, IPN idempotent, TH1/TH2/TH3, hoàn tiền thủ công), Voucher, Review, Báo cáo doanh thu, Docker Compose (MySQL); bộ Integration Test backend (12 test suites, bao gồm kiểm thử đồng thời đa luồng qua Testcontainers MySQL 8 và AbstractMySqlIT: IT-01 SeatHoldingConcurrencyIT, OrphanSeatConcurrencyIT, SeatTypeChangeVsHoldIT); CI GitHub Actions chạy verify toàn diện (`./mvnw -B verify`); bộ Unit/Integration Test frontend (Vitest, 10 suites / 55 tests); Script QA kiểm thử tích hợp giao diện quản trị (scripts/test-admin-suite.js).
+   Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI.
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 3.3 (2026-11-06):
+  + Bổ sung AF-07, AF-01, AF-12, AF-03: Triển khai hạ tầng kiểm thử đồng thời (Testcontainers MySQL 8, AbstractMySqlIT) và bật `./mvnw -B verify` trên CI GitHub Actions (NFR-CONC-01).
+  + Chuẩn hóa quy trình giữ ghế createBooking (FR-BOOK-02 & Mục 4.4): Đảo thứ tự khóa trước rồi mới validate (tránh stale snapshot trên MySQL REPEATABLE READ); dùng scalar projection (findRowNamesByIds, findIdsByShowtimeAndRows) để không nạp ShowtimeSeat vào L1 Cache trước khi khóa; khóa toàn bộ ghế trong các hàng liên quan trong một câu lệnh duy nhất ORDER BY id ASC.
+  + Tối ưu câu lệnh khóa ghế (AF-12): Loại bỏ JOIN FETCH ss.seat khỏi findByIdsForUpdateOrderByIdAsc để chỉ khóa bảng showtime_seats, không khóa lan sang bảng vật lý seats; bổ sung @BatchSize(size = 50) trên entity Seat.
+  + Sửa lỗi ghi đè trạng thái ghế đang giữ trong RoomService (AF-03): Thay thế saveAll bằng câu lệnh cập nhật có điều kiện nguyên tử repriceIfAvailable chỉ cập nhật giá khi ghế còn ở trạng thái AVAILABLE.
+  + Bổ sung 3 bộ kiểm thử đồng thời đa luồng: SeatHoldingConcurrencyIT (50 luồng), OrphanSeatConcurrencyIT (2 luồng race condition), SeatTypeChangeVsHoldIT (Admin đổi loại ghế vs User giữ ghế).
 - Phiên bản 3.2 (2026-11-06):
   + Bổ sung G3-03 & FR-PRICE-01: Chính sách ma trận định giá tự động theo ngày, giờ và loại ghế (Pricing Policy Matrix) qua PricingProperties (app.pricing) và PricingService theo Quyết định D-05 [ĐÃ CHỐT].
   + Cấu hình ma trận: chuẩn cơ sở 60k, phụ thu VIP +15k, phụ thu ghế đôi +10k/ghế, phụ thu cuối tuần (T7-CN) +15k, ưu đãi suất sớm (trước 12:00) -10k, phụ thu giờ vàng (18:00-22:00) +10k, sàn giá tối thiểu 40k.

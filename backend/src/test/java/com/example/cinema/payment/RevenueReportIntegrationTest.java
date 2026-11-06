@@ -49,12 +49,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.cinema.common.AbstractMySqlIT;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-public class RevenueReportIntegrationTest {
+public class RevenueReportIntegrationTest extends AbstractMySqlIT {
 
     @Autowired
     PaymentService paymentService;

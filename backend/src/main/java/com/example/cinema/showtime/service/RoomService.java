@@ -117,11 +117,10 @@ public class RoomService {
         for (Seat seat : seats) {
             if (request.type() != null && request.type() != seat.getType()) {
                 seat.setType(request.type());
-                List<ShowtimeSeat> futureAvailableSeats = showtimeSeatRepository.findFutureAvailableBySeatId(seat.getId(), now);
-                for (ShowtimeSeat ss : futureAvailableSeats) {
-                    ss.setPrice(pricingService.calculateSeatPrice(ss.getShowtime(), request.type()));
+                for (ShowtimeSeat ss : showtimeSeatRepository.findFutureAvailableBySeatId(seat.getId(), now)) {
+                    long newPrice = pricingService.calculateSeatPrice(ss.getShowtime(), request.type());
+                    showtimeSeatRepository.repriceIfAvailable(ss.getId(), newPrice);
                 }
-                showtimeSeatRepository.saveAll(futureAvailableSeats);
             }
             if (request.isActive() != null) {
                 seat.setIsActive(request.isActive());

@@ -57,13 +57,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.cinema.common.AbstractMySqlIT;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-public class BookingRefundWindowIntegrationTest {
+public class BookingRefundWindowIntegrationTest extends AbstractMySqlIT {
 
     @Autowired
     BookingService bookingService;

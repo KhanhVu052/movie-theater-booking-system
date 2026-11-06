@@ -42,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -103,26 +104,29 @@ public class BookingService {
             throw new AppException(ErrorCode.SHOWTIME_NOT_AVAILABLE_FOR_BOOKING);
         }
 
-        List<ShowtimeSeat> allSeatsInShowtime = showtimeSeatRepository
-                .findByShowtimeIdOrderBySeatRowNameAscSeatSeatNumberAsc(showtime.getId());
-
-        // Validate couple seats integrity (must book whole pair)
-        seatSelectionValidator.validateCoupleSeats(allSeatsInShowtime, uniqueRequestedSeatIds);
-
-        if (bookingProperties.isOrphanSeatRuleEnabled()) {
-            seatSelectionValidator.validateOrphanSeats(allSeatsInShowtime, uniqueRequestedSeatIds);
+        // LƯU Ý BẤT BIẾN (AF-01): KHÔNG nạp entity ShowtimeSeat trước khi khóa FOR UPDATE để tránh Hibernate L1 Cache stale snapshot!
+        Set<String> rows = showtimeSeatRepository.findRowNamesByIds(showtime.getId(), uniqueRequestedSeatIds);
+        if (rows.isEmpty()) {
+            throw new AppException(ErrorCode.SEAT_SELECTION_INVALID);
         }
 
-        List<Long> expiredBookingIds = bookingRepository.findExpiredBookingIdsHoldingSeats(uniqueRequestedSeatIds, now);
-        List<Booking> lockedExpiredBookings = List.of();
-        Set<Long> allSeatIdsToLock = new TreeSet<>(uniqueRequestedSeatIds);
+        List<Long> rowSeatIds = showtimeSeatRepository.findIdsByShowtimeAndRows(showtime.getId(), rows); // Đã ORDER BY id ASC
+        if (!new HashSet<>(rowSeatIds).containsAll(uniqueRequestedSeatIds)) {
+            throw new AppException(ErrorCode.SEAT_SELECTION_INVALID); // Có ghế không thuộc suất chiếu này
+        }
 
+        // Tìm các booking đã hết hạn đang giữ ghế trong các hàng liên quan
+        List<Long> expiredBookingIds = bookingRepository.findExpiredBookingIdsHoldingSeats(rowSeatIds, now);
+        List<Booking> lockedExpiredBookings = expiredBookingIds.isEmpty()
+                ? List.of()
+                : bookingRepository.findByIdsForUpdateOrderByIdAsc(expiredBookingIds); // Khóa bookings theo thứ tự ID tăng dần
+
+        Set<Long> allSeatIdsToLock = new TreeSet<>(rowSeatIds);
         if (!expiredBookingIds.isEmpty()) {
-            lockedExpiredBookings = bookingRepository.findByIdsForUpdateOrderByIdAsc(expiredBookingIds);
-            List<Long> expiredBookingSeatIds = showtimeSeatRepository.findIdsByHeldByBookingIdIn(expiredBookingIds);
-            allSeatIdsToLock.addAll(expiredBookingSeatIds);
+            allSeatIdsToLock.addAll(showtimeSeatRepository.findIdsByHeldByBookingIdIn(expiredBookingIds));
         }
 
+        // Khóa toàn bộ ShowtimeSeat liên quan trong ĐÚNG MỘT câu lệnh theo thứ tự ID tăng dần
         List<ShowtimeSeat> allLockedSeats = showtimeSeatRepository.findByIdsForUpdateOrderByIdAsc(allSeatIdsToLock);
 
         if (!lockedExpiredBookings.isEmpty()) {
@@ -152,6 +156,19 @@ public class BookingService {
                     }
                 }
             }
+        }
+
+        // Lọc ra danh sách ghế thuộc các hàng mà khách chọn (đã được khóa và giải phóng hold hết hạn)
+        List<ShowtimeSeat> lockedRowSeats = allLockedSeats.stream()
+                .filter(ss -> rows.contains(ss.getSeat().getRowName()))
+                .sorted(Comparator.comparing((ShowtimeSeat ss) -> ss.getSeat().getRowName())
+                        .thenComparing(ss -> ss.getSeat().getSeatNumber()))
+                .toList();
+
+        // Validate ghế đôi và ghế lẻ trên dữ liệu đã khóa an toàn
+        seatSelectionValidator.validateCoupleSeats(lockedRowSeats, uniqueRequestedSeatIds);
+        if (bookingProperties.isOrphanSeatRuleEnabled()) {
+            seatSelectionValidator.validateOrphanSeats(lockedRowSeats, uniqueRequestedSeatIds);
         }
 
         Map<Long, ShowtimeSeat> lockedSeatMap = allLockedSeats.stream()

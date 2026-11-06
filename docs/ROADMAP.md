@@ -58,6 +58,10 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | R-09 | Xoá `[cite: …]` trong SRS | P0 | DONE |
 | R-10 | README: hướng dẫn chạy test, biến môi trường cho DB test | P0 | DONE |
 | AF-02 | `run-backend.bat`: xóa secret cứng, nạp cấu hình từ `.env` | P0 | DONE |
+| AF-01 | `createBooking`: Khóa trước, validate sau (chống stale snapshot) | P0 | DONE |
+| AF-03 | `RoomService.batchUpdateSeats`: repriceIfAvailable chống ghi đè ghế HELD | P1 | DONE |
+| AF-07 | Testcontainers + test đồng thời + CI verify (AUDIT_FIXES.md) | P1 | DONE |
+| AF-12 | `ShowtimeSeatRepository`: Bỏ JOIN FETCH khỏi FOR UPDATE, @BatchSize Seat | P1 | DONE |
 | G2-01 | Giới hạn số đơn chờ thanh toán / user | P1 | DONE |
 | G2-02 | Ghế/phòng không hoạt động: chặn bán + cập nhật giá | P1 | DONE |
 | G2-03 | Hạn chót đặt vé + lọc suất chiếu còn bán | P1 | DONE |
@@ -76,7 +80,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | G4-07 | Bảo mật đăng nhập (throttle, mật khẩu ≥ 8) | P3 | BLOCKED (D-06 một phần) |
 | G4-08 | Kiểm chứng và sửa cấu hình hạ tầng | P3 | TODO |
 | G4-09 | Hiệu năng và dọn dẹp (N+1, page size, `Clock`, audit hoàn tiền) | P3 | TODO |
-| G4-10 | Testcontainers + test đồng thời + CI chạy test | P3 | TODO |
+| G4-10 | Testcontainers + test đồng thời + CI chạy test (AF-07) | P3 | DONE |
 | G4-11 | Hoàn thiện tài liệu | P3 | TODO |
 
 **Thứ tự đề xuất:** Phase 0 → G2-01, G2-02, G2-03, G2-06 → (sau khi chốt D-03) G2-04 → (D-05) G3-03 → G3-01 → (D-01/D-02) G3-02 → G2-05 → Nhóm 4. Mỗi task chức năng phải kèm test của nó; G4-10 là hạ tầng test dùng chung và có thể làm sớm hơn nếu muốn.

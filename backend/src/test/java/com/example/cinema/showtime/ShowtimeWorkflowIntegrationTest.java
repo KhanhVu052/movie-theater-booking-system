@@ -54,13 +54,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.example.cinema.common.AbstractMySqlIT;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class ShowtimeWorkflowIntegrationTest {
+class ShowtimeWorkflowIntegrationTest extends AbstractMySqlIT {
 
     @Autowired
     ShowtimeService showtimeService;
