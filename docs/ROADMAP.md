@@ -60,7 +60,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 | G2-01 | Giới hạn số đơn chờ thanh toán / user | P1 | DONE |
 | G2-02 | Ghế/phòng không hoạt động: chặn bán + cập nhật giá | P1 | DONE |
 | G2-03 | Hạn chót đặt vé + lọc suất chiếu còn bán | P1 | DONE |
-| G2-04 | Phim `ENDED` không còn bán được | P1 | BLOCKED (D-03) |
+| G2-04 | Phim `ENDED` không còn bán được | P1 | DONE |
 | G2-05 | Khách tự hủy vé đã thanh toán (cửa sổ hoàn tiền) | P2 | BLOCKED (D-04) |
 | G2-06 | Báo cáo doanh thu: đếm đúng vé và công suất | P1 | TODO |
 | G3-01 | Luật ghế lẻ (orphan seat) | P2 | TODO |
@@ -196,7 +196,7 @@ Trạng thái: `DONE` · `PARTIAL` · `TODO` · `BLOCKED` (chờ quyết định
 - **Test:** suất bắt đầu sau 10 phút → từ chối; sau 20 phút → cho phép; `bookableOnly=true` ẩn suất đã qua mốc.
 - **Tài liệu:** thêm **FR-BOOK-05** "Hạn chót đặt vé"; cập nhật mô tả `GET /showtimes`.
 
-### G2-04 — Phim `ENDED` (BLOCKED bởi D-03)
+### G2-04 — Phim `ENDED` (DONE)
 - **ĐỌC TRƯỚC:** `movie/service/MovieService.discontinueMovie`, `ShowtimeService.createShowtime` (đã chặn tạo suất cho phim `ENDED`), `AdminDashboard` (tab Ended).
 - **Bước (theo phương án mặc định "chặn"):**
   1. `ShowtimeRepository.existsByMovieIdAndStatusAndStartTimeAfter(Long movieId, ShowtimeStatus status, LocalDateTime time)`.
@@ -343,7 +343,7 @@ AI **không tự chọn**; chờ người dùng ghi quyết định vào cột "
 |---|---|---|---|
 | D-01 | Sofa đôi là 2 hàng trong bảng `seats` (A) hay 1 hàng (B)? | A nếu sơ đồ phòng vẽ từng ghế riêng | _chưa chốt_ |
 | D-02 | Giá ghế đôi: mỗi ghế = giá cơ sở × 2 (hiện tại) hay mỗi ghế = giá cơ sở (cặp = 2×)? | Mỗi ghế = giá cơ sở × hệ số cấu hình | _chưa chốt_ |
-| D-03 | Kết thúc phim còn suất tương lai: chặn hay tự hủy các suất đó? | Chặn kèm thông báo | _chưa chốt_ |
+| D-03 | Kết thúc phim còn suất tương lai: chặn hay tự hủy các suất đó? | Chặn kèm thông báo | Chặn kèm thông báo (đã chốt) |
 | D-04 | Có cho khách tự hủy vé đã thanh toán không? Hạn chót bao lâu? | Có, trước giờ chiếu 60 phút | _chưa chốt_ |
 | D-05 | Quy tắc giá: phụ thu cuối tuần (Thứ 6–CN hay Thứ 7–CN?), giờ vàng (18:00–22:00?), giảm suất sáng (trước 12:00?) và số tiền | Theo `PricingProperties` mặc định | _chưa chốt_ |
 | D-06 | JWT lưu `localStorage` (hiện tại) hay cookie HttpOnly? | Giữ `localStorage`, ghi rủi ro vào README | _chưa chốt_ |

@@ -15,6 +15,7 @@ import com.example.cinema.booking.repository.BookingRepository;
 import com.example.cinema.common.dto.PageResponse;
 import com.example.cinema.common.exception.AppException;
 import com.example.cinema.common.exception.ErrorCode;
+import com.example.cinema.movie.enums.MovieStatus;
 import com.example.cinema.showtime.entity.Showtime;
 import com.example.cinema.showtime.entity.ShowtimeSeat;
 import com.example.cinema.showtime.enums.ShowtimeSeatStatus;
@@ -90,6 +91,10 @@ public class BookingService {
 
         showtime = showtimeRepository.findDetailById(showtime.getId())
                 .orElse(showtime);
+
+        if (showtime.getMovie() != null && showtime.getMovie().getStatus() == MovieStatus.ENDED) {
+            throw new AppException(ErrorCode.SHOWTIME_NOT_AVAILABLE_FOR_BOOKING);
+        }
 
         List<Long> expiredBookingIds = bookingRepository.findExpiredBookingIdsHoldingSeats(uniqueRequestedSeatIds, now);
         List<Booking> lockedExpiredBookings = List.of();

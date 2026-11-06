@@ -13,6 +13,8 @@ import com.example.cinema.movie.mapper.MovieMapper;
 import com.example.cinema.movie.repository.ActorRepository;
 import com.example.cinema.movie.repository.GenreRepository;
 import com.example.cinema.movie.repository.MovieRepository;
+import com.example.cinema.showtime.enums.ShowtimeStatus;
+import com.example.cinema.showtime.repository.ShowtimeRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -23,6 +25,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +39,7 @@ public class MovieService {
     GenreRepository genreRepository;
     ActorRepository actorRepository;
     MovieMapper movieMapper;
+    ShowtimeRepository showtimeRepository;
 
     @Transactional
     public MovieResponse createMovie(MovieRequest request) {
@@ -74,6 +78,14 @@ public class MovieService {
     @Transactional
     public MovieResponse updateMovie(Long id, MovieRequest request) {
         Movie movie = findMovieByIdOrThrow(id);
+        if (request.status() == MovieStatus.ENDED && movie.getStatus() != MovieStatus.ENDED) {
+            boolean hasFutureShowtimes = showtimeRepository.existsByMovieIdAndStatusAndStartTimeAfter(
+                    id, ShowtimeStatus.SCHEDULED, LocalDateTime.now()
+            );
+            if (hasFutureShowtimes) {
+                throw new AppException(ErrorCode.MOVIE_HAS_FUTURE_SHOWTIMES);
+            }
+        }
         Set<Genre> genres = resolveGenres(request.genreIds());
         Set<Actor> actors = resolveActors(request.actorIds());
 
@@ -85,6 +97,12 @@ public class MovieService {
     @Transactional
     public void discontinueMovie(Long id) {
         Movie movie = findMovieByIdOrThrow(id);
+        boolean hasFutureShowtimes = showtimeRepository.existsByMovieIdAndStatusAndStartTimeAfter(
+                id, ShowtimeStatus.SCHEDULED, LocalDateTime.now()
+        );
+        if (hasFutureShowtimes) {
+            throw new AppException(ErrorCode.MOVIE_HAS_FUTURE_SHOWTIMES);
+        }
         movie.setStatus(MovieStatus.ENDED);
         movieRepository.save(movie);
     }

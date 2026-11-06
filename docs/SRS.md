@@ -1,5 +1,5 @@
 TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS)
-Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.6)
+Tên dự án: Hệ thống Đặt vé Xem phim – Movie Theater Booking System (Phiên bản 2.7)
 1. Giới thiệu Dự án (Introduction)
    1.1. Mục tiêu và Phạm vi
    Dự án là hệ thống đặt vé xem phim dành cho một rạp chiếu duy nhất, cung cấp phân hệ quản trị (Admin) để quản lý phim, phòng chiếu, lịch chiếu, khuyến mãi, doanh thu và phân hệ khách hàng (Customer) để tra cứu phim, chọn ghế, đặt vé, thanh toán qua cổng VNPay Sandbox.
@@ -114,9 +114,9 @@ Do InnoDB vẫn có thể phát sinh Deadlock trên các index phụ hoặc gap 
    FR-SHOW-01
    Tạo suất chiếu & Chống trùng lịch phòng
    Admin tạo suất chiếu cho phim (NOW_SHOWING, COMING_SOON) tại một phòng chiếu. Hệ thống tự tính end_time = start_time + duration_minutes và cleaning_end_time = end_time + 15 phút. Bắt buộc khóa bản ghi rooms (FOR UPDATE), kiểm tra không có suất chiếu SCHEDULED nào trong cùng phòng vi phạm: existing.start_time < new.cleaning_end_time AND new.start_time < existing.cleaning_end_time. Sau khi tạo, tự động khởi tạo danh sách showtime_seats từ các ghế có is_active = true của phòng.
-   • Lỗi: Trùng khung giờ hoặc phòng không hoạt động -> 409 Conflict. Vô hiệu hóa phòng khi còn suất chiếu SCHEDULED trong tương lai -> 409 Conflict (Mã lỗi 1312: ROOM_HAS_FUTURE_SHOWTIMES).
+   • Lỗi: Trùng khung giờ hoặc phòng không hoạt động -> 409 Conflict. Vô hiệu hóa phòng khi còn suất chiếu SCHEDULED trong tương lai -> 409 Conflict (Mã lỗi 1312: ROOM_HAS_FUTURE_SHOWTIMES). Ngừng chiếu phim khi còn suất tương lai -> 409 Conflict (Mã lỗi 1207: MOVIE_HAS_FUTURE_SHOWTIMES).
 
-• Nghiệm thu: 2 Admin gửi request đồng thời xếp 2 suất chiếu giao giờ nhau trong cùng 1 phòng -> Chỉ 1 request thành công. Admin không thể tắt phòng đang có suất chiếu tương lai.
+• Nghiệm thu: 2 Admin gửi request đồng thời xếp 2 suất chiếu giao giờ nhau trong cùng 1 phòng -> Chỉ 1 request thành công. Admin không thể tắt phòng đang có suất chiếu tương lai. Admin không thể ngừng chiếu phim khi còn suất chiếu SCHEDULED trong tương lai; phim ENDED bị chặn đặt vé hoàn toàn.
 FR-SHOW-02
 Hủy suất chiếu & Điều phối hoàn tiền tự động (Showtime Cancellation & Refund Pipeline)
 Admin thực hiện hủy một suất chiếu đang SCHEDULED. Hệ thống tuân thủ nghiêm ngặt thứ tự khóa tài nguyên chống Deadlock (SRS mục 4.4):
@@ -941,6 +941,10 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
    Chưa triển khai: Notification Module và gửi thông báo qua RabbitMQ; Redis caching (Redis hiện chỉ có trong docker-compose, chưa được mã nguồn sử dụng); Swagger/OpenAPI; bộ Integration Test tải/đồng thời cao IT-01 → IT-04 (dự kiến thực hiện ở giai đoạn tiếp theo G4-10).
 
 8. Lịch sử Thay đổi (Changelog)
+- Phiên bản 2.7 (2026-11-06):
+  + Bổ sung G2-04 (FR-SHOW-01): Chặn thao tác kết thúc/ngừng chiếu phim khi còn suất chiếu SCHEDULED trong tương lai (Mã lỗi 1207: MOVIE_HAS_FUTURE_SHOWTIMES) theo Quyết định D-03.
+  + Thêm lớp phòng thủ nhiều tầng trong BookingService.createBooking chặn đặt vé vào suất chiếu thuộc phim có trạng thái ENDED (mã lỗi 1502).
+  + Bổ sung kiểm thử tích hợp MovieDiscontinueIntegrationTest xác thực toàn diện quy trình ngừng chiếu phim.
 - Phiên bản 2.6 (2026-11-06):
   + Bổ sung G2-03 & FR-BOOK-05: Hạn chót đặt vé (cutoff 15 phút trước giờ chiếu, cấu hình app.booking.cutoff-minutes: 15) và cập nhật thông điệp mã lỗi 1502 thành "Showtime is cancelled or the booking window has closed".
   + Bổ sung tham số truy vấn bookableOnly trên endpoint GET /api/v1/showtimes để lọc danh sách suất chiếu còn mở bán cho khách hàng.

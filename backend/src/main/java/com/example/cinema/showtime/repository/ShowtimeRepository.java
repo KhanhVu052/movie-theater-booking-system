@@ -66,4 +66,6 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
     long countByMovieIdAndStartTimeBetween(Long movieId, LocalDateTime start, LocalDateTime end);
 
     boolean existsByRoomIdAndStatusAndStartTimeAfter(Long roomId, ShowtimeStatus status, LocalDateTime time);
+
+    boolean existsByMovieIdAndStatusAndStartTimeAfter(Long movieId, ShowtimeStatus status, LocalDateTime time);
 }

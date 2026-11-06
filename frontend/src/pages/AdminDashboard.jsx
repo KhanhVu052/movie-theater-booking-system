@@ -25,6 +25,7 @@ import {
   Percent,
   Banknote,
   Sparkles,
+  Ban,
 } from 'lucide-react';
 import Navbar, { CinemaBadgeIcon } from '../components/Navbar';
 import CustomDatePicker from '../components/CustomDatePicker';
@@ -434,6 +435,40 @@ export default function AdminDashboard() {
       fetchShowtimes();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to cancel showtime.', 'error');
+    }
+  };
+
+  // Discontinue Movie (G2-04)
+  const handleDiscontinueMovie = async (id, title) => {
+    const confirmed = await confirm({
+      title: 'Ngừng chiếu phim',
+      message: `Bạn có chắc chắn muốn ngừng chiếu phim "${title}"? Trạng thái của phim sẽ được chuyển thành ENDED.`,
+      confirmText: 'Xác nhận ngừng chiếu',
+      cancelText: 'Hủy',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
+
+    try {
+      await adminApi.deleteMovie(id);
+      showToast(`Phim "${title}" đã được chuyển sang trạng thái ENDED.`, 'info');
+      setNotice(`Phim "${title}" đã chuyển sang trạng thái ENDED.`);
+      setTimeout(() => setNotice(''), 4000);
+      fetchMovies();
+    } catch (err) {
+      const resData = err.response?.data;
+      const code = resData?.code;
+      if (code === 1207 || err.response?.status === 409) {
+        const errorMsg = 'Phim vẫn còn các suất chiếu sắp diễn ra. Vui lòng hủy các suất chiếu này trước khi ngừng chiếu phim.';
+        showToast(errorMsg, 'error');
+        setActionError(errorMsg);
+        setTimeout(() => setActionError(''), 5000);
+      } else {
+        const msg = resData?.message || 'Failed to discontinue movie.';
+        showToast(msg, 'error');
+        setActionError(msg);
+        setTimeout(() => setActionError(''), 5000);
+      }
     }
   };
 
@@ -1400,20 +1435,35 @@ export default function AdminDashboard() {
                                 className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                   m.status === 'NOW_SHOWING'
                                     ? 'bg-emerald-950 border border-emerald-700 text-emerald-300'
-                                    : 'bg-amber-950 border border-amber-700 text-amber-300'
+                                    : m.status === 'COMING_SOON'
+                                    ? 'bg-amber-950 border border-amber-700 text-amber-300'
+                                    : 'bg-rose-950 border border-rose-700 text-rose-300'
                                 }`}
                               >
                                 {m.status}
                               </span>
                             </td>
                             <td className="py-3 px-4 text-right">
-                              <Link
-                                to={`/movies/${m.id}`}
-                                className="px-2.5 py-1 rounded bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#ab9a84] hover:text-[#f3cb62] inline-flex items-center gap-1"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>View</span>
-                              </Link>
+                              <div className="flex items-center justify-end gap-2">
+                                <Link
+                                  to={`/movies/${m.id}`}
+                                  className="px-2.5 py-1 rounded bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#ab9a84] hover:text-[#f3cb62] inline-flex items-center gap-1"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>View</span>
+                                </Link>
+                                {m.status !== 'ENDED' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDiscontinueMovie(m.id, m.title)}
+                                    className="px-2.5 py-1 rounded bg-red-950/40 border border-red-800/60 text-xs font-semibold text-red-300 hover:bg-red-900/60 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                    title="Ngừng chiếu phim (chuyển sang ENDED)"
+                                  >
+                                    <Ban className="w-3.5 h-3.5" />
+                                    <span>Ngừng chiếu</span>
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}

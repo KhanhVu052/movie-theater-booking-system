@@ -2,6 +2,7 @@
 
 Định dạng: `YYYY-MM-DD — ID task — Tóm tắt một câu về việc đã làm — SRS mục tương ứng (nếu có)`
 
+- 2026-11-06 — G2-04 — Chặn kết thúc phim khi còn suất tương lai & chặn đặt vé phim đã kết thúc — SRS v2.7 (FR-SHOW-01, FR-BOOK-02)
 - 2026-11-06 — G2-03 — Hạn chót đặt vé 15 phút trước giờ chiếu & lọc suất còn bán — SRS v2.6 (FR-BOOK-05)
 - 2026-11-06 — G2-02 — Ghế/phòng không hoạt động: chặn bán + cập nhật giá suất tương lai — SRS v2.5 (FR-BOOK-02, FR-SHOW-01)
 - 2026-11-06 — G2-01 — Giới hạn số đơn chờ thanh toán tối đa 2 đơn/user — SRS v2.5 (FR-BOOK-04)

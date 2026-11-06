@@ -31,6 +31,7 @@ public enum ErrorCode {
     ACTOR_NOT_FOUND(1204, "One or more actors not found", HttpStatus.NOT_FOUND),
     ACTOR_IN_USE(1205, "Cannot delete actor because they are associated with existing movies", HttpStatus.CONFLICT),
     MOVIE_NOT_FOUND(1206, "Movie not found", HttpStatus.NOT_FOUND),
+    MOVIE_HAS_FUTURE_SHOWTIMES(1207, "Cannot discontinue movie with scheduled future showtimes", HttpStatus.CONFLICT),
 
     // --- Cinema, Room, Seat & Showtime Errors (1300 - 1399) ---
     CINEMA_NOT_FOUND(1301, "Cinema not found", HttpStatus.NOT_FOUND),
