@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { causesOrphanSeat, findOrphanSeatIds } from '../utils/seatGap';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const fixturePath = path.resolve(__dirname, '../../../docs/fixtures/seat-gap-cases.json');
 const fixtureCases = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
