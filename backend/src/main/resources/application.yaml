@@ -13,6 +13,9 @@ spring:
     hikari:
       connection-init-sql: SET SESSION innodb_lock_wait_timeout = 5
       connection-timeout: 10000
+      maximum-pool-size: 20
+      minimum-idle: 5
+      max-lifetime: 1500000
 
   jackson:
     time-zone: Asia/Ho_Chi_Minh
@@ -21,6 +24,7 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true

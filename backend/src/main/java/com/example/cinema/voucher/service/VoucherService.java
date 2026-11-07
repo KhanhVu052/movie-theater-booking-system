@@ -42,7 +42,7 @@ public class VoucherService {
         }
 
         String normalizedCode = request.code().trim().toUpperCase();
-        if (voucherRepository.existsByCodeIgnoreCase(normalizedCode)) {
+        if (voucherRepository.existsByCode(normalizedCode)) {
             throw new AppException(ErrorCode.VOUCHER_CODE_ALREADY_EXISTS);
         }
 
@@ -73,7 +73,8 @@ public class VoucherService {
     @Transactional(readOnly = true)
     public VoucherResponse getVoucherByCode(String code) {
         LocalDateTime now = LocalDateTime.now();
-        Voucher voucher = voucherRepository.findByCodeIgnoreCase(code.trim())
+        String normalizedCode = code.trim().toUpperCase();
+        Voucher voucher = voucherRepository.findByCode(normalizedCode)
                 .filter(x -> Boolean.TRUE.equals(x.getIsActive())
                         && !now.isBefore(x.getStartAt()) && !now.isAfter(x.getEndAt()))
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
@@ -90,7 +91,8 @@ public class VoucherService {
 
     @Transactional
     public Voucher lockAndReserveVoucher(String code, User user, long subtotalAmount, LocalDateTime now) {
-        Voucher voucher = voucherRepository.findByCodeForUpdate(code.trim())
+        String normalizedCode = code.trim().toUpperCase();
+        Voucher voucher = voucherRepository.findByCodeForUpdate(normalizedCode)
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
 
         if (Boolean.FALSE.equals(voucher.getIsActive())) {

@@ -17,13 +17,17 @@ import java.util.Optional;
 @Repository
 public interface VoucherRepository extends JpaRepository<Voucher, Long> {
 
+    boolean existsByCode(String code);
+
+    Optional<Voucher> findByCode(String code);
+
     boolean existsByCodeIgnoreCase(String code);
 
     Optional<Voucher> findByCodeIgnoreCase(String code);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")})
-    @Query("SELECT v FROM Voucher v WHERE UPPER(v.code) = UPPER(:code)")
+    @Query("SELECT v FROM Voucher v WHERE v.code = :code")
     Optional<Voucher> findByCodeForUpdate(@Param("code") String code);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

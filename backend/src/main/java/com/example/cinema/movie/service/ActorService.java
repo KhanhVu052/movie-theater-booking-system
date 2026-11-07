@@ -61,7 +61,9 @@ public class ActorService {
 
     @Transactional
     public void deleteActor(Long id) {
-        Actor actor = findActorByIdOrThrow(id);
+        Actor actor = actorRepository.findByIdForUpdate(id)
+                .filter(a -> Boolean.TRUE.equals(a.getIsActive()))
+                .orElseThrow(() -> new AppException(ErrorCode.ACTOR_NOT_FOUND));
 
         if (movieRepository.existsByActorsId(id)) {
             throw new AppException(ErrorCode.ACTOR_IN_USE);
