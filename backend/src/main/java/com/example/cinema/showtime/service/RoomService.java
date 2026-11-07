@@ -147,11 +147,14 @@ public class RoomService {
             }
         }
 
-        long newPrice = request.type() != null ? pricingService.calculateSeatPrice(null, null, request.type()) : 0L;
         for (Seat seat : seats) {
             if (request.type() != null && request.type() != seat.getType()) {
                 seat.setType(request.type());
-                showtimeSeatRepository.repriceFutureAvailable(seat.getId(), newPrice, now);
+                List<ShowtimeSeat> futureSeats = showtimeSeatRepository.findFutureAvailableBySeatId(seat.getId(), now);
+                for (ShowtimeSeat ss : futureSeats) {
+                    long newPrice = pricingService.calculateSeatPrice(ss.getShowtime(), request.type());
+                    showtimeSeatRepository.repriceIfAvailable(ss.getId(), newPrice);
+                }
             }
             if (request.isActive() != null) {
                 seat.setIsActive(request.isActive());

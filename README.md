@@ -1,7 +1,7 @@
 # 🎬 GoToro Cinema — Movie Theater Booking System
 
 [![CI Pipeline](https://github.com/KhanhVu052/movie-theater-booking-system/actions/workflows/ci.yml/badge.svg)](https://github.com/KhanhVu052/movie-theater-booking-system/actions/workflows/ci.yml)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8.3-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -40,7 +40,7 @@ The application is structured as a **Modular Monolith** combined with a layered 
 
 ```
 movie-theater-booking-system/
-├── backend/                  # Spring Boot 3 + Java 21 REST API
+├── backend/                  # Spring Boot 4 + Java 21 REST API
 │   ├── src/main/java/com/example/cinema/
 │   │   ├── auth/             # JWT Authentication & RBAC (CUSTOMER, ADMIN)
 │   │   ├── movie/            # Movie catalog, genres, cast

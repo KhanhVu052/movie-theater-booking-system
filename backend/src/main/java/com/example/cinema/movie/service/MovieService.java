@@ -116,21 +116,24 @@ public class MovieService {
     }
 
     private Set<Genre> resolveGenres(Set<Long> genreIds) {
-        List<Genre> foundGenres = genreRepository.findAllById(genreIds);
-        if (foundGenres.size() != genreIds.size()) {
+        if (genreIds == null || genreIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+        List<Genre> found = genreRepository.findActiveByIdInForShare(genreIds);
+        if (found.size() != genreIds.size()) {
             throw new AppException(ErrorCode.GENRE_NOT_FOUND);
         }
-        return new LinkedHashSet<>(foundGenres);
+        return new LinkedHashSet<>(found);
     }
 
     private Set<Actor> resolveActors(Set<Long> actorIds) {
         if (actorIds == null || actorIds.isEmpty()) {
             return new LinkedHashSet<>();
         }
-        List<Actor> foundActors = actorRepository.findAllById(actorIds);
-        if (foundActors.size() != actorIds.size()) {
+        List<Actor> found = actorRepository.findActiveByIdInForShare(actorIds);
+        if (found.size() != actorIds.size()) {
             throw new AppException(ErrorCode.ACTOR_NOT_FOUND);
         }
-        return new LinkedHashSet<>(foundActors);
+        return new LinkedHashSet<>(found);
     }
 }

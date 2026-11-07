@@ -56,7 +56,6 @@ public class AuthService {
         return buildAuthResponse(savedUser);
     }
 
-    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request, String ip) {
         String normalizedEmail = request.email().trim().toLowerCase();
         loginAttemptService.checkLoginAllowed(normalizedEmail, ip);
@@ -82,7 +81,6 @@ public class AuthService {
         }
     }
 
-    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         return login(request, "127.0.0.1");
     }

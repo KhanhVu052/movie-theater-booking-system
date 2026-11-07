@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -29,11 +30,16 @@ public class GenreService {
     @Transactional
     public GenreResponse createGenre(GenreRequest request) {
         String normalizedName = request.name().trim();
-
-        if (genreRepository.existsByNameIgnoreCase(normalizedName)) {
-            throw new AppException(ErrorCode.GENRE_ALREADY_EXISTS);
+        Optional<Genre> existing = genreRepository.findByNameIgnoreCase(normalizedName);
+        if (existing.isPresent()) {
+            Genre g = existing.get();
+            if (Boolean.TRUE.equals(g.getIsActive())) {
+                throw new AppException(ErrorCode.GENRE_ALREADY_EXISTS);
+            }
+            g.setName(normalizedName);
+            g.setIsActive(true);
+            return genreMapper.toResponse(genreRepository.save(g));
         }
-
         Genre savedGenre = genreRepository.save(genreMapper.toEntity(request));
         return genreMapper.toResponse(savedGenre);
     }
@@ -66,7 +72,9 @@ public class GenreService {
 
     @Transactional
     public void deleteGenre(Long id) {
-        Genre genre = findGenreByIdOrThrow(id);
+        Genre genre = genreRepository.findByIdForUpdate(id)
+                .filter(g -> Boolean.TRUE.equals(g.getIsActive()))
+                .orElseThrow(() -> new AppException(ErrorCode.GENRE_NOT_FOUND));
 
         if (movieRepository.existsByGenresId(id)) {
             throw new AppException(ErrorCode.GENRE_IN_USE);

@@ -42,6 +42,11 @@ public class AdminSeeder implements CommandLineRunner {
             return;
         }
 
+        if ("ChangeMeAdminPass123!".equals(password.trim())) {
+            log.error("Refusing to create bootstrap admin with the published example password. Please set a custom password.");
+            return;
+        }
+
         User admin = User.builder()
                 .email(email.trim().toLowerCase())
                 .passwordHash(passwordEncoder.encode(password))
