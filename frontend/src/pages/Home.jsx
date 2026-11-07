@@ -134,7 +134,7 @@ export default function Home() {
       setError('');
       try {
         const [moviesRes, cinemasRes, vouchersRes] = await Promise.allSettled([
-          movieApi.getAllMovies({ page: 1, size: 1000 }),
+          movieApi.getAllMovies({ page: 1, size: 100 }),
           movieApi.getAllCinemas(),
           movieApi.getActiveVouchers(),
         ]);
