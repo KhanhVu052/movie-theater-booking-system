@@ -1,3 +1,9 @@
+-- 0. Xóa các bản ghi booking_items liên đới của ghế E5 (nếu có từ test seed)
+DELETE bi FROM booking_items bi
+JOIN showtime_seats ss ON bi.showtime_seat_id = ss.id
+JOIN seats s ON ss.seat_id = s.id
+WHERE s.room_id BETWEEN 2 AND 7 AND s.row_name = 'E' AND s.seat_number = 5;
+
 -- 1. Xóa các bản ghi showtime_seats liên đới của ghế E5
 DELETE ss FROM showtime_seats ss
 JOIN seats s ON ss.seat_id = s.id

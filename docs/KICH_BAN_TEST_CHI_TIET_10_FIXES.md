@@ -1,8 +1,8 @@
 # BỘ KỊCH BẢN KIỂM THỬ TOÀN DIỆN HỆ THỐNG GOTORO CINEMA
-## (TẬP TRUNG KIỂM THỬ 10 BẢN VÁ LỖI & TOÀN BỘ LUỒNG HỆ THỐNG TỪ ĐẦU ĐẾN CUỐI)
+## (TẬP TRUNG KIỂM THỬ 12 BẢN VÁ LỖI & TOÀN BỘ LUỒNG HỆ THỐNG TỪ ĐẦU ĐẾN CUỐI)
 
-> **Nhánh Git kiểm thử:** `test/qa-full-fixes-integrated` *(Đã tích hợp toàn bộ 10 bản vá lỗi)*  
-> **Phiên bản:** QA Master Test Handbook v5.0  
+> **Nhánh Git kiểm thử:** `test/qa-full-fixes-integrated` *(Đã tích hợp toàn bộ 12 bản vá lỗi và tính năng mới)*  
+> **Phiên bản:** QA Master Test Handbook v6.0  
 > **Mục tiêu:** Cung cấp tài liệu kiểm thử chi tiết từng bước (Step-by-step) để Tester mở trực tiếp trên VS Code, tích chọn từng checkbox `[ ]` và xác nhận hệ thống vận hành 100% chuẩn xác trước khi bàn giao.
 
 ---
@@ -11,20 +11,20 @@
 
 ### 1. Trạng thái dịch vụ cần đảm bảo
 Trước khi bắt đầu, đảm bảo các dịch vụ đang chạy:
-- **Backend API:** `http://localhost:8080` (Spring Boot + Flyway V7)
+- **Backend API:** `http://localhost:8080` (Spring Boot + Flyway V8 đã hoàn tất)
 - **Frontend App:** `http://localhost:5173` (Vite + React)
 - **Database & Cache:** MySQL 8.0 (`localhost:3306`) & Redis 7 (`localhost:6379`)
 
 ### 2. Danh sách tài khoản thử nghiệm
 | Tài khoản | Email | Mật khẩu | Mục đích sử dụng |
 |---|---|---|---|
-| **Admin** | `admin@cinema.com` | `GoToroAdminSecure2026@Password` | Test Admin Dashboard, Quản lý Thể loại, Nhập Trailer, Xem doanh thu |
+| **Admin** | `admin@cinema.com` | `GoToroAdminSecure2026@Password` | Test Admin Dashboard, Quản lý Thể loại kèm Mô tả, Nhập Trailer, Xem doanh thu |
 | **Tester Khách hàng** | Bạn có thể tự đăng ký email mới (VD: `tester.qc@gmail.com`) hoặc dùng `khanh.2149@cinema.com` | `Customer@12345` | Đặt vé, chọn ghế đôi, áp voucher, hủy vé |
 | **Khách cạnh tranh (Tab ẩn danh)** | Tự đăng ký email thứ 2 | `Customer@12345` | Test tranh chấp giữ ghế cùng lúc (Concurrency) |
 
 ---
 
-# PHẦN 1: KIỂM THỬ ĐỘC LẬP 10 VẤN ĐỀ VỪA ĐƯỢC VÁ LỖI
+# PHẦN 1: KIỂM THỬ ĐỘC LẬP 12 VẤN ĐỀ VỪA ĐƯỢC VÁ LỖI
 
 ---
 
@@ -162,11 +162,10 @@ Trước khi bắt đầu, đảm bảo các dịch vụ đang chạy:
   - [ ] **Bước 1:** Đăng nhập vào trang Admin (`/login` -> `/admin`).
   - [ ] **Bước 2:** Trên thanh Tabs quản trị, quan sát tab mới: **`Movie Genres`** (biểu tượng thẻ tag).
   - [ ] **Bước 3:** Bấm vào tab **`Movie Genres`**:
-    - Hiển thị bảng danh sách các thể loại phim gồm các cột: `ID`, `Genre Name`, `Description`, `Movies Linked`, `Actions`.
+    - Hiển thị bảng danh sách các thể loại phim gồm các cột: `ID`, `Genre Name`, `Description`, `Status`, `Actions`.
   - [ ] **Bước 4 (Tạo mới thể loại):**
-    - Bấm nút **`+ Add Genre`** (hoặc Add New Genre).
+    - Bấm nút **`+ Add New Genre`**.
     - Nhập Tên thể loại: `Cyberpunk Sci-Fi`.
-    - Nhập Mô tả: `Phim khoa học viễn tưởng tương lai thế kỷ 22`.
     - Bấm **Save / Submit**.
     - **Kết quả:** Thể loại `Cyberpunk Sci-Fi` xuất hiện ngay lập tức trong bảng.
   - [ ] **Bước 5 (Chỉnh sửa thể loại):**
@@ -203,6 +202,43 @@ Trước khi bắt đầu, đảm bảo các dịch vụ đang chạy:
     - Bấm nút **`Watch Trailer`**:
     - **Kết quả:** Modal phát video YouTube nhúng (embed) mở ra và phát mượt mà.
   - [ ] **Kết quả mong đợi (PASS):** Bảo vệ an toàn chống lừa đảo, phát trailer YouTube chuẩn mực.
+
+---
+
+### 🧪 TEST CASE 10: TỐI ƯU SƠ ĐỒ GHẾ COUPLE THỰC TẾ - XÓA GHẾ LẺ E5 PHÒNG 2-7 (FIX 11)
+* **Mục tiêu:** Các phòng chiếu nhỏ (Room 2 đến 7) đã được xóa bỏ hoàn toàn ghế đơn VIP E5 ở hàng cuối qua Flyway V8. Hàng E chỉ còn đúng 4 ghế ghép thành 2 cặp ghế đôi (E1-E2 và E3-E4) cân đối và thẩm mỹ.
+* **Đường dẫn:** Chọn 1 suất chiếu ở Phòng 2, 3, 4, 5, 6, hoặc 7 (Ví dụ: Suất chiếu ID 246 tại Phòng 2 hoặc ID 251 tại Phòng 3).
+* **Các bước thực hiện:**
+  - [ ] **Bước 1:** Vào màn hình chọn ghế của suất chiếu tại Phòng 2 (`/booking/seat-selection/246`).
+  - [ ] **Bước 2:** Quan sát hàng ghế cuối cùng (Hàng E):
+    - Đếm số lượng ghế ở hàng E: **Chỉ có đúng 4 ghế** (E1, E2, E3, E4).
+    - Ghế **E5 đã bị loại bỏ hoàn toàn**, không còn ghế VIP lẻ loi nằm chơ vơ ở góc.
+  - [ ] **Bước 3:** Bấm chọn ghế E1 -> Cả E1 và E2 cùng sáng màu chọn.
+  - [ ] **Bước 4:** Bấm chọn ghế E3 -> Cả E3 và E4 cùng sáng màu chọn.
+  - [ ] **Kết quả mong đợi (PASS):** Hàng E của toàn bộ các phòng 2-7 chỉ gồm đúng 2 cặp ghế đôi đối xứng, giao diện sơ đồ ghế vuông vắn, sang trọng.
+
+---
+
+### 🧪 TEST CASE 11: BỔ SUNG TRƯỜNG DESCRIPTION CHO THỂ LOẠI PHIM (FEAT 12)
+* **Mục tiêu:** Thể loại phim có thêm trường Mô tả (Description) tối đa 500 ký tự từ Database lên Backend và hiển thị trên giao diện Admin.
+* **Đường dẫn:** `http://localhost:5173/admin` -> Tab **`Movie Genres`**
+* **Các bước thực hiện:**
+  - [ ] **Bước 1:** Vào tab `Movie Genres`.
+  - [ ] **Bước 2 (Kiểm tra bảng danh sách):**
+    - Bảng danh sách thể loại hiển thị cột mới: **`Description`** nằm ngay sau cột `Genre Name`.
+  - [ ] **Bước 3 (Kiểm tra Modal thêm thể loại):**
+    - Bấm nút **`+ Add New Genre`**.
+    - Xuất hiện trường nhập mới: **`Description`** (thẻ `<textarea>` 3 dòng) kèm bộ đếm ký tự `0/500`.
+    - Nhập Genre Name: `Psychological Thriller`.
+    - Nhập Description: `Thể loại phim tâm lý kịch tính, giật gân đánh đố tâm trí người xem`.
+    - Bấm **Save Genre**.
+  - [ ] **Bước 4 (Xác thực dữ liệu lưu trữ):**
+    - Modal đóng lại, bảng hiển thị dòng mới `Psychological Thriller` kèm đúng đoạn mô tả vừa nhập.
+  - [ ] **Bước 5 (Kiểm tra Modal chỉnh sửa):**
+    - Bấm nút **`Edit`** ở thể loại vừa tạo:
+    - Cả Tên thể loại và Mô tả cũ đều được điền sẵn vào 2 ô nhập.
+    - Sửa mô tả và bấm **Update Genre** -> Bảng cập nhật nội dung mới tức thì.
+  - [ ] **Kết quả mong đợi (PASS):** Trường Description hoạt động hoàn hảo từ Database -> API -> Admin UI.
 
 ---
 
@@ -302,12 +338,13 @@ Tester đánh dấu `[x]` vào các ô dưới đây khi hoàn thành kiểm th�
 | **7** | Voucher hết lượt dùng cá nhân bị làm mờ, hiện badge LIMIT REACHED | [ ] PASS / [ ] FAIL | |
 | **8** | Tab Movie Genres trên Admin: Thêm/Sửa/Xóa thể loại phim trơn tru | [ ] PASS / [ ] FAIL | |
 | **9** | Ô nhập YouTube Trailer URL cho phim: Chặn link rác, phát video chuẩn | [ ] PASS / [ ] FAIL | |
-| **10** | Luồng đặt vé -> Thanh toán -> Xem mã vé QR tại `My Tickets` | [ ] PASS / [ ] FAIL | |
-| **11** | Hủy vé trước 60 phút: Giải phóng ghế tức thì & hoàn lại voucher | [ ] PASS / [ ] FAIL | |
-| **12** | Tranh chấp ghế đồng thời (Concurrency): Ngăn chặn 100% Double-Booking | [ ] PASS / [ ] FAIL | |
+| **10** | Tối ưu sơ đồ ghế Couple: Xóa hẳn ghế E5 ở phòng 2-7, hàng E còn 2 cặp | [ ] PASS / [ ] FAIL | |
+| **11** | Bổ sung trường Description cho Thể loại phim (DB, DTO, Mapper, Admin UI) | [ ] PASS / [ ] FAIL | |
+| **12** | Luồng đặt vé -> Thanh toán -> Xem mã vé QR tại `My Tickets` | [ ] PASS / [ ] FAIL | |
+| **13** | Hủy vé trước 60 phút: Giải phóng ghế tức thì & hoàn lại voucher | [ ] PASS / [ ] FAIL | |
+| **14** | Tranh chấp ghế đồng thời (Concurrency): Ngăn chặn 100% Double-Booking | [ ] PASS / [ ] FAIL | |
 
 ---
 > **Người thực hiện kiểm thử:** ________________________  
 > **Ngày kiểm thử:** 08/11/2026  
 > **Kết luận cuối cùng:** [ ] ĐẠT CHUẨN ĐỂ MERGE VÀO MAIN  /  [ ] CẦN ĐIỀU CHỈNH THÊM
-
