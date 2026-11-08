@@ -11,6 +11,7 @@ public class GenreMapper {
     public Genre toEntity(GenreRequest request) {
         return Genre.builder()
                 .name(request.name().trim())
+                .description(request.description() != null ? request.description().trim() : null)
                 .build();
     }
 
@@ -18,6 +19,7 @@ public class GenreMapper {
         return GenreResponse.builder()
                 .id(genre.getId())
                 .name(genre.getName())
+                .description(genre.getDescription())
                 .createdAt(genre.getCreatedAt())
                 .build();
     }

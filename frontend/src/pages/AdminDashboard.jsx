@@ -164,6 +164,7 @@ export default function AdminDashboard() {
   const [showGenreModal, setShowGenreModal] = useState(false);
   const [editingGenre, setEditingGenre] = useState(null);
   const [genreNameInput, setGenreNameInput] = useState('');
+  const [genreDescInput, setGenreDescInput] = useState('');
 
   const fetchGenres = useCallback(async () => {
     setLoadingGenres(true);
@@ -182,17 +183,19 @@ export default function AdminDashboard() {
     e.preventDefault();
     const name = genreNameInput.trim();
     if (!name) return;
+    const description = genreDescInput.trim() || null;
     try {
       if (editingGenre) {
-        await adminApi.updateGenre(editingGenre.id, { name });
+        await adminApi.updateGenre(editingGenre.id, { name, description });
         showToast(`Genre updated to "${name}".`, 'success');
       } else {
-        await adminApi.createGenre({ name });
+        await adminApi.createGenre({ name, description });
         showToast(`Genre "${name}" created/restored successfully.`, 'success');
       }
       setShowGenreModal(false);
       setEditingGenre(null);
       setGenreNameInput('');
+      setGenreDescInput('');
       fetchGenres();
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to save genre.', 'error');
@@ -1742,6 +1745,7 @@ export default function AdminDashboard() {
                       onClick={() => {
                         setEditingGenre(null);
                         setGenreNameInput('');
+                        setGenreDescInput('');
                         setShowGenreModal(true);
                       }}
                       className="px-4 py-2 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer"
@@ -1758,6 +1762,7 @@ export default function AdminDashboard() {
                       <tr>
                         <th className="p-3.5">ID</th>
                         <th className="p-3.5">Genre Name</th>
+                        <th className="p-3.5">Description</th>
                         <th className="p-3.5">Status</th>
                         <th className="p-3.5 text-right">Actions</th>
                       </tr>
@@ -1765,14 +1770,14 @@ export default function AdminDashboard() {
                     <tbody className="divide-y divide-[#241a10]">
                       {loadingGenres ? (
                         <tr>
-                          <td colSpan="4" className="p-8 text-center text-[#8a765d]">
+                          <td colSpan="5" className="p-8 text-center text-[#8a765d]">
                             <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-[#e0b354]" />
                             Loading genres...
                           </td>
                         </tr>
                       ) : genresList.length === 0 ? (
                         <tr>
-                          <td colSpan="4" className="p-8 text-center text-[#8a765d]">
+                          <td colSpan="5" className="p-8 text-center text-[#8a765d]">
                             No genres found.
                           </td>
                         </tr>
@@ -1781,6 +1786,9 @@ export default function AdminDashboard() {
                           <tr key={genre.id} className="hover:bg-[#1a130d]">
                             <td className="p-3.5 font-mono text-[#8a765d]">#{genre.id}</td>
                             <td className="p-3.5 font-bold text-[#f5ece0]">{genre.name}</td>
+                            <td className="p-3.5 text-[#b8a690] max-w-xs truncate" title={genre.description || ''}>
+                              {genre.description || <span className="text-[#6b5843] italic">No description</span>}
+                            </td>
                             <td className="p-3.5">
                               <span
                                 className={`px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -1798,6 +1806,7 @@ export default function AdminDashboard() {
                                 onClick={() => {
                                   setEditingGenre(genre);
                                   setGenreNameInput(genre.name);
+                                  setGenreDescInput(genre.description || '');
                                   setShowGenreModal(true);
                                 }}
                                 className="px-2.5 py-1 rounded bg-[#241a10] border border-[#4d3c26] text-[11px] font-semibold text-[#e6c27a] hover:border-[#e0b354] cursor-pointer"
@@ -2531,6 +2540,7 @@ export default function AdminDashboard() {
                   setShowGenreModal(false);
                   setEditingGenre(null);
                   setGenreNameInput('');
+                  setGenreDescInput('');
                 }}
                 className="text-[#ab9a84] hover:text-[#f3cb62]"
               >
@@ -2553,6 +2563,23 @@ export default function AdminDashboard() {
                 />
               </div>
 
+              <div>
+                <label className="block text-[#ab9a84] mb-1 font-semibold">
+                  Description
+                </label>
+                <textarea
+                  rows="3"
+                  maxLength="500"
+                  placeholder="Provide a brief description of this genre (max 500 characters)..."
+                  value={genreDescInput}
+                  onChange={(e) => setGenreDescInput(e.target.value)}
+                  className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0] focus:outline-none focus:border-[#e0b354] resize-none"
+                />
+                <div className="text-right text-[10px] text-[#6b5843] mt-0.5">
+                  {genreDescInput.length}/500
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#2e2316]">
                 <button
                   type="button"
@@ -2560,6 +2587,7 @@ export default function AdminDashboard() {
                     setShowGenreModal(false);
                     setEditingGenre(null);
                     setGenreNameInput('');
+                    setGenreDescInput('');
                   }}
                   className="px-4 py-2 rounded-lg bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#b8a690] hover:text-[#f7efe4]"
                 >

@@ -37,6 +37,7 @@ public class GenreService {
                 throw new AppException(ErrorCode.GENRE_ALREADY_EXISTS);
             }
             g.setName(normalizedName);
+            g.setDescription(request.description() != null ? request.description().trim() : null);
             g.setIsActive(true);
             return genreMapper.toResponse(genreRepository.save(g));
         }
@@ -67,6 +68,7 @@ public class GenreService {
         }
 
         genre.setName(normalizedName);
+        genre.setDescription(request.description() != null ? request.description().trim() : null);
         return genreMapper.toResponse(genreRepository.save(genre));
     }
 
