@@ -81,4 +81,21 @@ export const adminApi = {
   getRooms: (cinemaId) => {
     return axiosClient.get('/rooms', { params: { cinemaId } });
   },
+
+  // Genre management (Module 2.2)
+  getGenres: () => {
+    return axiosClient.get('/genres');
+  },
+
+  createGenre: (data) => {
+    return axiosClient.post('/genres', data);
+  },
+
+  updateGenre: (id, data) => {
+    return axiosClient.put(`/genres/${id}`, data);
+  },
+
+  deleteGenre: (id) => {
+    return axiosClient.delete(`/genres/${id}`);
+  },
 };
