@@ -647,3 +647,17 @@ Kiểm tra ESLint, Unit Tests (Vitest) & Build Production Frontend:PowerShellcd 
 npm run lint
 npm test -- --run
 npm run build
+
+## VẤN ĐỀ 11: Tối ưu sơ đồ ghế Couple thực tế (Xóa ghế lẻ E5)
+- **Vấn đề:** Các phòng chiếu nhỏ (Room 2 đến 7) có 5 cột, dẫn đến hàng E kẹp 2 ghế Couple và 1 ghế VIP (E5) trông mất thẩm mỹ.
+- **Giải pháp:** Ghế Couple thực tế to hơn ghế thường. Cần xóa hoàn toàn ghế E5 ở hàng cuối của các phòng này để hàng E chỉ còn đúng 4 ghế (2 cặp Couple).
+- **Mã nguồn thực thi (Tạo file `backend/src/main/resources/db/migration/V8__optimize_couple_seats_and_genre_desc.sql`):**
+```sql
+-- 1. Xóa các bản ghi showtime_seats liên đới của ghế E5
+DELETE ss FROM showtime_seats ss
+JOIN seats s ON ss.seat_id = s.id
+WHERE s.room_id BETWEEN 2 AND 7 AND s.row_name = 'E' AND s.seat_number = 5;
+
+-- 2. Xóa ghế vật lý E5 khỏi bảng seats
+DELETE FROM seats
+WHERE room_id BETWEEN 2 AND 7 AND row_name = 'E' AND seat_number = 5;

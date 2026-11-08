@@ -310,3 +310,4 @@ Tester đánh dấu `[x]` vào các ô dưới đây khi hoàn thành kiểm th�
 > **Người thực hiện kiểm thử:** ________________________  
 > **Ngày kiểm thử:** 08/11/2026  
 > **Kết luận cuối cùng:** [ ] ĐẠT CHUẨN ĐỂ MERGE VÀO MAIN  /  [ ] CẦN ĐIỀU CHỈNH THÊM
+
