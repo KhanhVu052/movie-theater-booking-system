@@ -109,6 +109,70 @@ export default function MovieDetail() {
   const [selectedCinemaId, setSelectedCinemaId] = useState('ALL');
   const [trailerOpen, setTrailerOpen] = useState(false);
 
+  const [preSaleShowtimes, setPreSaleShowtimes] = useState([]);
+  const [loadingPreSale, setLoadingPreSale] = useState(false);
+
+  // Kiểm tra danh sách suất chiếu mở bán sớm (Pre-Sale) nếu phim là COMING_SOON
+  useEffect(() => {
+    if (!id || !movie || movie.status !== 'COMING_SOON') {
+      setPreSaleShowtimes([]);
+      return;
+    }
+    let isMounted = true;
+    setLoadingPreSale(true);
+    movieApi
+      .getShowtimes({ movieId: id, bookableOnly: true, page: 1, size: 100 })
+      .then((res) => {
+        if (!isMounted) return;
+        const raw = res?.data?.data ?? res?.data;
+        const list = (
+          Array.isArray(raw)
+            ? raw
+            : Array.isArray(raw?.items)
+            ? raw.items
+            : Array.isArray(raw?.content)
+            ? raw.content
+            : []
+        ).filter((st) => st.status === 'SCHEDULED');
+
+        setPreSaleShowtimes(list);
+        if (list.length > 0 && list[0].startTime) {
+          setSelectedDate(list[0].startTime.split('T')[0]);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setPreSaleShowtimes([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingPreSale(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, movie]);
+
+  const isComingSoon = movie?.status === 'COMING_SOON';
+  const hasPreSaleShowtimes = isComingSoon && preSaleShowtimes.length > 0;
+
+  // Danh sách ngày hiển thị: 7 ngày cố định cho NOW_SHOWING, hoặc chỉ các ngày có suất chiếu cho PRE-SALE
+  const displayDates = useMemo(() => {
+    if (!isComingSoon) return availableDates;
+    const uniqueDates = Array.from(
+      new Set(preSaleShowtimes.map((st) => st.startTime?.split('T')[0]).filter(Boolean))
+    ).sort();
+    return uniqueDates.map((dateStr) => {
+      const d = new Date(`${dateStr}T00:00:00`);
+      return {
+        dateStr,
+        label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        dayNum: d.getDate(),
+      };
+    });
+  }, [isComingSoon, availableDates, preSaleShowtimes]);
+  const activeDateTabs = displayDates;
+
   // 1. Fetch Movie details, Cinemas, and Review summary
   useEffect(() => {
     let isMounted = true;
@@ -393,128 +457,177 @@ export default function MovieDetail() {
 
           {/* Showtimes & Booking Section */}
           <section id="showtimes-section" className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-12 flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-[#2e2316] pb-4">
-              <div>
-                <h2 className="font-body font-bold text-2xl sm:text-3xl text-[#f7efe4] tracking-tight">
-                  Select Showtime & Cinema
-                </h2>
-                <p className="text-xs text-[#9c8b75] mt-1">
-                  Pick your preferred date, theater, and seat reservation time.
-                </p>
-              </div>
-
-              {/* Cinema Filter Dropdown */}
-              {cinemas.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#e0b354]" />
-                  <select
-                    value={selectedCinemaId}
-                    onChange={(e) => setSelectedCinemaId(e.target.value)}
-                    className="bg-[#16110b] border border-[#3d2f1d] rounded-lg px-3 py-1.5 text-xs text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
-                  >
-                    <option value="ALL">All Cinema Locations</option>
-                    {cinemas.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {/* Date Selector Tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
-              {availableDates.map((item) => {
-                const isActive = selectedDate === item.dateStr;
-                return (
-                  <button
-                    key={item.dateStr}
-                    type="button"
-                    onClick={() => setSelectedDate(item.dateStr)}
-                    className={`flex flex-col items-center justify-center min-w-[80px] px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#dda938] text-[#1a1209] shadow-md font-bold'
-                        : 'bg-[#140f0a] border-[#2e2316] text-[#ab9a84] hover:border-[#5e4727] hover:text-[#f2e8dc]'
-                    }`}
-                  >
-                    <span className="text-[11px] uppercase tracking-wider">
-                      {item.dayName}
-                    </span>
-                    <span className="text-lg font-extrabold mt-0.5 leading-none">
-                      {item.dayNum}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Showtimes Grid Grouped by Cinema */}
-            {loadingShowtimes ? (
+            {loadingPreSale ? (
               <div className="py-16 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-[#e6c27a]" />
-                <p className="text-xs text-[#ab9a84]">Loading showtimes for {selectedDate}...</p>
+                <p className="text-xs text-[#ab9a84]">Checking advance ticket availability...</p>
               </div>
-            ) : groupedShowtimes.length === 0 ? (
-              <div className="bg-[#15100b] border border-[#2e2316] rounded-2xl p-12 text-center">
-                <Clock className="w-10 h-10 text-[#8a765d] mx-auto mb-3" />
-                <p className="text-base font-semibold text-[#e6c27a]">
-                  No showtimes scheduled for this date
+            ) : isComingSoon && !hasPreSaleShowtimes ? (
+              /* TRƯỜNG HỢP 1: COMING_SOON CHƯA MỞ BÁN -> ẨN THANH 7 NGÀY, HIỆN PREMIERE TEASER BANNER */
+              <div className="bg-gradient-to-br from-[#1c140c] via-[#140f0a] to-[#0e0a07] border-2 border-[#5e4727] rounded-2xl p-8 sm:p-12 text-center space-y-4 shadow-2xl">
+                <Calendar className="w-12 h-12 text-[#f3cb62] mx-auto" />
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#2b2014] border border-[#e0b354]/50 text-xs font-bold text-[#f3cb62] uppercase tracking-wider">
+                  🎬 Official Premiere Schedule
+                </div>
+                <h2 className="font-body font-extrabold text-2xl sm:text-3xl text-[#f7efe4]">
+                  Official Release Date: {formatReleaseDate(movie.releaseDate) || 'Coming Soon'}
+                </h2>
+                <p className="text-xs sm:text-sm text-[#ab9a84] max-w-xl mx-auto leading-relaxed">
+                  Tickets for this title are not on sale yet. Showtimes and advance seat reservations will open 3 to 5 days before the official premiere date.
                 </p>
-                <p className="text-xs text-[#9c8b75] mt-1.5">
-                  Please pick another date above or select a different cinema location.
-                </p>
-                {availableDates.length > 0 && selectedDate !== availableDates[0].dateStr && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedDate(availableDates[0].dateStr)}
-                    className="mt-4 px-4 py-2 rounded-lg bg-[#21170e] hover:bg-[#2b1f13] border border-[#e0b354]/40 text-[#f3cb62] text-xs font-bold transition-all cursor-pointer"
-                  >
-                    View Today's Showtimes
-                  </button>
+                {movie.trailerUrl && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setTrailerOpen(true)}
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] font-bold text-xs shadow-md cursor-pointer"
+                    >
+                      <Play className="w-4 h-4 fill-[#1a1209]" />
+                      <span>Watch Official Trailer</span>
+                    </button>
+                  </div>
                 )}
               </div>
             ) : (
-              <div className="space-y-6">
-                {groupedShowtimes.map((group) => (
-                  <div
-                    key={group.cinemaId}
-                    className="bg-[#18120c] border border-[#362919] rounded-xl p-6 shadow-md"
-                  >
-                    <div className="flex items-center gap-2 border-b border-[#2b2015] pb-3 mb-4">
-                      <MapPin className="w-4 h-4 text-[#e0b354]" />
-                      <h3 className="font-body font-bold text-base text-[#f7efe4]">
-                        {group.cinemaName}
-                      </h3>
-                    </div>
-
-                    <div className="flex flex-wrap gap-3">
-                      {group.showtimes.map((st) => (
-                        <button
-                          key={st.id}
-                          type="button"
-                          onClick={() => handleSelectShowtime(st.id)}
-                          className="group relative flex flex-col items-center px-4 py-2.5 rounded-lg bg-[#140f0a] border border-[#3d2f1d] hover:border-[#e0b354] hover:bg-[#21170e] transition-all cursor-pointer shadow-sm text-left"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-body font-extrabold text-base text-[#f3cb62] group-hover:text-[#ffdf88]">
-                              {formatHour(st.startTime)}
-                            </span>
-                            {st.format && (
-                              <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-[#2b2014] text-[#c7b59d]">
-                                {st.format}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[11px] text-[#8a765d] mt-0.5">
-                            {st.roomName || 'Screen'} {st.translationType ? `• ${st.translationType}` : ''}
-                          </span>
-                        </button>
-                      ))}
+              /* TRƯỜNG HỢP 2 (PRE-SALE) & MẶC ĐỊNH (NOW_SHOWING) */
+              <>
+                {hasPreSaleShowtimes && (
+                  <div className="mb-6 p-4 rounded-xl bg-amber-950/40 border border-[#e0b354] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#f3cb62]">
+                        🔥 Advance Ticket Sales (Pre-Sale / Sneak Show)
+                      </span>
+                      <p className="text-xs text-[#d4c3ad] mt-0.5">
+                        Be among the first viewers! Only dates with active advance screenings are shown below.
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-[#2e2316] pb-4">
+                  <div>
+                    <h2 className="font-body font-bold text-2xl sm:text-3xl text-[#f7efe4] tracking-tight">
+                      Select Showtime & Cinema
+                    </h2>
+                    <p className="text-xs text-[#9c8b75] mt-1">
+                      Pick your preferred date, theater, and seat reservation time.
+                    </p>
+                  </div>
+
+                  {/* Cinema Filter Dropdown */}
+                  {cinemas.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-[#e0b354]" />
+                      <select
+                        value={selectedCinemaId}
+                        onChange={(e) => setSelectedCinemaId(e.target.value)}
+                        className="bg-[#16110b] border border-[#3d2f1d] rounded-lg px-3 py-1.5 text-xs text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
+                      >
+                        <option value="ALL">All Cinema Locations</option>
+                        {cinemas.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Date Selector Tabs */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
+                  {displayDates.map((item) => {
+                    const isActive = selectedDate === item.dateStr;
+                    return (
+                      <button
+                        key={item.dateStr}
+                        type="button"
+                        onClick={() => setSelectedDate(item.dateStr)}
+                        className={`flex flex-col items-center justify-center min-w-[80px] px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#dda938] text-[#1a1209] shadow-md font-bold'
+                            : 'bg-[#140f0a] border-[#2e2316] text-[#ab9a84] hover:border-[#5e4727] hover:text-[#f2e8dc]'
+                        }`}
+                      >
+                        <span className="text-[11px] uppercase tracking-wider">
+                          {item.dayName}
+                        </span>
+                        <span className="text-lg font-extrabold mt-0.5 leading-none">
+                          {item.dayNum}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Showtimes Grid Grouped by Cinema */}
+                {loadingShowtimes ? (
+                  <div className="py-16 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#e6c27a]" />
+                    <p className="text-xs text-[#ab9a84]">Loading showtimes for {selectedDate}...</p>
+                  </div>
+                ) : groupedShowtimes.length === 0 ? (
+                  <div className="bg-[#15100b] border border-[#2e2316] rounded-2xl p-12 text-center">
+                    <Clock className="w-10 h-10 text-[#8a765d] mx-auto mb-3" />
+                    <p className="text-base font-semibold text-[#e6c27a]">
+                      No showtimes scheduled for this date
+                    </p>
+                    <p className="text-xs text-[#9c8b75] mt-1.5">
+                      Please pick another date above or select a different cinema location.
+                    </p>
+                    {displayDates.length > 0 && selectedDate !== displayDates[0].dateStr && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDate(displayDates[0].dateStr)}
+                        className="mt-4 px-4 py-2 rounded-lg bg-[#21170e] hover:bg-[#2b1f13] border border-[#e0b354]/40 text-[#f3cb62] text-xs font-bold transition-all cursor-pointer"
+                      >
+                        View Today's Showtimes
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {groupedShowtimes.map((group) => (
+                      <div
+                        key={group.cinemaId}
+                        className="bg-[#18120c] border border-[#362919] rounded-xl p-6 shadow-md"
+                      >
+                        <div className="flex items-center gap-2 border-b border-[#2b2015] pb-3 mb-4">
+                          <MapPin className="w-4 h-4 text-[#e0b354]" />
+                          <h3 className="font-body font-bold text-base text-[#f7efe4]">
+                            {group.cinemaName}
+                          </h3>
+                        </div>
+
+                        <div className="flex flex-wrap gap-3">
+                          {group.showtimes.map((st) => (
+                            <button
+                              key={st.id}
+                              type="button"
+                              onClick={() => handleSelectShowtime(st.id)}
+                              className="group relative flex flex-col items-center px-4 py-2.5 rounded-lg bg-[#140f0a] border border-[#3d2f1d] hover:border-[#e0b354] hover:bg-[#21170e] transition-all cursor-pointer shadow-sm text-left"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-body font-extrabold text-base text-[#f3cb62] group-hover:text-[#ffdf88]">
+                                  {formatHour(st.startTime)}
+                                </span>
+                                {st.format && (
+                                  <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-[#2b2014] text-[#c7b59d]">
+                                    {st.format}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-[#8a765d] mt-0.5">
+                                {st.roomName || 'Screen'} {st.translationType ? `• ${st.translationType}` : ''}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </section>
 
