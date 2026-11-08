@@ -157,18 +157,25 @@ Hệ thống sẽ tự động phân loại và xử lý theo 2 trường hợp 
 ##### 🔥 TRƯỜNG HỢP 2: Phim `COMING_SOON` nhưng CÓ MỞ BÁN VÉ SỚM (Pre-Sale / Advance Ticket Sales)
 * **Khái niệm:** Phim chưa tới ngày ra mắt, nhưng rạp đã mở bán vé trước cho các suất chiếu đặc biệt (ví dụ: Suất chiếu sớm *Sneak Show* hoặc vé công chiếu ngày đầu tiên).
 * **Điều kiện nhận diện:** `movie.status === 'COMING_SOON' && showtimes.length > 0`.
-* **Gợi ý tối ưu giao diện (UX Recommendations):**
-  1. **Gắn huy hiệu nổi bật (Pre-Sale Badge):**
-     * Trên Poster tại Trang chủ và Trang chi tiết: Gắn badge màu cam/đỏ rực rỡ:  
-       `🔥 VÉ ĐẶT TRƯỚC (PRE-SALE)` hoặc `⭐ SUẤT CHIẾU SỚM`.
-  2. **Thanh lọc ngày động (Dynamic Pre-Sale Date Filter - Thay vì cố định 7 ngày):**
-     * Thanh chọn ngày **chỉ hiển thị đúng các ngày thực tế CÓ SUẤT CHIẾU MỞ BÁN**, tự động loại bỏ các ngày không có lịch.
-     * *Ví dụ:* Phim công chiếu vào thứ Bảy (14/11) và Chủ Nhật (15/11). Thanh ngày sẽ chỉ hiện 2 nút:  
-       `[Thứ Bảy - 14/11]` và `[Chủ Nhật - 15/11]`.
-     * 👉 **Lợi ích:** Người dùng bấm vào ngày nào cũng **100% có suất chiếu để đặt vé**, triệt tiêu hoàn toàn cảm giác bấm vào ngày bị rỗng.
-  3. **Banner thông báo đặt chỗ sớm:**
-     * Đặt ở đầu phần lịch chiếu:  
-       `🎟️ MỞ BÁN VÉ SỚM: Hãy là những khán giả đầu tiên thưởng thức siêu phẩm! Đặt vé ngay các suất chiếu dưới đây để giữ vị trí ghế VIP tốt nhất.`
+
+#### ⭐ 3 GỢI Ý TỐI ƯU ĐẶC BIỆT DÀNH CHO PHIM BÁN VÉ ĐẶT TRƯỚC (PRE-SALE):
+
+1. **Gợi ý 1: Gắn Huy hiệu nổi bật (Pre-Sale Badge trên Poster & Header)**
+   * Trên Poster tại Trang chủ và Trang chi tiết: Gắn huy hiệu màu cam/đỏ rực rỡ:  
+     `🔥 VÉ ĐẶT TRƯỚC (PRE-SALE)` hoặc `⭐ SUẤT CHIẾU SỚM (SNEAK SHOW)`.
+   * Khách hàng lướt qua là biết ngay phim này **ĐÃ CÓ THỂ MUA VÉ ĐƯỢC NGAY** dù chưa tới ngày công chiếu.
+
+2. **Gợi ý 2: Thanh lọc ngày động thông minh (Dynamic Pre-Sale Date Filter - Loại bỏ 100% ngày rỗng)**
+   * **Tuyệt đối không hiện 7 ngày cố định** (vì các ngày đầu tuần sẽ bị trống, chỉ có ngày cuối tuần mới có vé).
+   * Thanh chọn ngày sẽ **tự động chỉ hiển thị đúng các ngày thực tế CÓ SUẤT CHIẾU BÁN TRƯỚC**!
+   * *Ví dụ thực tế:* Phim công chiếu vào thứ Bảy (14/11) và Chủ Nhật (15/11). Thanh ngày sẽ chỉ hiện đúng 2 tab:  
+     `[Thứ Bảy, 14/11]` và `[Chủ Nhật, 15/11]`.
+   * 👉 **Ưu điểm vượt trội:** Người dùng bấm vào bất kỳ tab ngày nào cũng **100% có suất chiếu để đặt chỗ**, triệt tiêu hoàn toàn trải nghiệm bấm vào ngày bị rỗng!
+
+3. **Gợi ý 3: Khung kêu gọi hành động đặt chỗ sớm (CTA Pre-Sale Banner)**
+   * Đặt ngay phía trên danh sách suất chiếu:  
+     `🎟️ MỞ BÁN VÉ SỚM: Hãy là những khán giả đầu tiên thưởng thức siêu phẩm! Đặt vé ngay các suất chiếu dưới đây để giữ vị trí ghế VIP tốt nhất trước ngày công chiếu.`
+
 
 ---
 

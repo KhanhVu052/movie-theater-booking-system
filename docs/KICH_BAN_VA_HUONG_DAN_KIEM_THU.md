@@ -83,6 +83,13 @@
   3. Bấm vào các tag thể loại: `Action`, `Drama`, `Sci-Fi`...
   4. Gõ từ khóa vào thanh tìm kiếm trên Navbar: ví dụ `Spider` -> Nhấn Enter.
 * **Kỳ vọng:** Danh sách phim tự động lọc chính xác theo từ khóa và thể loại. Các phim đã ngừng chiếu (`ENDED`) không xuất hiện trong danh sách bán vé.
+* 💡 **Ghi chú về phim `COMING_SOON` & 3 Gợi ý tối ưu vé đặt trước (Pre-Sale):**
+  1. *Phim sắp chiếu chưa mở bán:* Sẽ được ẩn thanh 7 ngày rỗng và thay bằng banner hiển thị rõ ngày công chiếu (`releaseDate`).
+  2. *Phim sắp chiếu có bán vé đặt trước (Pre-Sale):* Sẽ áp dụng 3 cơ chế tối ưu:
+     * (1) Gắn huy hiệu `🔥 VÉ ĐẶT TRƯỚC (PRE-SALE)`.
+     * (2) Thanh ngày chỉ hiện các ngày thực tế có suất chiếu (Dynamic Date Filter) để khách không bao giờ gặp ngày rỗng.
+     * (3) Banner kêu gọi đặt vé sớm giữ chỗ đẹp nhất.  
+     *(Chi tiết xem tại file `docs/BUG_LOG_QA_TESTING.md` mục `FEAT-UX-COMING-SOON-PRE-SALE-02`)*.
 
 #### Case 1.2.2: Xem chi tiết phim & Kiểm tra iframe Trailer an toàn (Chống XSS)
 * **Vị trí thao tác:** Click vào một phim bất kỳ ở trang chủ (ví dụ phim *Spider-Man: Brand New Day* để vào `/movies/1`).
