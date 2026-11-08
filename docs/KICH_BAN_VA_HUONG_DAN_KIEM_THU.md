@@ -398,7 +398,8 @@
 
 ### MODULE 2.6: QUẢN LÝ VOUCHER & BẢO MẬT DỮ LIỆU
 
-#### Case 2.6.1: Tạo Voucher và chuẩn hóa chữ hoa tự động
+#### Case 2.6.1: Tạo Voucher và chuẩn hóa chữ hoa tự động — [✅ TEST THÀNH CÔNG]
+* **Trạng thái:** ✅ **ĐÃ TEST THÀNH CÔNG** (Mã code tự động uppercase chuẩn).
 * **Vị trí thao tác:** Admin Console -> Bấm vào Tab thứ 5: **`Promotional Vouchers`**.
 * **Các bước thực hiện:**
   1. Bấm nút màu vàng: **`+ Create Voucher`**.
@@ -411,8 +412,10 @@
      * Start Date / End Date: Chọn thời gian hợp lệ trong tương lai.
   3. Bấm **"Create Voucher"**.
 * **Kỳ vọng:** Voucher được tạo thành công và mã tự động chuyển thành chữ hoa chuẩn: **`TET2026_SALE`**.
+* 💡 **Đề xuất cải tiến UX phát hiện khi test:** Khi tài khoản khách hàng đã chạm giới hạn dùng mã (`perUserLimit`), modal chọn voucher phía Client cần làm mờ và khóa nút Apply kèm thông báo rõ ràng (mã theo dõi `FEAT-UX-VOUCHER-USER-USAGE-DIMMING-10` trong Bug Log).
 
-#### Case 2.6.2: Bảo mật thông tin Voucher nội bộ
+#### Case 2.6.2: Bảo mật thông tin Voucher nội bộ — [✅ TEST THÀNH CÔNG]
+* **Trạng thái:** ✅ **ĐÃ TEST THÀNH CÔNG** (Bảo mật thông tin nội bộ của voucher thành công).
 * **Kỳ vọng:** Người dùng chưa đăng nhập khi tra cứu mã voucher chỉ nhận được thông tin công khai cần thiết (Code, Tỷ lệ giảm, Giá trị đơn tối thiểu), không thể xem các tham số thống kê nội bộ của Admin.
 
 ---

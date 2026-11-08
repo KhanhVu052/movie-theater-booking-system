@@ -19,6 +19,7 @@
 | `FEAT-ADMIN-GENRE-MANAGEMENT-UI-07` | Admin Portal (`AdminDashboard.jsx`) | Thiếu giao diện Quản lý Thể loại (Genre Management UI Tab) trên Admin Dashboard (Backend đã có 100% API) | Medium (Missing Admin Feature) | 🟡 PENDING (Chờ bổ sung) |
 | `BUG-ADMIN-MOVIE-MODAL-MISSING-TRAILER-INPUT-08` | Admin Portal (`AdminDashboard.jsx`) | Modal Thêm/Sửa phim thiếu ô nhập Trailer URL -> Phim tạo mới không có trailer, chặn kiểm thử Case 2.3.1, 2.3.2 | High (Missing Input Field) | 🟡 PENDING (Chờ sửa) |
 | `BUG-CLIENT-HOMEPAGE-MOVIE-PAGINATION-SATURATION-09` | Client Homepage (`Home.jsx`) | Phim có lịch chiếu nhưng biến mất khỏi Client Homepage do Trang 1 bị bão hòa bởi 84 phim ENDED | High (Missing Active Movies on UI) | 🟡 PENDING (Chờ sửa) |
+| `FEAT-UX-VOUCHER-USER-USAGE-DIMMING-10` | Module 1.6 & 2.6 (Voucher UX) | Voucher đã chạm giới hạn tài khoản (`perUserLimit`) vẫn hiện sáng cho Apply -> Cần làm mờ và khóa nút | Medium (Anti-Frustration UX) | 🟡 PENDING (Chờ làm) |
 | `TRACK-CASE-1.3.2-CUTOFF-PENDING` | Module 1.3 (Showtime Cutoff 15m) | Tạm hoãn kiểm thử: Chưa có suất chiếu trong khung giờ cận < 15 phút | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 | `TRACK-CASE-1.4.4-COUPLE-PENDING` | Module 1.4 (Couple Seat Rules) | Tạm hoãn kiểm thử: Luật ghế đôi chưa test được do hàng E đang bị mờ (Lỗi #4) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 | `TRACK-CASE-2.4.1-ROOM-SEAT-PENDING` | Module 2.4 (Room Seat Matrix) | Tạm hoãn kiểm thử: Cấu hình ghế phòng đang bị lỗi (phụ thuộc Lỗi #4 & Lỗi #5) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
@@ -711,6 +712,61 @@ export const genreApi = {
    * Khi Backend nhận tham số `status: 'NOW_SHOWING'`, câu truy vấn SQL sẽ lọc `WHERE m.status = 'NOW_SHOWING'` ngay trong database $\rightarrow$ Trả về đầy đủ tất cả 20 bộ phim đang chiếu (gồm cả Avengers, Your Name, Joker...) mà không bị phim `ENDED` chiếm chỗ.
 2. **Tại thanh Đặt vé nhanh (Quick Booking Bar):**
    * Fetch danh sách các phim `NOW_SHOWING` để đổ vào dropdown `Select Movie`.
+
+---
+
+### 💡 CẢI TIẾN UX #10: LÀM MỜ VÀ KHÓA VOUCHER ĐÃ ĐẠT GIỚI HẠN SỬ DỤNG TÀI KHOẢN (PER-USER LIMIT) TRONG MODAL CHỌN MÃ
+
+> **Mã cải tiến UX:** `FEAT-UX-VOUCHER-USER-USAGE-DIMMING-10`  
+> **Module bị ảnh hưởng:** Module 1.6 & 2.6 (Voucher Selection Modal - `SeatSelection.jsx`, `VoucherController.java`, `VoucherService.java`)  
+> **Mức độ:** Medium (Tối ưu trải nghiệm khách hàng / Anti-Frustration Design)  
+> **Trạng thái:** Chờ xử lý (`PENDING`) - **Chưa can thiệp mã nguồn theo yêu cầu của User**
+
+---
+
+#### 1. MÔ TẢ HIỆN TƯỢNG (SYMPTOMS)
+* **Vị trí xảy ra:** Modal *"Select from Available Vouchers"* trên màn hình Chọn ghế & Đặt vé (`/booking/seats/:showtimeId`).
+* **Các bước tái hiện:**
+  1. Khách hàng A đặt vé cho một bộ phim và đã áp dụng thành công mã giảm giá (ví dụ mã `DISCOUNT50` có giới hạn `perUserLimit = 1`).
+  2. Khách hàng A tiếp tục đặt vé cho một bộ phim khác hoặc suất chiếu khác.
+  3. Tại màn hình chọn ghế, mở Modal **"Select from Available Vouchers"**:
+     * Thẻ voucher `DISCOUNT50` **vẫn hiển thị sáng trưng**, viền vàng nổi bật và có nút màu vàng **"Apply"** cho phép bấm.
+     * Khách hàng bấm **"Apply"** -> Hệ thống chấp nhận mã ở Client (hiện badge `Active` và tính giảm tiền tạm thời).
+  4. Khách hàng bấm nút **"Reserve Seats & Checkout"**:
+     * Đến lúc này Backend mới kiểm tra lịch sử dùng mã của User và ném lỗi 400: `VOUCHER_USER_LIMIT_EXCEEDED (Mã 1605: Voucher has already reached its per-user usage limit)`.
+     * Một Toast đỏ báo lỗi xuất hiện chặn đơn hàng lại.
+* **Kết quả thực tế:**
+  * Khách hàng bị hẫng hụt trải nghiệm (Frustrated UX): Hệ thống cho phép chọn mã và tính tiền giảm giá, nhưng đến bước thanh toán cuối cùng mới chặn và thông báo không được dùng.
+* **Kỳ vọng chuẩn theo yêu cầu của Tester:**
+  * Hệ thống cần **thông báo ngay từ bước duyệt danh sách Voucher**:
+    * Với các voucher mà tài khoản hiện tại đã chạm giới hạn sử dụng (`userUsageCount >= perUserLimit`):
+      * **Làm mờ thẻ voucher** (`opacity-50`).
+      * Khóa nút "Apply", thay thế bằng nút màu xám bị vô hiệu hóa mang nhãn: **`Limit Reached`** (hoặc `Used`).
+      * Hiển thị dòng giải thích nhỏ: *"Bạn đã dùng hết lượt cho mã giảm giá này (1/1 lượt)"*.
+    * Nếu khách hàng cố tình nhập tay mã đó vào ô input text: Hệ thống chặn ngay lập tức tại form nhập kèm thông báo rõ ràng, không để đến bước bấm Checkout mới báo lỗi.
+
+---
+
+#### 2. NGUYÊN NHÂN GỐC RỄ (ROOT CAUSE)
+* Hiện tại endpoint `GET /api/v1/vouchers` (`getPublicVouchers()`) chỉ trả về danh sách voucher công khai chung mà không đối soát với Token của người dùng đang đăng nhập để biết người dùng đó đã dùng bao nhiêu lần (`userUsageCount`).
+* Trong `SeatSelection.jsx`, điều kiện `isEligible` chỉ kiểm tra đơn thuần:
+  ```javascript
+  const isEligible = subtotal >= minOrder && subtotal > 0;
+  ```
+  hoàn toàn không có dữ liệu số lượt đã dùng của user để quyết định khóa voucher.
+
+---
+
+#### 3. GIẢI PHÁP TRIỂN KHAI KHI SỬA CODE (PROPOSED FIX)
+1. **Phía Backend:**
+   * Mở rộng endpoint lấy Voucher (hoặc tạo endpoint `GET /api/v1/vouchers/my-eligibility`): Khi có JWT Token của khách hàng, Backend tính toán `userRedemptionCount` cho từng voucher và trả về cờ `isEligibleForUser: boolean` cùng `remainingUserUses: int`.
+2. **Phía Frontend (`SeatSelection.jsx`):**
+   * Trong modal duyệt voucher, bổ sung điều kiện:
+     ```javascript
+     const isUserLimitReached = voucher.remainingUserUses !== undefined && voucher.remainingUserUses <= 0;
+     const canApply = isEligible && !isUserLimitReached;
+     ```
+   * Nếu `isUserLimitReached`: Làm mờ thẻ, hiển thị badge `Limit Reached` và khóa nút Apply.
 
 ---
 
