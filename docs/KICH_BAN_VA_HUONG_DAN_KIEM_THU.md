@@ -112,9 +112,12 @@
 * **Kỳ vọng:** Danh sách các khung giờ chiếu hiển thị rõ ràng kèm định dạng: `IMAX • SUBTITLE`, `2D • DUBBED`...
 
 #### Case 1.3.2: Chặn đặt vé suất chiếu cận giờ (Cutoff 15 phút)
+* **Trạng thái:** ⏳ **CHƯA TEST (PENDING TEST) - Sẽ kiểm thử sau** (do hiện tại chưa có suất chiếu rơi vào khung giờ cận < 15 phút).
 * **Vị trí thao tác:** Trang chi tiết phim hoặc thanh Quick Booking ở Trang chủ.
 * **Các bước thực hiện:** Tìm một suất chiếu có giờ bắt đầu cách thời điểm hiện tại dưới 15 phút (hoặc suất chiếu đã qua giờ).
 * **Kỳ vọng:** Suất chiếu đó bị làm mờ (disabled) hoặc không xuất hiện trong danh sách bookable; nếu cố tình gọi API thì hệ thống từ chối: `Showtime has already started or is within cutoff period (Mã 1309)`.
+* 💡 *Mẹo test nhanh:* Chạy lệnh tạo suất chiếu sau 8 phút nữa:  
+  `docker exec cinema_mysql mysql -u root -proot cinema_booking_db -e "INSERT INTO showtimes (movie_id, room_id, start_time, end_time, base_price, status) VALUES (1, 1, DATE_ADD(NOW(), INTERVAL 8 MINUTE), DATE_ADD(NOW(), INTERVAL 128 MINUTE), 100000, 'SCHEDULED');"`
 
 ---
 

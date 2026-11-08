@@ -13,6 +13,8 @@
 | `BUG-AUTH-EMAIL-FORMAT-VALIDATION-01` | Module 1.1 (Auth & Register) | Đăng ký thành công với email không chuẩn domain (`abc@xyz`) do thiếu regex TLD | Medium (Validation Gap) | 🟡 PENDING (Chờ sửa) |
 | `FEAT-UX-COMING-SOON-PRE-SALE-02` | Module 1.2 (Movie Detail & Catalog) | Giao diện phim Sắp chiếu (`COMING_SOON`): Cần ẩn thanh 7 ngày rỗng và Cơ chế xử lý vé đặt trước (`Pre-Sale`) | Medium (UX Optimization) | 🟡 PENDING (Chờ sửa) |
 | `BUG-SEAT-TOAST-DUPLICATE-03` | Module 1.4 (Seat Selection) | Thông báo cảnh báo luật ghế lẻ bị lặp đúp 2 lần (Duplicate Toast) khi chọn 1 ghế | Low (UI Polish) | 🟡 PENDING (Chờ sửa) |
+| `BUG-SEAT-ROW-E-COUPLE-NULL-04` | Module 1.4 (Couple Seat Matrix) | Toàn bộ hàng ghế E (COUPLE) bị mờ/khóa do cột pair_group trong DB bị NULL | High (Data & Logic Incomplete) | 🟡 PENDING (Chờ sửa) |
+| `TRACK-CASE-1.3.2-CUTOFF-PENDING` | Module 1.3 (Showtime Cutoff 15m) | Tạm hoãn kiểm thử: Chưa có suất chiếu trong khung giờ cận < 15 phút | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 
 ---
 
@@ -274,6 +276,107 @@ Khi được phép can thiệp code:
    ```
 2. **Bổ sung cơ chế Deduplication trong `ToastContext.jsx`:**
    * Trong `ToastContext.jsx`, có thể thêm cơ chế debounce / deduplicate: Nếu một toast có cùng `message` được gọi trong vòng 300ms thì tự động bỏ qua để tránh mọi trường hợp bắn trùng lặp từ React render.
+
+---
+
+### 🐛 LỖI #4: HÀNG GHẾ ĐÔI (COUPLE) BỊ MỜ TỐI / KHÓA CHẶN ĐẶT VÉ DO `pair_group` BỊ GÁN `NULL`
+
+> **Mã lỗi:** `BUG-SEAT-ROW-E-COUPLE-NULL-04`  
+> **Module bị ảnh hưởng:** Module 1.4 (Case 1.4.1 & Case 1.4.4: Sơ đồ ghế & Quy tắc Ghế đôi - `SeatSelection.jsx`, `ShowtimeMapper.java`, `V2__seed_movies_data.sql`)  
+> **Mức độ:** High (Dữ liệu Seed & Tính năng Ghế đôi chưa hoàn thiện)  
+> **Trạng thái:** Chờ xử lý (`PENDING`) - **Chưa can thiệp mã nguồn theo yêu cầu của User**
+
+---
+
+#### 1. MÔ TẢ HIỆN TƯỢNG (SYMPTOMS)
+* **Vị trí xảy ra:** Màn hình sơ đồ chọn ghế (`/booking/seat-selection/:showtimeId`) ở tất cả các suất chiếu và phòng chiếu.
+* **Hiện tượng quan sát được:**
+  * Toàn bộ hàng ghế E (từ E1 đến E5 ở các phòng nhỏ, hoặc E1 đến E8 ở phòng IMAX) đều hiển thị ở trạng thái mờ tối (opacity 30%), có gạch ngang gạch chéo (`line-through`).
+  * Con trỏ chuột chuyển thành hình cấm chọn (`cursor-not-allowed`), tooltip hiển thị: `Maintenance / Inactive`.
+  * Ở thanh chú thích (Legend) đáy màn hình vẫn hiển thị giá: `Couple (320,000 VND/pair)` hoặc `Couple (520,000 VND/pair)`, nhưng khách hàng hoàn toàn không thể chọn bất kỳ ghế đôi nào để đặt vé.
+
+---
+
+#### 2. NGUYÊN NHÂN GỐC RỄ (ROOT CAUSE)
+
+##### A. Dữ liệu trong Database (`cinema_booking_db` -> bảng `seats`):
+Khi truy vấn trực tiếp bảng `seats`:
+```sql
+SELECT id, room_id, row_name, seat_number, type, pair_group, is_active 
+FROM seats 
+WHERE row_name = 'E';
+```
+* **Kết quả:**
+  * Tất cả các ghế hàng E đều có `type = 'COUPLE'` và `is_active = 1`.
+  * **NHƯNG cột `pair_group` bị bỏ quên và mang giá trị `NULL`!**
+  * Đặc biệt ở các phòng Review Room (Room 2 đến 7), hàng E chỉ có **5 ghế** (`E1` đến `E5`). Số 5 là số lẻ, không thể chia đều thành các cặp 2 ghế được.
+
+##### B. Cơ chế bảo vệ D-07 trong Backend & Frontend:
+* **Tại Backend ([`ShowtimeMapper.java:81–84`](file:///d:/movie-theater-booking-system/backend/src/main/java/com/example/cinema/showtime/mapper/ShowtimeMapper.java#L81-L84)):**
+  ```java
+  // Quyết định D-07: Nếu là ghế COUPLE mà pairGroup bị null hoặc <= 0 => Đánh dấu là ghế đôi không có cặp
+  boolean isCoupleWithoutPair = showtimeSeat.getSeat() != null
+          && showtimeSeat.getSeat().getType() == SeatType.COUPLE
+          && (showtimeSeat.getSeat().getPairGroup() == null || showtimeSeat.getSeat().getPairGroup() <= 0);
+
+  // Khi isCoupleWithoutPair == true => Backend trả về selectable = false
+  boolean selectable = isSeatActive && effectiveStatus == ShowtimeSeatStatus.AVAILABLE && !isCoupleWithoutPair;
+  ```
+* **Tại Frontend ([`SeatSelection.jsx:570`](file:///d:/movie-theater-booking-system/frontend/src/pages/SeatSelection.jsx#L570)):**
+  * Nhận được `selectable = false` -> Frontend gán style: `cursor-not-allowed opacity-30 line-through`.
+  * Đồng thời, hệ thống chưa có cơ chế ẩn đi cả hàng ghế nếu phòng đó không có ghế nào active, dẫn tới việc vẽ nguyên hàng E mờ xám gạch ngang.
+
+---
+
+#### 3. HƯỚNG DẪN CHI TIẾT CÁC BƯỚC ĐỂ SỬA (STEP-BY-STEP FIX INSTRUCTIONS)
+
+Khi User ra lệnh sửa code, sẽ thực hiện đồng thời 3 bước sau:
+
+##### Bước 1: Cập nhật Database & File Seed (`V2__seed_movies_data.sql`)
+1. **Đối với Phòng chiếu IMAX Hall 2149 (Room ID 1, có 8 ghế hàng E):**
+   * Ghép 2 ghế liền kề thành 1 cặp đôi:
+     * Ghế `E1, E2` -> `pair_group = 1`
+     * Ghế `E3, E4` -> `pair_group = 2`
+     * Ghế `E5, E6` -> `pair_group = 3`
+     * Ghế `E7, E8` -> `pair_group = 4`
+   * Câu lệnh SQL sửa nhanh:
+     ```sql
+     UPDATE seats SET pair_group = 1 WHERE room_id = 1 AND row_name = 'E' AND seat_number IN (1, 2);
+     UPDATE seats SET pair_group = 2 WHERE room_id = 1 AND row_name = 'E' AND seat_number IN (3, 4);
+     UPDATE seats SET pair_group = 3 WHERE room_id = 1 AND row_name = 'E' AND seat_number IN (5, 6);
+     UPDATE seats SET pair_group = 4 WHERE room_id = 1 AND row_name = 'E' AND seat_number IN (7, 8);
+     ```
+
+2. **Đối với các phòng nhỏ Review Room (Room ID 2 đến 7, đang có 5 ghế lẻ hàng E):**
+   * Ghép `E1, E2` thành Cặp 1 (`pair_group = 1`), `E3, E4` thành Cặp 2 (`pair_group = 2`).
+   * Riêng ghế `E5` (ghế lẻ), chuyển loại ghế thành `VIP` hoặc `NORMAL` (hoặc chèn thêm ghế `E6` để đủ 3 cặp đôi).
+   * Câu lệnh SQL sửa nhanh:
+     ```sql
+     UPDATE seats SET pair_group = 1 WHERE room_id IN (2,3,4,5,6,7) AND row_name = 'E' AND seat_number IN (1, 2);
+     UPDATE seats SET pair_group = 2 WHERE room_id IN (2,3,4,5,6,7) AND row_name = 'E' AND seat_number IN (3, 4);
+     UPDATE seats SET type = 'VIP', pair_group = NULL WHERE room_id IN (2,3,4,5,6,7) AND row_name = 'E' AND seat_number = 5;
+     ```
+
+##### Bước 2: Tối ưu hiển thị Sơ đồ ghế trên Frontend (`SeatSelection.jsx`)
+* Nếu một phòng chiếu thực sự **không có ghế nào hoạt động ở hàng E** (hoặc hàng ghế bị tắt):
+  * **Ẩn hoàn toàn hàng E** khỏi sơ đồ, không vẽ ra hàng ghế mờ xám.
+  * Trên thanh Chú thích (Legend) ở đáy màn hình: Nếu suất chiếu của phòng đó không chứa bất kỳ ghế `COUPLE` nào, **tự động ẩn mục `Couple (...)`**, đảm bảo tính nhất quán giữa chú thích và sơ đồ thực tế.
+
+---
+
+### ⏳ MỤC THEO DÕI KIỂM THỬ: CASE 1.3.2 (CHẶN ĐẶT VÉ CẬN GIỜ CUTOFF 15 PHÚT)
+
+> **Mã theo dõi:** `TRACK-CASE-1.3.2-CUTOFF-PENDING`  
+> **Trạng thái:** **CHƯA TEST (PENDING TEST) - Sẽ kiểm thử sau**  
+> **Lý do:** Tại thời điểm test, trong Database chưa có suất chiếu nào đang rơi vào khoảng cách `[Hiện tại, Hiện tại + 15 phút]` để kích hoạt luật Cutoff.
+
+#### 💡 Cách tạo dữ liệu test nhanh khi bạn muốn kiểm thử Case 1.3.2:
+Chạy lệnh SQL sau vào Docker container để tạo 1 suất chiếu bắt đầu sau 8 phút nữa (nằm trong phạm vi < 15 phút):
+```sql
+docker exec cinema_mysql mysql -u root -proot cinema_booking_db -e "INSERT INTO showtimes (movie_id, room_id, start_time, end_time, base_price, status) VALUES (1, 1, DATE_ADD(NOW(), INTERVAL 8 MINUTE), DATE_ADD(NOW(), INTERVAL 128 MINUTE), 100000, 'SCHEDULED');"
+```
+Khi đó suất chiếu này sẽ rơi vào trạng thái cận giờ chiếu, bạn có thể kiểm tra xem hệ thống có làm mờ nút hoặc chặn đặt vé đúng chuẩn Case 1.3.2 hay không.
+
 
 
 
