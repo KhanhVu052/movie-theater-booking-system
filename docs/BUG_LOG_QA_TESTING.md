@@ -15,6 +15,7 @@
 | `BUG-SEAT-TOAST-DUPLICATE-03` | Module 1.4 (Seat Selection) | Thông báo cảnh báo luật ghế lẻ bị lặp đúp 2 lần (Duplicate Toast) khi chọn 1 ghế | Low (UI Polish) | 🟡 PENDING (Chờ sửa) |
 | `BUG-SEAT-ROW-E-COUPLE-NULL-04` | Module 1.4 (Couple Seat Matrix) | Toàn bộ hàng ghế E (COUPLE) bị mờ/khóa do cột pair_group trong DB bị NULL | High (Data & Logic Incomplete) | 🟡 PENDING (Chờ sửa) |
 | `TRACK-CASE-1.3.2-CUTOFF-PENDING` | Module 1.3 (Showtime Cutoff 15m) | Tạm hoãn kiểm thử: Chưa có suất chiếu trong khung giờ cận < 15 phút | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
+| `TRACK-CASE-1.4.4-COUPLE-PENDING` | Module 1.4 (Couple Seat Rules) | Tạm hoãn kiểm thử: Luật ghế đôi chưa test được do hàng E đang bị mờ (Lỗi #4) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 
 ---
 
@@ -376,6 +377,15 @@ Chạy lệnh SQL sau vào Docker container để tạo 1 suất chiếu bắt �
 docker exec cinema_mysql mysql -u root -proot cinema_booking_db -e "INSERT INTO showtimes (movie_id, room_id, start_time, end_time, base_price, status) VALUES (1, 1, DATE_ADD(NOW(), INTERVAL 8 MINUTE), DATE_ADD(NOW(), INTERVAL 128 MINUTE), 100000, 'SCHEDULED');"
 ```
 Khi đó suất chiếu này sẽ rơi vào trạng thái cận giờ chiếu, bạn có thể kiểm tra xem hệ thống có làm mờ nút hoặc chặn đặt vé đúng chuẩn Case 1.3.2 hay không.
+
+---
+
+### ⏳ MỤC THEO DÕI KIỂM THỬ: CASE 1.4.3 & 1.4.4 (KIỂM TRA LUẬT GHẾ ĐÔI COUPLE)
+
+> **Mã theo dõi:** `TRACK-CASE-1.4.4-COUPLE-PENDING`  
+> **Trạng thái:** **CHƯA TEST (PENDING TEST) - Sẽ kiểm thử sau khi sửa Lỗi #4**  
+> **Lý do:** Tester chưa kiểm thử được hành vi chọn ghế đôi (chọn 1 ghế tự chọn cả cặp, giá nhân đôi) do toàn bộ hàng ghế E (COUPLE) trong Database đang bị gán `pair_group = NULL` và bị hệ thống khóa mờ (Lỗi `BUG-SEAT-ROW-E-COUPLE-NULL-04`).
+
 
 
 

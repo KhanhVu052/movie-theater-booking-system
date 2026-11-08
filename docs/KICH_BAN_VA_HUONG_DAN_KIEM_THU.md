@@ -147,8 +147,10 @@
 * **Vị trí thao tác:** Màn hình chọn ghế.
 * **Các bước thực hiện:** Bấm chọn 2 ghế liền nhau: ví dụ `B5` và `B6` (hoặc `B1` và `B2`).
 * **Kỳ vọng:** Ghế chuyển sang màu vàng (Selected), khung Booking Summary bên phải hiển thị danh sách ghế kèm tổng tiền tạm tính. Nút **"Reserve Seats & Checkout"** sáng lên cho phép click.
+* ⏳ *Ghi chú:* Ghế thường/VIP đã test OK. Riêng kiểm thử chọn ghế đôi (Couple) tạm thời **CHƯA TEST ĐƯỢC** do hàng E đang bị mờ/lỗi.
 
 #### Case 1.4.4: Kiểm tra Luật Ghế Đôi (Couple Seat Rules)
+* **Trạng thái:** ⏳ **CHƯA TEST (PENDING TEST) - Sẽ kiểm thử sau khi sửa Lỗi #4** (do hàng ghế đôi E đang bị mờ/khóa toàn bộ).
 * **Vị trí thao tác:** Chọn suất chiếu phòng có ghế đôi (hoặc phòng chiếu IMAX hàng E).
 * **Kịch bản kiểm tra:**
   * Bấm vào 1 ghế thuộc cặp ghế đôi:
