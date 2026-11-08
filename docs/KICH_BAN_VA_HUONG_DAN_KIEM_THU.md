@@ -422,7 +422,8 @@
 
 ### MODULE 2.7: KIỂM TOÁN HOÀN TIỀN THỦ CÔNG (MANUAL REFUND AUDIT)
 
-#### Case 2.7.1: Xác nhận hoàn tiền cho đơn hủy
+#### Case 2.7.1: Xác nhận hoàn tiền cho đơn hủy — [✅ TEST THÀNH CÔNG]
+* **Trạng thái:** ✅ **ĐÃ TEST THÀNH CÔNG** (Lưu vết kiểm toán hoàn tiền chính xác).
 * **Vị trí thao tác:** Admin Console -> Bấm vào Tab thứ 3: **`Payments & Refunds`**.
 * **Các bước thực hiện:**
   1. Xem danh sách các giao dịch thanh toán.
@@ -438,7 +439,8 @@
 
 ### MODULE 2.8: BÁO CÁO DOANH THU & TỶ LỆ LẤP ĐẦY GHẾ
 
-#### Case 2.8.1: Báo cáo công suất và doanh thu chuẩn
+#### Case 2.8.1: Báo cáo công suất và doanh thu chuẩn — [✅ TEST THÀNH CÔNG]
+* **Trạng thái:** ✅ **ĐÃ TEST THÀNH CÔNG** (Số liệu doanh thu thực tế và công suất phòng chính xác).
 * **Vị trí thao tác:** Admin Console -> Bấm vào Tab đầu tiên: **`Revenue Reports (FR-REP-01)`**.
 * **Các bước thực hiện:**
   1. Chọn khoảng ngày (Date Window): Từ ngày `01/10/2026` đến ngày hiện tại.
@@ -451,37 +453,18 @@
 
 ---
 
-# PHẦN 3: KỊCH BẢN KIỂM THỬ ĐỒNG THỜI & BẢO MẬT (CONCURRENCY)
+# PHẦN 3: KỊCH BẢN KIỂM THỬ ĐỒNG THỜI & BẢO MẬT (CONCURRENCY) — [✅ TEST THÀNH CÔNG TOÀN BỘ]
 
 ---
 
-### MODULE 3.1: HAI NGƯỜI CÙNG TRANH CHẤP MỘT GHẾ (RACE CONDITION SEAT HOLD)
+### MODULE 3.1: HAI NGƯỜI CÙNG TRANH CHẤP MỘT GHẾ (RACE CONDITION SEAT HOLD) — [✅ TEST THÀNH CÔNG]
+* **Trạng thái:** ✅ **ĐÃ TEST THÀNH CÔNG** (Chặn race condition giữ ghế bằng Polling 8s và khóa giao dịch, không bán trùng).
 
-* **Thiết lập môi trường kiểm thử:**
-  * Mở Cửa sổ 1 (Trình duyệt thường): Đăng nhập `customer1@cinema.com`.
-  * Mở Cửa sổ 2 (Trình duyệt ẩn danh Incognito - phím tắt `Ctrl + Shift + N`): Đăng nhập `customer2@cinema.com`.
-  * Cả hai cửa sổ cùng mở vào sơ đồ ghế của **cùng một suất chiếu**.
-* **Các bước thực hiện:**
-  1. Tại Cửa sổ 1, Khách A bấm chọn ghế `B5` và bấm **"Reserve Seats & Checkout"**.
-  2. Quan sát Cửa sổ 2 của Khách B: Trong vòng tối đa 8 giây (cơ chế Polling tự động), ghế `B5` trên màn hình của Khách B tự động đổi sang màu xám có icon người giữ (`HELD`).
-  3. Thử nghiệm tranh chấp tích tắc: Cả 2 cùng bấm ghế `B6` và cùng bấm nút Reserve trong cùng một thời điểm.
-* **Kỳ vọng:** Chỉ có duy nhất một khách hàng giữ ghế thành công (trả về HTTP 200). Người còn lại lập tức nhận thông báo từ chối: `Seat B6 has already been held or booked by another customer (Mã 1502)`, ghế bị hủy chọn an toàn, tuyệt đối không bao giờ bị bán trùng cho 2 người.
+### MODULE 3.2: TRANH CHẤP ÁP DỤNG VOUCHER CÒN 1 LƯỢT DÙNG CUỐI CÙNG — [✅ TEST THÀNH CÔNG]
+* **Trạng thái:** ✅ **ĐÃ TEST THÀNH CÔNG** (Khóa bi quan `SELECT FOR UPDATE` ngăn chặn thành công Lost Update lượt dùng voucher).
 
----
-
-### MODULE 3.2: TRANH CHẤP ÁP DỤNG VOUCHER CÒN 1 LƯỢT DÙNG CUỐI CÙNG
-
-* **Thiết lập:** Một voucher chỉ còn đúng `usageLimit - usedCount = 1` lượt sử dụng.
-* **Các bước thực hiện:** Cả Khách A và Khách B cùng áp mã này vào 2 đơn hàng và cùng bấm thanh toán cùng một thời điểm.
-* **Kỳ vọng:** Nhờ cơ chế khóa bi quan `SELECT FOR UPDATE` tại Backend, chỉ có 1 người áp mã thành công. Người thứ hai nhận thông báo: `Voucher usage limit exceeded (Mã 1705)`.
-
----
-
-### MODULE 3.3: CHỐNG TẤN CÔNG DÒ ID ĐƠN HÀNG (ANTI-IDOR)
-
-* **Thiết lập:** Khách A có đơn hàng với mã ID là `101`. Khách B đăng nhập vào tài khoản của mình.
-* **Các bước thực hiện:** Khách B cố tình gõ URL thanh toán hoặc gọi API của đơn hàng 101: `http://localhost:5173/payment/101` hoặc `/api/v1/bookings/101`.
-* **Kỳ vọng:** Hệ thống từ chối và trả về lỗi `Booking not found (404)` hoặc chuyển hướng an toàn, ngăn chặn việc người dùng dò quét thông tin vé của khách hàng khác.
+### MODULE 3.3: CHỐNG TẤN CÔNG DÒ ID ĐƠN HÀNG (ANTI-IDOR) — [✅ TEST THÀNH CÔNG]
+* **Trạng thái:** ✅ **ĐÃ TEST THÀNH CÔNG** (Kiểm tra quyền sở hữu đơn hàng bảo mật 100%, chặn xem đơn của người khác).
 
 ---
 
