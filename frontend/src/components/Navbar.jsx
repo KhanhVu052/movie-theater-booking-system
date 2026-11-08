@@ -155,14 +155,6 @@ export default function Navbar({ searchQuery = '', onSearchChange, onSearchSubmi
             >
               Vouchers
             </button>
-            {token && (
-              <Link
-                to="/my-bookings"
-                className="hover:text-[#f3cb62] transition-colors cursor-pointer"
-              >
-                My Bookings
-              </Link>
-            )}
 
           </nav>
         </div>
@@ -400,7 +392,7 @@ export default function Navbar({ searchQuery = '', onSearchChange, onSearchSubmi
                   onClick={() => setMobileMenuOpen(false)}
                   className="text-left py-2 text-sm text-[#f3cb62] font-semibold border-b border-[#2e2316]"
                 >
-                  My Bookings &amp; Tickets
+                  My Tickets
                 </Link>
               </>
             )}
