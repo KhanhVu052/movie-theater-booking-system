@@ -15,6 +15,7 @@
 | `BUG-SEAT-TOAST-DUPLICATE-03` | Module 1.4 (Seat Selection) | Thông báo cảnh báo luật ghế lẻ bị lặp đúp 2 lần (Duplicate Toast) khi chọn 1 ghế | Low (UI Polish) | 🟡 PENDING (Chờ sửa) |
 | `BUG-SEAT-ROW-E-COUPLE-NULL-04` | Module 1.4 (Couple Seat Matrix) | Toàn bộ hàng ghế E (COUPLE) bị mờ/khóa do cột pair_group trong DB bị NULL | High (Data & Logic Incomplete) | 🟡 PENDING (Chờ sửa) |
 | `BUG-SEAT-COUPLE-PRICE-DOUBLE-MULTIPLICATION-05` | Module 1.4 (Seat Selection & Pricing) | Giá ghế đôi (COUPLE) bị nhân đôi 2 lần: Giá gốc 80k thì cặp phải là 160k, nhưng hệ thống tính thành 320.000đ/cặp | High (Pricing Calculation Bug) | 🟡 PENDING (Chờ sửa) |
+| `FEAT-UX-NAVBAR-DUPLICATE-MY-BOOKINGS-06` | Client Navigation (`Navbar.jsx`) | Trùng lặp liên kết điều hướng: Cả "My Bookings" và "My Tickets" đều trỏ về `/my-bookings` -> Xóa "My Bookings" | Low (UI Redundancy) | 🟡 PENDING (Chờ sửa) |
 | `TRACK-CASE-1.3.2-CUTOFF-PENDING` | Module 1.3 (Showtime Cutoff 15m) | Tạm hoãn kiểm thử: Chưa có suất chiếu trong khung giờ cận < 15 phút | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 | `TRACK-CASE-1.4.4-COUPLE-PENDING` | Module 1.4 (Couple Seat Rules) | Tạm hoãn kiểm thử: Luật ghế đôi chưa test được do hàng E đang bị mờ (Lỗi #4) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 
@@ -448,6 +449,49 @@ Hiện tượng này xảy ra do **sự xung đột cách hiểu và nhân đôi
   * `couplePair` = `couplePerSeat * 2` = `160.000đ` $\rightarrow$ Legend hiển thị chuẩn: `Couple (160,000 VND/pair)`.
 * Khi người dùng chọn cặp ghế đôi (gồm 2 ID ghế E1 và E2):
   * `subtotal` = $80.000đ + 80.000đ = 160.000đ$ $\rightarrow$ Chính xác 100%!
+
+---
+
+### 💡 CẢI TIẾN UX #6: XÓA LIÊN KẾT TRÙNG LẶP "MY BOOKINGS" TRÊN THANH MENU ĐIỀU HƯỚNG CLIENT (CHỈ GIỮ LẠI NÚT "MY TICKETS")
+
+> **Mã cải tiến/lỗi:** `FEAT-UX-NAVBAR-DUPLICATE-MY-BOOKINGS-06`  
+> **Module bị ảnh hưởng:** Client Header Navigation (`frontend/src/components/Navbar.jsx`)  
+> **Mức độ:** Low (Tối ưu trải nghiệm giao diện / UI Redundancy)  
+> **Trạng thái:** Chờ xử lý (`PENDING`) - **Chưa can thiệp mã nguồn theo yêu cầu của User**
+
+---
+
+#### 1. MÔ TẢ HIỆN TƯỢNG (SYMPTOMS)
+* **Vị trí xảy ra:** Thanh điều hướng chính (Navbar) ở đầu trang client.
+* **Các bước tái hiện:**
+  1. Đăng nhập tài khoản khách hàng hoặc admin.
+  2. Quan sát thanh menu Header:
+     * Ở cụm liên kết chính giữa (Desktop Nav Links): Xuất hiện thêm mục text link **`My Bookings`** (bên cạnh Movies, Showtimes, Vouchers).
+     * Ở cụm thao tác tài khoản bên phải (User Action Cluster): Xuất hiện nút bấm màu nâu sang trọng có biểu tượng vé **`🎟️ My Tickets`**.
+  3. Bấm vào cả 2 mục trên: Cả 2 đều chuyển hướng đến cùng một trang giao diện danh sách vé và lịch sử đặt chỗ (`/my-bookings`).
+* **Kết quả thực tế:**
+  * Giao diện bị trùng lặp liên kết đến cùng một chức năng, chiếm không gian trên thanh menu ngang và gây bối rối cho người dùng ("My Bookings" và "My Tickets" có gì khác nhau?).
+* **Kỳ vọng chuẩn theo yêu cầu của Tester:**
+  * **Xóa bỏ hoàn toàn** liên kết `My Bookings` ở cụm menu điều hướng chính giữa (`Navbar.jsx` dòng 158-165).
+  * **Giữ nguyên và đồng nhất** việc truy cập lịch sử vé thông qua nút bấm **`🎟️ My Tickets`** ở cụm bên phải (hoặc trong menu mobile).
+
+---
+
+#### 2. NGUYÊN NHÂN GỐC RỄ (ROOT CAUSE)
+* Trong `Navbar.jsx`:
+  * Đoạn code dòng 158–165 kiểm tra điều kiện `{token && <Link to="/my-bookings">My Bookings</Link>}` chèn thêm 1 liên kết vào thanh menu chung.
+  * Đồng thời, cụm bên phải (dòng 284–290) cũng đã có sẵn nút riêng biệt:
+    ```jsx
+    <Link to="/my-bookings" className="..."><Ticket className="..." /><span>My Tickets</span></Link>
+    ```
+  * Cả hai cùng điều hướng về Route `/my-bookings` do `MyBookings.jsx` phục vụ.
+
+---
+
+#### 3. GIẢI PHÁP TRIỂN KHAI KHI SỬA CODE (PROPOSED FIX)
+1. **Trong `frontend/src/components/Navbar.jsx`:**
+   * Xóa bỏ khối `{token && (<Link to="/my-bookings">My Bookings</Link>)}` tại dòng 158–165.
+   * Tại mobile drawer menu (dòng 403), tinh chỉnh nhãn `My Bookings & Tickets` thành `My Tickets` để đồng nhất ngôn ngữ thiết kế toàn hệ thống.
 
 ---
 
