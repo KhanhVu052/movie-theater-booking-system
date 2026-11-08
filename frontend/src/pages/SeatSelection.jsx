@@ -234,44 +234,40 @@ export default function SeatSelection() {
       return;
     }
 
-    setSelectedSeatIds((prev) => {
-      let nextSelected;
-      if (partner) {
-        if (prev.includes(seat.id)) {
-          // Deselect both seats of the couple pair
-          nextSelected = prev.filter((id) => id !== seat.id && id !== partner.id);
-        } else {
-          // Both seats must be selected together
-          if (prev.length + 2 > 8) {
-            const maxMsg = 'You can only select up to 8 seats per booking.';
-            setSelectionNotice(maxMsg);
-            showToast(maxMsg, 'warning');
-            return prev;
-          }
-          nextSelected = [...prev, seat.id, partner.id];
-        }
+    let nextSelected;
+    if (partner) {
+      if (selectedSeatIds.includes(seat.id)) {
+        nextSelected = selectedSeatIds.filter((id) => id !== seat.id && id !== partner.id);
       } else {
-        if (prev.includes(seat.id)) {
-          nextSelected = prev.filter((id) => id !== seat.id);
-        } else {
-          if (prev.length >= 8) {
-            const maxMsg = 'You can only select up to 8 seats per booking.';
-            setSelectionNotice(maxMsg);
-            showToast(maxMsg, 'warning');
-            return prev;
-          }
-          nextSelected = [...prev, seat.id];
+        if (selectedSeatIds.length + 2 > 8) {
+          const maxMsg = 'You can only select up to 8 seats per booking.';
+          setSelectionNotice(maxMsg);
+          showToast(maxMsg, 'warning');
+          return;
         }
+        nextSelected = [...selectedSeatIds, seat.id, partner.id];
       }
-
-      if (causesOrphanSeat(seats, nextSelected)) {
-        const warningMsg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
-        setSelectionNotice(warningMsg);
-        showToast(warningMsg, 'warning');
+    } else {
+      if (selectedSeatIds.includes(seat.id)) {
+        nextSelected = selectedSeatIds.filter((id) => id !== seat.id);
+      } else {
+        if (selectedSeatIds.length >= 8) {
+          const maxMsg = 'You can only select up to 8 seats per booking.';
+          setSelectionNotice(maxMsg);
+          showToast(maxMsg, 'warning');
+          return;
+        }
+        nextSelected = [...selectedSeatIds, seat.id];
       }
+    }
 
-      return nextSelected;
-    });
+    setSelectedSeatIds(nextSelected);
+
+    if (causesOrphanSeat(seats, nextSelected)) {
+      const warningMsg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
+      setSelectionNotice(warningMsg);
+      showToast(warningMsg, 'warning');
+    }
   };
 
   // Voucher apply handler via manual form
