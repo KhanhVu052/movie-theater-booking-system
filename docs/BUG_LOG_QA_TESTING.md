@@ -14,6 +14,7 @@
 | `FEAT-UX-COMING-SOON-PRE-SALE-02` | Module 1.2 (Movie Detail & Catalog) | Giao diện phim Sắp chiếu (`COMING_SOON`): Cần ẩn thanh 7 ngày rỗng và Cơ chế xử lý vé đặt trước (`Pre-Sale`) | Medium (UX Optimization) | 🟡 PENDING (Chờ sửa) |
 | `BUG-SEAT-TOAST-DUPLICATE-03` | Module 1.4 (Seat Selection) | Thông báo cảnh báo luật ghế lẻ bị lặp đúp 2 lần (Duplicate Toast) khi chọn 1 ghế | Low (UI Polish) | 🟡 PENDING (Chờ sửa) |
 | `BUG-SEAT-ROW-E-COUPLE-NULL-04` | Module 1.4 (Couple Seat Matrix) | Toàn bộ hàng ghế E (COUPLE) bị mờ/khóa do cột pair_group trong DB bị NULL | High (Data & Logic Incomplete) | 🟡 PENDING (Chờ sửa) |
+| `BUG-SEAT-COUPLE-PRICE-DOUBLE-MULTIPLICATION-05` | Module 1.4 (Seat Selection & Pricing) | Giá ghế đôi (COUPLE) bị nhân đôi 2 lần: Giá gốc 80k thì cặp phải là 160k, nhưng hệ thống tính thành 320.000đ/cặp | High (Pricing Calculation Bug) | 🟡 PENDING (Chờ sửa) |
 | `TRACK-CASE-1.3.2-CUTOFF-PENDING` | Module 1.3 (Showtime Cutoff 15m) | Tạm hoãn kiểm thử: Chưa có suất chiếu trong khung giờ cận < 15 phút | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 | `TRACK-CASE-1.4.4-COUPLE-PENDING` | Module 1.4 (Couple Seat Rules) | Tạm hoãn kiểm thử: Luật ghế đôi chưa test được do hàng E đang bị mờ (Lỗi #4) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 
@@ -362,6 +363,91 @@ Khi User ra lệnh sửa code, sẽ thực hiện đồng thời 3 bước sau:
 * Nếu một phòng chiếu thực sự **không có ghế nào hoạt động ở hàng E** (hoặc hàng ghế bị tắt):
   * **Ẩn hoàn toàn hàng E** khỏi sơ đồ, không vẽ ra hàng ghế mờ xám.
   * Trên thanh Chú thích (Legend) ở đáy màn hình: Nếu suất chiếu của phòng đó không chứa bất kỳ ghế `COUPLE` nào, **tự động ẩn mục `Couple (...)`**, đảm bảo tính nhất quán giữa chú thích và sơ đồ thực tế.
+
+---
+
+### 🐛 LỖI #5: GIÁ GHẾ ĐÔI COUPLE BỊ NHÂN ĐÔI 2 LẦN (HIỂN THỊ VÀ TÍNH TIỀN THÀNH 320.000Đ/CẶP THAY VÌ 160.000Đ/CẶP Ở PHÒNG 80K)
+
+> **Mã lỗi:** `BUG-SEAT-COUPLE-PRICE-DOUBLE-MULTIPLICATION-05`  
+> **Module bị ảnh hưởng:** Module 1.4 (Seat Selection & Dynamic Pricing - `V2__seed_movies_data.sql`, `priceTags.js`, `SeatSelection.jsx`)  
+> **Mức độ:** High (Lỗi tính toán giá vé và doanh thu / Pricing Calculation Bug)  
+> **Trạng thái:** Chờ xử lý (`PENDING`) - **Chưa can thiệp mã nguồn theo yêu cầu của User**
+
+---
+
+#### 1. MÔ TẢ HIỆN TƯỢNG (SYMPTOMS)
+* **Vị trí xảy ra:** Màn hình Chọn ghế (`/booking/seats/:showtimeId`) tại thanh Chú thích loại ghế (Legend) và phần tính Tổng tiền (Booking Summary).
+* **Các bước tái hiện:**
+  1. Vào phim bất kỳ ở phòng chiếu 2D thường (ví dụ Room 2, có giá cơ sở `base_price = 80.000 VND`).
+  2. Quan sát thanh Chú thích (Legend) dưới sơ đồ ghế:
+     * Regular: `80,000 VND`
+     * VIP: `100,000 VND` (+20k VIP)
+     * **Couple: `320,000 VND/pair`** *(Bất thường: Lẽ ra 1 cặp đôi gồm 2 ghế thì giá là $80.000 \times 2 = 160.000\text{ VND}$, nhưng lại hiển thị vọt lên $320.000\text{ VND/pair}$!)*
+  3. Ở phòng chiếu IMAX (Room 1, giá cơ sở `base_price = 130.000 VND`):
+     * Regular: `130,000 VND`
+     * VIP: `150,000 VND`
+     * **Couple: `520,000 VND/pair`** *(Lẽ ra $130.000 \times 2 = 260.000\text{ VND}$, nhưng lại hiển thị $520.000\text{ VND/pair}$ gấp đôi tiếp!)*
+* **Kết quả thực tế:**
+  * Giá cặp ghế đôi bị nhân đôi 2 lần (thành 4 lần giá cơ sở).
+* **Kỳ vọng chuẩn nghiệp vụ:**
+  * Với phòng có giá vé chuẩn 80.000đ: Một cặp ghế đôi (2 chỗ ngồi) phải có giá trọn gói là **160.000đ/cặp** (80.000đ x 2) hoặc nếu có phụ thu ghế đôi (theo `coupleSurcharge` 10k/ghế) thì tối đa là **180.000đ/cặp** (90.000đ x 2).
+  * Chú thích phải hiển thị: `Couple (160,000 VND/pair)`.
+  * Khi chọn cặp ghế đôi, tổng tiền vé cho 2 ghế phải là 160.000đ, không phải 320.000đ.
+
+---
+
+#### 2. NGUYÊN NHÂN GỐC RỄ (ROOT CAUSE)
+Hiện tượng này xảy ra do **sự xung đột cách hiểu và nhân đôi 2 lần giữa SQL Seed Script và Frontend Javascript**:
+
+1. **Lần nhân đôi thứ nhất (Tại Database Seed - `V2__seed_movies_data.sql` dòng 12968):**
+   ```sql
+   INSERT IGNORE INTO showtime_seats (showtime_id, seat_id, price, status, held_by_booking_id, updated_at)
+   SELECT 
+       st.id, s.id, 
+       CASE 
+           WHEN s.type = 'VIP' THEN st.base_price + 20000 
+           WHEN s.type = 'COUPLE' THEN st.base_price * 2 
+           ELSE st.base_price 
+       END, 
+       'AVAILABLE', NULL, CURRENT_TIMESTAMP 
+   FROM showtimes st JOIN seats s ON s.room_id = st.room_id;
+   ```
+   * Tác giả script seed nghĩ rằng "ghế couple bán theo cặp nên giá là `base_price * 2 = 160.000đ`".
+   * Nhưng trong DB, mỗi bản ghi của bảng `showtime_seats` lại là **1 ghế vật lý đơn lẻ** (ghế `E1` là 1 record, `E2` là 1 record).
+   * Dẫn đến: Ghế `E1` được gán giá = `160.000đ`, và ghế `E2` cũng được gán giá = `160.000đ`!
+   * Khi khách đặt cặp E1 + E2, hệ thống cộng tổng `160k + 160k = 320.000đ`!
+
+2. **Lần nhân đôi thứ hai (Tại Frontend Utility - `frontend/src/utils/priceTags.js` dòng 45-46):**
+   ```javascript
+   const couplePerSeat = showtime?.seatTypePrices?.COUPLE ?? coupleSeat?.price ?? normal;
+   const couplePair = couplePerSeat * 2;
+   ```
+   * Frontend lấy `coupleSeat?.price` từ API (đang mang giá trị `160.000đ` từ DB ở trên).
+   * Frontend coi `couplePerSeat` là giá của 1 ghế đơn lẻ (`160.000đ`), rồi lấy `couplePair = couplePerSeat * 2` để vẽ chuỗi `"Couple (320,000 VND/pair)"`!
+   * **Kết quả:** $80.000 \times 2 \times 2 = 320.000\text{ VND}$!
+
+---
+
+#### 3. GIẢI PHÁP KHẮC PHỤC KỸ THUẬT (PROPOSED FIX)
+
+##### Bước 1: Chuẩn hóa lại giá ghế COUPLE trong Database Seed & Bảng `showtime_seats`
+* Mỗi ghế thuộc cặp COUPLE phải lưu giá của **1 chỗ ngồi đơn lẻ** (bằng giá cơ sở `base_price`, hoặc `base_price + coupleSurcharge`):
+  ```sql
+  -- Sửa lại logic trong migration hoặc cập nhật DB hiện tại:
+  UPDATE showtime_seats ss
+  JOIN seats s ON ss.seat_id = s.id
+  JOIN showtimes st ON ss.showtime_id = st.id
+  SET ss.price = st.base_price
+  WHERE s.type = 'COUPLE';
+  ```
+  *(Khi đó, E1 = 80.000đ, E2 = 80.000đ).*
+
+##### Bước 2: Đảm bảo tính toán hiển thị Legend trên Frontend
+* Trong `priceTags.js`:
+  * `couplePerSeat` = `80.000đ`
+  * `couplePair` = `couplePerSeat * 2` = `160.000đ` $\rightarrow$ Legend hiển thị chuẩn: `Couple (160,000 VND/pair)`.
+* Khi người dùng chọn cặp ghế đôi (gồm 2 ID ghế E1 và E2):
+  * `subtotal` = $80.000đ + 80.000đ = 160.000đ$ $\rightarrow$ Chính xác 100%!
 
 ---
 

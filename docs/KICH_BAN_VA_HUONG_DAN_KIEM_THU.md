@@ -149,12 +149,13 @@
 * **Kỳ vọng:** Ghế chuyển sang màu vàng (Selected), khung Booking Summary bên phải hiển thị danh sách ghế kèm tổng tiền tạm tính. Nút **"Reserve Seats & Checkout"** sáng lên cho phép click.
 * ⏳ *Ghi chú:* Ghế thường/VIP đã test OK. Riêng kiểm thử chọn ghế đôi (Couple) tạm thời **CHƯA TEST ĐƯỢC** do hàng E đang bị mờ/lỗi.
 
-#### Case 1.4.4: Kiểm tra Luật Ghế Đôi (Couple Seat Rules)
-* **Trạng thái:** ⏳ **CHƯA TEST (PENDING TEST) - Sẽ kiểm thử sau khi sửa Lỗi #4** (do hàng ghế đôi E đang bị mờ/khóa toàn bộ).
+#### Case 1.4.4: Kiểm tra Luật Ghế Đôi (Couple Seat Rules & Pricing)
+* **Trạng thái:** ⏳ **CHƯA TEST (PENDING TEST) - Sẽ kiểm thử sau khi sửa Lỗi #4 & #5** (do hàng ghế đôi E đang bị mờ/khóa toàn bộ và giá ghế đôi đang bị nhân 2 hai lần).
 * **Vị trí thao tác:** Chọn suất chiếu phòng có ghế đôi (hoặc phòng chiếu IMAX hàng E).
 * **Kịch bản kiểm tra:**
   * Bấm vào 1 ghế thuộc cặp ghế đôi:
   * 👉 **Kỳ vọng:** Hệ thống tự động chọn luôn cả ghế đối tác cùng cặp `pairGroup` (chọn cả đôi cùng lúc), không cho phép mua lẻ 1 chiếc trong cặp ghế đôi (Theo Quyết định D-07).
+  * 👉 **Kỳ vọng về Giá vé:** Với phòng có giá cơ sở 80k/vé thường, giá cho 1 cặp đôi phải là `160.000đ/cặp` (80k x 2 chỗ ngồi), không bị nhân đôi 2 lần thành `320.000đ/cặp` (Lỗi `BUG-SEAT-COUPLE-PRICE-DOUBLE-MULTIPLICATION-05`).
 
 ---
 
