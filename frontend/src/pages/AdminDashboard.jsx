@@ -32,6 +32,7 @@ import CustomDatePicker from '../components/CustomDatePicker';
 import { adminApi } from '../api/adminApi';
 import { movieApi } from '../api/movieApi';
 import { useToast } from '../context/ToastContext';
+import { getEmbedTrailerUrl } from '../utils/trailer';
 
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { toLocalDateStr, localDateStrFromToday } from '../utils/dates';
@@ -479,8 +480,19 @@ export default function AdminDashboard() {
   // Create Movie Form Submit
   const handleCreateMovieSubmit = async (e) => {
     e.preventDefault();
+    const rawTrailer = (newMovie.trailerUrl || '').trim();
+    if (rawTrailer && !getEmbedTrailerUrl(rawTrailer)) {
+      showToast(
+        'Invalid Trailer URL: Must be a valid HTTPS YouTube URL (e.g. https://www.youtube.com/watch?v=... or https://youtu.be/...)',
+        'error'
+      );
+      return;
+    }
     try {
-      await adminApi.createMovie(newMovie);
+      await adminApi.createMovie({
+        ...newMovie,
+        trailerUrl: rawTrailer,
+      });
       setShowAddMovieModal(false);
       setNotice('Movie published successfully.');
       fetchMovies();
@@ -1918,6 +1930,19 @@ export default function AdminDashboard() {
                   value={newMovie.posterUrl}
                   onChange={(e) => setNewMovie({ ...newMovie, posterUrl: e.target.value })}
                   placeholder="https://..."
+                  className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#ab9a84] mb-1 font-semibold">
+                  YouTube Trailer URL
+                </label>
+                <input
+                  type="url"
+                  value={newMovie.trailerUrl}
+                  onChange={(e) => setNewMovie({ ...newMovie, trailerUrl: e.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
                   className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0]"
                 />
               </div>
