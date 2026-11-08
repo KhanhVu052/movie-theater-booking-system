@@ -17,6 +17,7 @@
 | `BUG-SEAT-COUPLE-PRICE-DOUBLE-MULTIPLICATION-05` | Module 1.4 (Seat Selection & Pricing) | Giá ghế đôi (COUPLE) bị nhân đôi 2 lần: Giá gốc 80k thì cặp phải là 160k, nhưng hệ thống tính thành 320.000đ/cặp | High (Pricing Calculation Bug) | 🟡 PENDING (Chờ sửa) |
 | `FEAT-UX-NAVBAR-DUPLICATE-MY-BOOKINGS-06` | Client Navigation (`Navbar.jsx`) | Trùng lặp liên kết điều hướng: Cả "My Bookings" và "My Tickets" đều trỏ về `/my-bookings` -> Xóa "My Bookings" | Low (UI Redundancy) | 🟡 PENDING (Chờ sửa) |
 | `FEAT-ADMIN-GENRE-MANAGEMENT-UI-07` | Admin Portal (`AdminDashboard.jsx`) | Thiếu giao diện Quản lý Thể loại (Genre Management UI Tab) trên Admin Dashboard (Backend đã có 100% API) | Medium (Missing Admin Feature) | 🟡 PENDING (Chờ bổ sung) |
+| `BUG-ADMIN-MOVIE-MODAL-MISSING-TRAILER-INPUT-08` | Admin Portal (`AdminDashboard.jsx`) | Modal Thêm/Sửa phim thiếu ô nhập Trailer URL -> Phim tạo mới không có trailer, chặn kiểm thử Case 2.3.1, 2.3.2 | High (Missing Input Field) | 🟡 PENDING (Chờ sửa) |
 | `TRACK-CASE-1.3.2-CUTOFF-PENDING` | Module 1.3 (Showtime Cutoff 15m) | Tạm hoãn kiểm thử: Chưa có suất chiếu trong khung giờ cận < 15 phút | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 | `TRACK-CASE-1.4.4-COUPLE-PENDING` | Module 1.4 (Couple Seat Rules) | Tạm hoãn kiểm thử: Luật ghế đôi chưa test được do hàng E đang bị mờ (Lỗi #4) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 
@@ -570,6 +571,81 @@ export const genreApi = {
   * Nút CTA: **"+ Add New Genre"** mở Modal nhập tên thể loại.
   * Xử lý lỗi thông minh: Khi xóa thể loại đang có phim, bắt mã lỗi `1205` từ Backend và hiển thị Toast đỏ: *"Cannot delete genre because it is currently linked to one or more movies."*
   * Hỗ trợ sửa tên thể loại (`Edit Modal`) với kiểm tra trùng lặp.
+
+---
+
+### 🐛 LỖI #8: MODAL THÊM PHIM MỚI TRÊN ADMIN DASHBOARD THIẾU Ô NHẬP TRAILER URL (DẪN ĐẾN PHIM TẠO XONG KHÔNG CÓ NÚT XEM TRAILER TRÊN CLIENT)
+
+> **Mã lỗi:** `BUG-ADMIN-MOVIE-MODAL-MISSING-TRAILER-INPUT-08`  
+> **Module bị ảnh hưởng:** Quản lý phim Admin (`AdminDashboard.jsx` dòng 1830–1950) & Chi tiết phim Client (`MovieDetail.jsx` dòng 286, 379)  
+> **Mức độ:** High (Thiếu trường dữ liệu đầu vào / Gãy chuỗi tính năng Trailer & Chặn kiểm thử Case 2.3.1, 2.3.2)  
+> **Trạng thái:** Chờ xử lý (`PENDING`) - **Chưa can thiệp mã nguồn theo yêu cầu của User**
+
+---
+
+#### 1. MÔ TẢ HIỆN TƯỢNG (SYMPTOMS)
+* **Vị trí xảy ra:** Modal *"Publish New Title to Catalog"* trong Tab `Movie Catalog` của trang Quản trị viên (`http://localhost:5173/admin`).
+* **Các bước tái hiện:**
+  1. Đăng nhập Admin, vào tab **`Movie Catalog`**.
+  2. Bấm nút **`+ Publish Movie`** để mở modal thêm phim mới.
+  3. Quan sát các ô nhập liệu trong modal:
+     * Có: *Title, Director, Duration (mins), Age Rating, Status, Poster Image URL, Synopsis*.
+     * **Hoàn toàn KHÔNG CÓ ô nhập `Trailer URL`**!
+  4. Vì không có ô nhập Trailer URL, tester muốn kiểm thử Case 2.3.2 (chặn link độc hại XSS/Phishing) đã nhập đường dẫn `https://malicious-website.com/phishing` vào ô **Poster Image URL** (như trong ảnh chụp).
+  5. Bấm **"Publish Title"** -> Phim được tạo thành công với `trailerUrl = ""` (chuỗi rỗng).
+  6. Ra trang chủ Client (`http://localhost:5173`), click vào poster bộ phim vừa tạo (ví dụ *Avatar 3: Fire and Ash*):
+     * Giao diện nhảy vào thẳng trang chi tiết phim kèm bảng chọn lịch chiếu.
+     * **Hoàn toàn KHÔNG CÓ nút "Watch Official Trailer"** và không có icon Play trên poster!
+* **Kết quả thực tế:**
+  * Tester không thể thực hiện kiểm thử Case 2.3.1 (Tạo phim với Trailer YouTube hợp lệ) và Case 2.3.2 (Chặn URL Trailer độc hại).
+  * Bộ phim tạo mới bị mất tính năng xem Trailer trên trang Client.
+* **Kỳ vọng chuẩn:**
+  * Modal thêm phim và sửa phim trong `AdminDashboard.jsx` phải có ô nhập **`Trailer URL`** (placeholder: `https://www.youtube.com/watch?v=...` hoặc `https://youtu.be/...`).
+  * Có validation phía Frontend và Backend kiểm tra định dạng URL YouTube hợp lệ, chặn đứng các link giả mạo / độc hại (XSS).
+  * Sau khi tạo phim có Trailer hợp lệ, trên trang Client `/movie/:id` phải hiển thị nút **"Watch Official Trailer"** và nút Play để mở Modal phát video YouTube an toàn qua iframe sandbox.
+
+---
+
+#### 2. NGUYÊN NHÂN GỐC RỄ (ROOT CAUSE)
+1. **Trong `AdminDashboard.jsx`:**
+   * Tại dòng 103–116, State `newMovie` **đã được định nghĩa sẵn** trường `trailerUrl: ''`:
+     ```javascript
+     const [newMovie, setNewMovie] = useState({
+       title: '', description: '', director: '', durationMinutes: 120,
+       releaseDate: toLocalDateStr(), ageRating: 'P', originalLanguage: 'English',
+       posterUrl: '', trailerUrl: '', status: 'NOW_SHOWING', genreIds: [1], actorIds: [],
+     });
+     ```
+   * Tuy nhiên, trong phần JSX render Modal (dòng 1830–1950), lập trình viên đã **bỏ sót không vẽ thẻ `<input>`** cho `trailerUrl`!
+   * Kết quả là `newMovie.trailerUrl` luôn gửi chuỗi rỗng `""` lên Backend khi gọi `adminApi.createMovie(newMovie)`.
+
+2. **Trong `MovieDetail.jsx`:**
+   * Giao diện Client bọc nút xem trailer trong điều kiện kiểm tra `{movie.trailerUrl && (...)}`:
+     ```jsx
+     {movie.trailerUrl && (
+       <button onClick={() => setTrailerOpen(true)}>Watch Official Trailer</button>
+     )}
+     ```
+   * Do `trailerUrl` bị rỗng, cả nút Play trên poster và nút Watch Official Trailer đều bị ẩn, làm người dùng tưởng rằng giao diện nhảy thẳng vào trang đặt vé mà không có tính năng trailer.
+
+---
+
+#### 3. GIẢI PHÁP TRIỂN KHAI KHI SỬA CODE (PROPOSED FIX)
+1. **Trong `AdminDashboard.jsx` (Cả Add Modal và Edit Modal):**
+   * Bổ sung trường nhập liệu `Trailer URL` ngay dưới trường `Poster Image URL`:
+     ```jsx
+     <div>
+       <label className="block text-[#ab9a84] mb-1 font-semibold">YouTube Trailer URL</label>
+       <input
+         type="url"
+         value={newMovie.trailerUrl}
+         onChange={(e) => setNewMovie({ ...newMovie, trailerUrl: e.target.value })}
+         placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+         className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0]"
+       />
+     </div>
+     ```
+   * Bổ sung validation kiểm tra URL YouTube trước khi submit.
 
 ---
 

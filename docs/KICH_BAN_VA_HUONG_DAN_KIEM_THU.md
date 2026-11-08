@@ -315,8 +315,10 @@
 ### MODULE 2.3: QUẢN LÝ PHIM & CHẶN KẾT THÚC PHIM CÒN LỊCH CHIẾU
 
 #### Case 2.3.1: Thêm phim mới với URL Trailer hợp lệ
+* **Trạng thái:** ⏳ **CHƯA TEST ĐƯỢC (TẠM HOÃN - CHỜ SỬA LỖI #8 TRÊN MODAL ADMIN)**  
 * **Vị trí thao tác:** Admin Console -> Bấm vào Tab thứ 4: **`Movie Catalog`**.
-* **Các bước thực hiện:**
+* **Hiện tượng phát hiện:** Modal thêm phim hiện tại bị thiếu ô nhập **Trailer URL** (Lỗi `BUG-ADMIN-MOVIE-MODAL-MISSING-TRAILER-INPUT-08`). Do đó phim tạo mới có `trailerUrl = ""` và phía Client không hiện nút "Watch Official Trailer".
+* **Các bước thực hiện khi sửa xong lỗi #8:**
   1. Bấm nút màu vàng: **`+ Publish Movie`** (ở góc trên bên phải bảng danh sách phim).
   2. Modal "Publish New Movie Title" hiện lên:
      * Title: `Avatar 3: Fire and Ash`
@@ -326,9 +328,10 @@
      * Poster URL: Nhập link ảnh bất kỳ (hoặc `https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500`)
      * **Trailer URL:** Nhập link chuẩn YouTube: `https://www.youtube.com/watch?v=dQw4w9WgXcQ` (hoặc `https://youtu.be/dQw4w9WgXcQ`).
   3. Bấm **"Publish to Catalog"**.
-* **Kỳ vọng:** Phim được tạo thành công, xuất hiện ngay trong bảng danh mục phim.
+* **Kỳ vọng:** Phim được tạo thành công, xuất hiện ngay trong bảng danh mục phim. Ra ngoài Client bấm vào phim có hiện nút "Watch Official Trailer" để phát trailer an toàn qua iframe.
 
 #### Case 2.3.2: Thêm phim với URL Trailer độc hại (Chống XSS/Phishing) — [BỊ CHẶN]
+* **Trạng thái:** ⏳ **CHƯA TEST ĐƯỢC (TẠM HOÃN - CHỜ SỬA LỖI #8 TRÊN MODAL ADMIN)**  
 * **Vị trí thao tác:** Modal `+ Publish Movie` trong tab `Movie Catalog`.
 * **Các bước thực hiện:**
   1. Nhập thông tin phim, nhưng tại ô **Trailer URL**, cố tình nhập script độc hại: `javascript:alert(1)` hoặc một link không thuộc domain YouTube: `https://malicious-website.com/phishing`.
