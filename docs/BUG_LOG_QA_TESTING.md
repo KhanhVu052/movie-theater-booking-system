@@ -673,12 +673,14 @@ export const genreApi = {
      * *Joker* (ID #16 - Suất 13:00 Room 6732)...
   2. Mở sang trang chủ Client (`http://localhost:5173/`):
      * Tại khu vực "Now & Upcoming Releases" (Tab `Now Showing`): Chỉ hiển thị đúng **10 bộ phim** (*Spider-Man: Brand New Day, Avatar Aang, The Odyssey, Batman, Toy Story 5, Haunted 3D, Obsession, Swapped, Michael, Project Hail Mary*).
-     * Toàn bộ các bộ phim *Avengers: Infinity War, Your Name, Spider-Man Across the Spider-Verse, Demon Slayer, Joker* **hoàn toàn biến mất**, không tìm thấy ở bất kỳ đâu trên trang chủ!
+     * Cuộn xuống đáy lưới phim: **Hoàn toàn KHÔNG CÓ thanh phân trang (Pagination)**, không có số trang `1, 2, 3...`, và không có nút **"Load More / Xem thêm"**. Lưới phim kết thúc lửng lơ ở 2 phim *Michael* và *Project Hail Mary* (như trong ảnh chụp).
+     * Toàn bộ các bộ phim *Avengers: Infinity War, Your Name, Spider-Man Across the Spider-Verse, Demon Slayer, Joker* **hoàn toàn biến mất**, người dùng không có cách nào lật trang để xem hoặc đặt vé!
   3. Tại thanh Đặt vé nhanh (Quick Booking Bar): Danh sách chọn phim thả xuống cũng chỉ có 10 phim, không hề có các phim đang có lịch chiếu trên.
 * **Kết quả thực tế:**
-  * Khách hàng vào trang chủ không thể nhìn thấy và không thể bấm đặt vé cho các bộ phim đang có suất chiếu diễn ra hôm nay.
+  * Giao diện Client không có phân trang và chỉ hiển thị duy nhất 10 phim, trong khi Admin vẫn lên lịch chiếu cho nhiều phim khác $\rightarrow$ Khách hàng không thể tiếp cận và không thể đặt vé cho các phim còn lại.
 * **Kỳ vọng chuẩn:**
   * Toàn bộ các bộ phim đang mang trạng thái `NOW_SHOWING` (đặc biệt là các phim đang có lịch chiếu thực tế) phải được hiển thị đầy đủ trên trang chủ và thanh chọn phim Quick Booking.
+  * Bổ sung thanh phân trang (Pagination) hoặc nút "Load More" ở cuối danh sách phim để người dùng có thể duyệt qua tất cả các phim nếu danh mục có số lượng lớn.
 
 ---
 
@@ -712,6 +714,8 @@ export const genreApi = {
    * Khi Backend nhận tham số `status: 'NOW_SHOWING'`, câu truy vấn SQL sẽ lọc `WHERE m.status = 'NOW_SHOWING'` ngay trong database $\rightarrow$ Trả về đầy đủ tất cả 20 bộ phim đang chiếu (gồm cả Avengers, Your Name, Joker...) mà không bị phim `ENDED` chiếm chỗ.
 2. **Tại thanh Đặt vé nhanh (Quick Booking Bar):**
    * Fetch danh sách các phim `NOW_SHOWING` để đổ vào dropdown `Select Movie`.
+3. **Bổ sung thanh phân trang (Pagination Bar) hoặc nút "Load More / Xem thêm":**
+   * Đặt ở cuối lưới phim tại `Home.jsx` với hiển thị số trang `1, 2, 3...` và nút Next/Prev, giúp người dùng chủ động duyệt qua toàn bộ kho phim của rạp mà không bị giới hạn hiển thị cố định.
 
 ---
 
