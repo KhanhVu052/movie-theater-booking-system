@@ -352,9 +352,17 @@
 ### MODULE 2.4: QUẢN LÝ PHÒNG CHIẾU & ĐỊNH GIÁ GHẾ
 
 #### Case 2.4.1: Kiểm tra cấu hình ghế phòng chiếu
-* **Kỳ vọng:** Phòng chiếu đảm bảo các ghế đôi (COUPLE) có gán đúng cặp `pairGroup` và giá ghế tương ứng được định giá chính xác theo loại ghế.
+* **Trạng thái:** ⏳ **CHƯA TEST (ĐANG BỊ LỖI - PENDING TEST)**
+* **Ghi chú lỗi:** Đang bị lỗi do ảnh hưởng từ 2 lỗi cốt lõi đã phát hiện:
+  1. Toàn bộ hàng ghế E (COUPLE) có `pair_group = NULL` (Lỗi `BUG-SEAT-ROW-E-COUPLE-NULL-04`).
+  2. Giá ghế đôi bị nhân đôi 2 lần từ 80k thành 320k/cặp (Lỗi `BUG-SEAT-COUPLE-PRICE-DOUBLE-MULTIPLICATION-05`).
+* **Kỳ vọng sau khi sửa:** Phòng chiếu đảm bảo các ghế đôi (COUPLE) có gán đúng cặp `pairGroup` và giá ghế tương ứng được định giá chính xác (160k/cặp cho phòng 80k). Sẽ kiểm thử nghiệm thu sau khi sửa dữ liệu.
 
 #### Case 2.4.2: Chặn vô hiệu hóa phòng khi còn suất chiếu tương lai
+* **Trạng thái:** ℹ️ **ĐÃ GHI NHẬN: TƯƠNG ĐỒNG LOGIC VỚI CASE 2.3.3** (Mã `NOTE-CASE-2.4.2-ROOM-DEACTIVATE`)
+* **Phân tích:**
+  * Về mặt nghiệp vụ: Tương đồng với Case 2.3.3 (triết lý an toàn dữ liệu: không cho phép vô hiệu hóa thực thể khi vẫn còn lịch chiếu `SCHEDULED` trong tương lai).
+  * Về mặt giao diện: Khác với Case 2.3.3 đã có nút `Discontinue` trên UI `Movie Catalog`, Case 2.4.2 hiện tại Frontend chưa có màn hình Quản lý Phòng riêng để bấm nút tắt phòng. Nghiệp vụ này đang được bảo vệ ở tầng Backend qua API `PATCH /api/v1/rooms/:id/status` (Mã lỗi `1403: ROOM_HAS_FUTURE_SHOWTIMES`).
 * **Kỳ vọng:** Khi phòng chiếu đang có lịch chiếu chưa diễn ra, hệ thống từ chối tắt hoạt động của phòng để tránh ảnh hưởng đến vé đã bán của khách hàng (`Mã 1403`).
 
 ---

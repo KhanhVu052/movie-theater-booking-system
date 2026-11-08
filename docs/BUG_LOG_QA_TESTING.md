@@ -20,6 +20,8 @@
 | `BUG-ADMIN-MOVIE-MODAL-MISSING-TRAILER-INPUT-08` | Admin Portal (`AdminDashboard.jsx`) | Modal Thêm/Sửa phim thiếu ô nhập Trailer URL -> Phim tạo mới không có trailer, chặn kiểm thử Case 2.3.1, 2.3.2 | High (Missing Input Field) | 🟡 PENDING (Chờ sửa) |
 | `TRACK-CASE-1.3.2-CUTOFF-PENDING` | Module 1.3 (Showtime Cutoff 15m) | Tạm hoãn kiểm thử: Chưa có suất chiếu trong khung giờ cận < 15 phút | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 | `TRACK-CASE-1.4.4-COUPLE-PENDING` | Module 1.4 (Couple Seat Rules) | Tạm hoãn kiểm thử: Luật ghế đôi chưa test được do hàng E đang bị mờ (Lỗi #4) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
+| `TRACK-CASE-2.4.1-ROOM-SEAT-PENDING` | Module 2.4 (Room Seat Matrix) | Tạm hoãn kiểm thử: Cấu hình ghế phòng đang bị lỗi (phụ thuộc Lỗi #4 & Lỗi #5) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
+| `NOTE-CASE-2.4.2-ROOM-DEACTIVATE` | Module 2.4 (Deactivate Room Rule) | Đã ghi nhận: Logic tương đồng Case 2.3.3 (chặn tắt khi còn lịch), hiện FE chưa có nút tắt phòng | Info (QA Feedback) | ℹ️ ĐÃ GHI NHẬN |
 
 ---
 
@@ -667,8 +669,32 @@ Khi đó suất chiếu này sẽ rơi vào trạng thái cận giờ chiếu, b
 ### ⏳ MỤC THEO DÕI KIỂM THỬ: CASE 1.4.3 & 1.4.4 (KIỂM TRA LUẬT GHẾ ĐÔI COUPLE)
 
 > **Mã theo dõi:** `TRACK-CASE-1.4.4-COUPLE-PENDING`  
-> **Trạng thái:** **CHƯA TEST (PENDING TEST) - Sẽ kiểm thử sau khi sửa Lỗi #4**  
-> **Lý do:** Tester chưa kiểm thử được hành vi chọn ghế đôi (chọn 1 ghế tự chọn cả cặp, giá nhân đôi) do toàn bộ hàng ghế E (COUPLE) trong Database đang bị gán `pair_group = NULL` và bị hệ thống khóa mờ (Lỗi `BUG-SEAT-ROW-E-COUPLE-NULL-04`).
+> **Trạng thái:** **CHƯA TEST (PENDING TEST) - Sẽ kiểm thử sau khi sửa Lỗi #4 & #5**  
+> **Lý do:** Tester chưa kiểm thử được hành vi chọn ghế đôi (chọn 1 ghế tự chọn cả cặp, giá nhân đôi) do toàn bộ hàng ghế E (COUPLE) trong Database đang bị gán `pair_group = NULL` (Lỗi `BUG-SEAT-ROW-E-COUPLE-NULL-04`) và giá ghế đôi đang bị nhân đôi 2 lần (Lỗi `BUG-SEAT-COUPLE-PRICE-DOUBLE-MULTIPLICATION-05`).
+
+---
+
+### ⏳ MỤC THEO DÕI KIỂM THỬ: CASE 2.4.1 (CẤU HÌNH GHẾ ĐÔI & ĐỊNH GIÁ GHẾ TRONG PHÒNG CHIẾU)
+
+> **Mã theo dõi:** `TRACK-CASE-2.4.1-ROOM-SEAT-PENDING`  
+> **Trạng thái:** **CHƯA TEST (ĐANG BỊ LỖI - PENDING TEST)**  
+> **Lý do:** Tester ghi nhận cấu hình ghế phòng chiếu đang bị lỗi do chịu ảnh hưởng trực tiếp từ 2 lỗi cốt lõi đã phát hiện:
+> 1. `BUG-SEAT-ROW-E-COUPLE-NULL-04`: Toàn bộ ghế đôi hàng E trong DB có `pair_group = NULL` và phòng nhỏ có số lẻ ghế (5 ghế).
+> 2. `BUG-SEAT-COUPLE-PRICE-DOUBLE-MULTIPLICATION-05`: Giá ghế đôi bị nhân đôi 2 lần từ 80k thành 320k/cặp.  
+> 👉 Case này sẽ được kiểm thử và nghiệm thu lại ngay sau khi hoàn thành sửa chữa 2 lỗi dữ liệu trên.
+
+---
+
+### ℹ️ GHI NHẬN ĐỐI CHIẾU: CASE 2.4.2 (CHẶN VÔ HIỆU HÓA PHÒNG CHIẾU CÒN SUẤT CHIẾU TƯƠNG LAI)
+
+> **Mã ghi nhận:** `NOTE-CASE-2.4.2-ROOM-DEACTIVATE`  
+> **Phản hồi từ Tester:** Case 2.4.2 có logic xử lý tương đồng với Case 2.3.3.  
+> **Phân tích kỹ thuật & nghiệp vụ:**
+> * **Điểm tương đồng:** Cả Case 2.3.3 và Case 2.4.2 cùng tuân thủ nguyên tắc an toàn dữ liệu: *Không bao giờ cho phép vô hiệu hóa một thực thể (Phim hoặc Phòng) khi thực thể đó vẫn còn gắn với ít nhất một suất chiếu ở trạng thái `SCHEDULED` trong tương lai*.
+> * **Điểm khác biệt giữa 2 Case:**
+>   * **Case 2.3.3 (Đối tượng Phim):** Đã có sẵn nút bấm màu đỏ **`Discontinue`** trong tab `Movie Catalog` trên giao diện Admin để tester click kiểm tra trực tiếp (Bị chặn với mã `1207 / 1206: MOVIE_HAS_FUTURE_SHOWTIMES`).
+>   * **Case 2.4.2 (Đối tượng Phòng chiếu):** Backend đã có API chuẩn `PATCH /api/v1/rooms/{id}/status` kiểm tra điều kiện `existsByRoomIdAndStatusAndStartTimeAfter` và ném mã lỗi `1403: ROOM_HAS_FUTURE_SHOWTIMES`. Tuy nhiên, trên Frontend hiện tại Admin chưa có màn hình Quản lý Phòng riêng (Room Management UI) để hiển thị nút bật/tắt trạng thái phòng. Do đó, tester không có nút trên giao diện để click test trực quan như Case 2.3.3.
+
 
 
 
