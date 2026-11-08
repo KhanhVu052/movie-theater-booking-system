@@ -11,6 +11,7 @@
 | Mã lỗi (Bug ID) | Module | Tên lỗi & Hiện tượng | Mức độ | Trạng thái |
 |---|---|---|---|---|
 | `BUG-AUTH-EMAIL-FORMAT-VALIDATION-01` | Module 1.1 (Auth & Register) | Đăng ký thành công với email không chuẩn domain (`abc@xyz`) do thiếu regex TLD | Medium (Validation Gap) | 🟡 PENDING (Chờ sửa) |
+| `FEAT-UX-COMING-SOON-PRE-SALE-02` | Module 1.2 (Movie Detail & Catalog) | Giao diện phim Sắp chiếu (`COMING_SOON`): Cần ẩn thanh 7 ngày rỗng và Cơ chế xử lý vé đặt trước (`Pre-Sale`) | Medium (UX Optimization) | 🟡 PENDING (Chờ sửa) |
 
 ---
 
@@ -108,3 +109,86 @@ Cập nhật thẻ input email trong `frontend/src/pages/Register.jsx`:
   ...
 />
 ```
+
+---
+
+### 💡 VẤN ĐỀ #2: TỐI ƯU GIAO DIỆN PHIM SẮP CHIẾU (`COMING_SOON`) & CƠ CHẾ VÉ ĐẶT TRƯỚC (`PRE-SALE`)
+
+> **Mã theo dõi:** `FEAT-UX-COMING-SOON-PRE-SALE-02`  
+> **Module bị ảnh hưởng:** Module 1.2 (Case 1.2.1: Xem chi tiết phim & Lịch chiếu - `MovieDetail.jsx`)  
+> **Mức độ:** Cải thiện trải nghiệm người dùng & Nghiệp vụ rạp (UX Optimization & Business Logic Alignment)  
+> **Trạng thái:** Chờ xử lý (`PENDING`) - **Chưa can thiệp mã nguồn theo yêu cầu của User**
+
+---
+
+#### 1. MÔ TẢ VẤN ĐỀ & PHÂN TÍCH THỰC TRẠNG (SYMPTOMS & UX GAP)
+* **Thực trạng quan sát:**
+  * Người dùng vào mục **`Coming Soon`** (Phim sắp chiếu) ở trang chủ và bấm vào một bộ phim (ví dụ: *Avatar Aang* hoặc *Toy Story 5*).
+  * Tại trang chi tiết phim (`/movies/:id`), hệ thống vẫn vẽ ra toàn bộ khu vực chọn lịch chiếu gồm:
+    1. Thanh chọn **7 ngày trong tuần** (`Today`, `Tomorrow`, `Mon`, `Tue`...).
+    2. Bộ lọc rạp chiếu (`All Cinema Locations`).
+  * Khi người dùng click thử vào bất kỳ ngày nào trong 7 ngày, màn hình đều hiển thị thông báo:  
+    `No showtimes scheduled for this date. Please pick another date above or select a different cinema location.`
+* **Tác động tiêu cực đến trải nghiệm (UX Pain Points):**
+  * **Gây hiểu lầm cho khách hàng:** Người dùng tưởng rằng phim này đang mở bán vé nhưng hệ thống bị lỗi dữ liệu nên không load được suất chiếu.
+  * **Thực tế nghiệp vụ:** Phim `COMING_SOON` là phim **chưa đến ngày khởi chiếu chính thức** (`releaseDate`). Nếu rạp chưa mở bán vé sớm (Pre-Sale), việc hiển thị 7 ngày rỗng là không cần thiết và tạo cảm giác trống trải, thiếu hoàn thiện.
+
+---
+
+#### 2. GIẢI PHÁP ĐỀ XUẤT CHO 2 NHÓM PHIM `COMING_SOON` (OPTIMIZATION DESIGN)
+
+Hệ thống sẽ tự động phân loại và xử lý theo 2 trường hợp cụ thể:
+
+##### 🟢 TRƯỜNG HỢP 1: Phim `COMING_SOON` thông thường (Chưa có lịch chiếu / Chưa mở bán)
+* **Điều kiện nhận diện:** `movie.status === 'COMING_SOON' && showtimes.length === 0`.
+* **Cách xử lý giao diện (User Request):**
+  1. **Ẩn hoàn toàn thanh chọn 7 ngày** và dropdown chọn rạp (không hiển thị các tab ngày bị rỗng).
+  2. **Thay thế bằng một khung thông tin công chiếu nổi bật (Premiere Teaser Banner):**
+     * 🎬 **Biểu tượng:** Icon lịch chiếu / Đồng hồ đếm ngược.
+     * **Tiêu đề nổi bật:** `🎬 KHỞI CHIẾU CHÍNH THỨC: [DD/MM/YYYY]` (hiển thị rõ ngày phát hành từ trường `movie.releaseDate`).
+     * **Thông điệp hướng dẫn:**  
+       *"Bộ phim hiện chưa mở bán vé. Lịch chiếu và đặt chỗ sẽ được mở bán chính thức trước ngày công chiếu từ 3 - 5 ngày."*
+     * **Nút hành động nhanh (CTA):**
+       * Nút **`▶ Xem Official Trailer`** (kích hoạt mở modal video YouTube).
+       * Nút **`🔔 Nhận thông báo khi mở bán vé`** (Remind Me).
+
+---
+
+##### 🔥 TRƯỜNG HỢP 2: Phim `COMING_SOON` nhưng CÓ MỞ BÁN VÉ SỚM (Pre-Sale / Advance Ticket Sales)
+* **Khái niệm:** Phim chưa tới ngày ra mắt, nhưng rạp đã mở bán vé trước cho các suất chiếu đặc biệt (ví dụ: Suất chiếu sớm *Sneak Show* hoặc vé công chiếu ngày đầu tiên).
+* **Điều kiện nhận diện:** `movie.status === 'COMING_SOON' && showtimes.length > 0`.
+* **Gợi ý tối ưu giao diện (UX Recommendations):**
+  1. **Gắn huy hiệu nổi bật (Pre-Sale Badge):**
+     * Trên Poster tại Trang chủ và Trang chi tiết: Gắn badge màu cam/đỏ rực rỡ:  
+       `🔥 VÉ ĐẶT TRƯỚC (PRE-SALE)` hoặc `⭐ SUẤT CHIẾU SỚM`.
+  2. **Thanh lọc ngày động (Dynamic Pre-Sale Date Filter - Thay vì cố định 7 ngày):**
+     * Thanh chọn ngày **chỉ hiển thị đúng các ngày thực tế CÓ SUẤT CHIẾU MỞ BÁN**, tự động loại bỏ các ngày không có lịch.
+     * *Ví dụ:* Phim công chiếu vào thứ Bảy (14/11) và Chủ Nhật (15/11). Thanh ngày sẽ chỉ hiện 2 nút:  
+       `[Thứ Bảy - 14/11]` và `[Chủ Nhật - 15/11]`.
+     * 👉 **Lợi ích:** Người dùng bấm vào ngày nào cũng **100% có suất chiếu để đặt vé**, triệt tiêu hoàn toàn cảm giác bấm vào ngày bị rỗng.
+  3. **Banner thông báo đặt chỗ sớm:**
+     * Đặt ở đầu phần lịch chiếu:  
+       `🎟️ MỞ BÁN VÉ SỚM: Hãy là những khán giả đầu tiên thưởng thức siêu phẩm! Đặt vé ngay các suất chiếu dưới đây để giữ vị trí ghế VIP tốt nhất.`
+
+---
+
+#### 3. LOGIC XỬ LÝ TRONG CODE (KHI ĐƯỢC PHÉP TRIỂN KHAI)
+Tại `frontend/src/pages/MovieDetail.jsx`:
+```jsx
+const isComingSoon = movie.status === 'COMING_SOON';
+const hasPreSaleShowtimes = showtimes && showtimes.length > 0;
+
+if (isComingSoon && !hasPreSaleShowtimes) {
+  // Render Premiere Teaser Banner (Ẩn thanh 7 ngày, hiển thị ngày khởi chiếu rõ ràng)
+  return <ComingSoonTeaserCard movie={movie} onWatchTrailer={() => setTrailerOpen(true)} />;
+}
+
+if (isComingSoon && hasPreSaleShowtimes) {
+  // Render Pre-Sale Flow: Chỉ hiển thị các tab ngày có suất chiếu bán trước
+  return <PreSaleShowtimeSection movie={movie} showtimes={showtimes} />;
+}
+
+// Mặc định (NOW_SHOWING): Render thanh 7 ngày như hiện tại
+```
+
+
