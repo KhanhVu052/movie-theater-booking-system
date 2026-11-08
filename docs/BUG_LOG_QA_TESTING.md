@@ -18,6 +18,7 @@
 | `FEAT-UX-NAVBAR-DUPLICATE-MY-BOOKINGS-06` | Client Navigation (`Navbar.jsx`) | Trùng lặp liên kết điều hướng: Cả "My Bookings" và "My Tickets" đều trỏ về `/my-bookings` -> Xóa "My Bookings" | Low (UI Redundancy) | 🟡 PENDING (Chờ sửa) |
 | `FEAT-ADMIN-GENRE-MANAGEMENT-UI-07` | Admin Portal (`AdminDashboard.jsx`) | Thiếu giao diện Quản lý Thể loại (Genre Management UI Tab) trên Admin Dashboard (Backend đã có 100% API) | Medium (Missing Admin Feature) | 🟡 PENDING (Chờ bổ sung) |
 | `BUG-ADMIN-MOVIE-MODAL-MISSING-TRAILER-INPUT-08` | Admin Portal (`AdminDashboard.jsx`) | Modal Thêm/Sửa phim thiếu ô nhập Trailer URL -> Phim tạo mới không có trailer, chặn kiểm thử Case 2.3.1, 2.3.2 | High (Missing Input Field) | 🟡 PENDING (Chờ sửa) |
+| `BUG-CLIENT-HOMEPAGE-MOVIE-PAGINATION-SATURATION-09` | Client Homepage (`Home.jsx`) | Phim có lịch chiếu nhưng biến mất khỏi Client Homepage do Trang 1 bị bão hòa bởi 84 phim ENDED | High (Missing Active Movies on UI) | 🟡 PENDING (Chờ sửa) |
 | `TRACK-CASE-1.3.2-CUTOFF-PENDING` | Module 1.3 (Showtime Cutoff 15m) | Tạm hoãn kiểm thử: Chưa có suất chiếu trong khung giờ cận < 15 phút | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 | `TRACK-CASE-1.4.4-COUPLE-PENDING` | Module 1.4 (Couple Seat Rules) | Tạm hoãn kiểm thử: Luật ghế đôi chưa test được do hàng E đang bị mờ (Lỗi #4) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 | `TRACK-CASE-2.4.1-ROOM-SEAT-PENDING` | Module 2.4 (Room Seat Matrix) | Tạm hoãn kiểm thử: Cấu hình ghế phòng đang bị lỗi (phụ thuộc Lỗi #4 & Lỗi #5) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
@@ -648,6 +649,68 @@ export const genreApi = {
      </div>
      ```
    * Bổ sung validation kiểm tra URL YouTube trước khi submit.
+
+---
+
+### 🐛 LỖI #9: PHIM CÓ LỊCH CHIẾU NHƯNG BIẾN MẤT KHỎI TRANG CHỦ CLIENT (DO HOMEPAGE FETCH PHIM THIẾU BỘ LỌC STATUS LÀM TRANG 1 BỊ BÃO HÒA BỞI 84 PHIM ENDED)
+
+> **Mã lỗi:** `BUG-CLIENT-HOMEPAGE-MOVIE-PAGINATION-SATURATION-09`  
+> **Module bị ảnh hưởng:** Trang chủ Client (`frontend/src/pages/Home.jsx` dòng 137, 281–290) & Catalog API  
+> **Mức độ:** High (Mất dữ liệu hiển thị phim đang chiếu / Active Movies Inaccessible on Home UI)  
+> **Trạng thái:** Chờ xử lý (`PENDING`) - **Chưa can thiệp mã nguồn theo yêu cầu của User**
+
+---
+
+#### 1. MÔ TẢ HIỆN TƯỢNG (SYMPTOMS)
+* **Vị trí xảy ra:** Trang chủ khách hàng GoToro Cinema (`http://localhost:5173/`).
+* **Các bước tái hiện:**
+  1. Trong Admin Portal (Tab `Showtime Scheduling`): Lịch chiếu ngày hôm nay (`08/11/2026`) có hàng loạt suất chiếu cho các bộ phim nổi tiếng như:
+     * *Avengers: Infinity War* (ID #4 - Suất 09:30 Room 7547)
+     * *Your Name.* (ID #18 - Suất 09:30 Room 4798)
+     * *Spider-Man: Across the Spider-Verse* (ID #15 - Suất 09:30 Room 6732)
+     * *Demon Slayer: Kimetsu no Yaiba* (ID #7 - Suất 09:30 Room 4694)
+     * *Joker* (ID #16 - Suất 13:00 Room 6732)...
+  2. Mở sang trang chủ Client (`http://localhost:5173/`):
+     * Tại khu vực "Now & Upcoming Releases" (Tab `Now Showing`): Chỉ hiển thị đúng **10 bộ phim** (*Spider-Man: Brand New Day, Avatar Aang, The Odyssey, Batman, Toy Story 5, Haunted 3D, Obsession, Swapped, Michael, Project Hail Mary*).
+     * Toàn bộ các bộ phim *Avengers: Infinity War, Your Name, Spider-Man Across the Spider-Verse, Demon Slayer, Joker* **hoàn toàn biến mất**, không tìm thấy ở bất kỳ đâu trên trang chủ!
+  3. Tại thanh Đặt vé nhanh (Quick Booking Bar): Danh sách chọn phim thả xuống cũng chỉ có 10 phim, không hề có các phim đang có lịch chiếu trên.
+* **Kết quả thực tế:**
+  * Khách hàng vào trang chủ không thể nhìn thấy và không thể bấm đặt vé cho các bộ phim đang có suất chiếu diễn ra hôm nay.
+* **Kỳ vọng chuẩn:**
+  * Toàn bộ các bộ phim đang mang trạng thái `NOW_SHOWING` (đặc biệt là các phim đang có lịch chiếu thực tế) phải được hiển thị đầy đủ trên trang chủ và thanh chọn phim Quick Booking.
+
+---
+
+#### 2. NGUYÊN NHÂN GỐC RỄ (ROOT CAUSE)
+1. **Dữ liệu trong Database có hơn 1000 bộ phim:**
+   * Trong DB có hơn 1000 bản ghi phim, trong đó chỉ có 20 phim `NOW_SHOWING`, một số phim `COMING_SOON`, còn lại phần lớn là phim `ENDED` (phim đã ngừng chiếu).
+2. **Lỗi bão hòa trang 1 tại `Home.jsx` (dòng 137):**
+   ```javascript
+   movieApi.getAllMovies({ page: 1, size: 100 })
+   ```
+   * Trang chủ gọi API lấy 100 phim nhưng **KHÔNG truyền `status: 'NOW_SHOWING'`**.
+   * Backend sắp xếp 1000 phim theo `releaseDate DESC` rồi cắt lấy 100 phim đầu tiên.
+   * Trong 100 phim đầu này:
+     * Chỉ có đúng **10 phim** mang trạng thái `NOW_SHOWING` (các phim mới nhất năm 2026).
+     * Có **6 phim** mang trạng thái `COMING_SOON`.
+     * **84 phim còn lại mang trạng thái `ENDED`**!
+   * Các phim `NOW_SHOWING` nhưng có năm phát hành cũ hơn (như *Avengers: Infinity War (2018)*, *Your Name (2016)*, *Joker (2019)*, *Demon Slayer (2025)*) **bị đẩy sang Trang 2, Trang 3 của API**!
+   * Khi Frontend nhận về 100 phim của Trang 1 và chạy bộ lọc:
+     ```javascript
+     movies.filter((movie) => movie.status === activeTab) // activeTab = 'NOW_SHOWING'
+     ```
+     kết quả chỉ lấy được đúng 10 phim, làm rơi rụng toàn bộ các phim `NOW_SHOWING` còn lại!
+
+---
+
+#### 3. GIẢI PHÁP TRIỂN KHAI KHI SỬA CODE (PROPOSED FIX)
+1. **Truyền trực tiếp `status` xuống Backend khi fetch phim:**
+   * Trong `Home.jsx`:
+     * Khi tab đang là `NOW_SHOWING`: Gọi `movieApi.getAllMovies({ status: 'NOW_SHOWING', size: 100 })`.
+     * Khi tab đang là `COMING_SOON`: Gọi `movieApi.getAllMovies({ status: 'COMING_SOON', size: 100 })`.
+   * Khi Backend nhận tham số `status: 'NOW_SHOWING'`, câu truy vấn SQL sẽ lọc `WHERE m.status = 'NOW_SHOWING'` ngay trong database $\rightarrow$ Trả về đầy đủ tất cả 20 bộ phim đang chiếu (gồm cả Avengers, Your Name, Joker...) mà không bị phim `ENDED` chiếm chỗ.
+2. **Tại thanh Đặt vé nhanh (Quick Booking Bar):**
+   * Fetch danh sách các phim `NOW_SHOWING` để đổ vào dropdown `Select Movie`.
 
 ---
 
