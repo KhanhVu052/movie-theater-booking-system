@@ -169,7 +169,6 @@ export default function SeatSelection() {
     () => seats.some((s) => s.seatType === 'COUPLE' || s.pairGroup != null),
     [seats]
   );
-  const hasCoupleSeatsInRoom = hasCoupleSeats;
 
   // Map of selected seat objects
   const selectedSeatObjects = useMemo(() => {

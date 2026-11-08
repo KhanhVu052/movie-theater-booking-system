@@ -171,7 +171,6 @@ export default function MovieDetail() {
       };
     });
   }, [isComingSoon, availableDates, preSaleShowtimes]);
-  const activeDateTabs = displayDates;
 
   // 1. Fetch Movie details, Cinemas, and Review summary
   useEffect(() => {
