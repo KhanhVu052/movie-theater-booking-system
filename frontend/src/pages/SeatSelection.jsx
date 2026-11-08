@@ -964,7 +964,11 @@ export default function SeatSelection() {
               ) : (
                 availableVouchers.map((voucher) => {
                   const minOrder = voucher.minOrderValue || 0;
-                  const isEligible = subtotal >= minOrder && subtotal > 0;
+                  const isUserLimitReached =
+                    voucher.remainingUserQuota !== undefined &&
+                    voucher.remainingUserQuota !== null &&
+                    voucher.remainingUserQuota <= 0;
+                  const isEligible = subtotal >= minOrder && subtotal > 0 && !isUserLimitReached;
                   const isApplied = appliedVoucher?.code === voucher.code;
                   const shortage = minOrder - subtotal;
 
@@ -976,6 +980,8 @@ export default function SeatSelection() {
                           ? 'border-[#f3cb62] bg-[#291e12] ring-1 ring-[#f3cb62]/50 shadow-[0_0_15px_rgba(243,203,98,0.2)]'
                           : isEligible
                           ? 'border-[#785325] hover:border-[#f3cb62] bg-[#1f160e] hover:bg-[#241a10] shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
+                          : isUserLimitReached
+                          ? 'border-red-950/40 bg-[#120d09] opacity-50'
                           : 'border-[#291e13] bg-[#120d09] opacity-55'
                       }`}
                     >
@@ -996,12 +1002,17 @@ export default function SeatSelection() {
                                 Active
                               </span>
                             )}
-                            {!isEligible && (
+                            {isUserLimitReached ? (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-950/80 border border-red-700/60 text-red-300 font-bold flex items-center gap-1">
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>Limit Reached</span>
+                              </span>
+                            ) : !isEligible ? (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#241a10] border border-[#3d2b17] text-[#8a765d] flex items-center gap-1">
                                 <Lock className="w-2.5 h-2.5" />
                                 <span>Locked</span>
                               </span>
-                            )}
+                            ) : null}
                           </div>
                           <p
                             className={`text-xs font-semibold ${
@@ -1042,6 +1053,14 @@ export default function SeatSelection() {
                             >
                               Apply
                             </button>
+                          ) : isUserLimitReached ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs font-bold text-zinc-500 cursor-not-allowed"
+                            >
+                              Limit Reached
+                            </button>
                           ) : (
                             <button
                               type="button"
@@ -1054,8 +1073,15 @@ export default function SeatSelection() {
                         </div>
                       </div>
 
-                      {/* Subtotal shortage warning for locked vouchers */}
-                      {!isEligible && (
+                      {/* Notice */}
+                      {isUserLimitReached ? (
+                        <div className="mt-2.5 pt-2 border-t border-[#1f160e] text-[11px] text-red-400/80 flex items-center gap-1.5">
+                          <Lock className="w-3 h-3 shrink-0" />
+                          <span>
+                            You have reached the usage limit for this voucher ({voucher.userUsedCount}/{voucher.perUserLimit} used).
+                          </span>
+                        </div>
+                      ) : !isEligible ? (
                         <div className="mt-2.5 pt-2 border-t border-[#1f160e] text-[11px] text-amber-500/70 flex items-center gap-1.5">
                           <Info className="w-3 h-3 shrink-0" />
                           <span>
@@ -1066,7 +1092,7 @@ export default function SeatSelection() {
                                 )} more to your ticket selection to qualify.`}
                           </span>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })

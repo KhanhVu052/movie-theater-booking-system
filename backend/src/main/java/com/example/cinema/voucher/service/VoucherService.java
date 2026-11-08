@@ -1,6 +1,7 @@
 package com.example.cinema.voucher.service;
 
 import com.example.cinema.auth.entity.User;
+import com.example.cinema.auth.repository.UserRepository;
 import com.example.cinema.booking.entity.Booking;
 import com.example.cinema.common.exception.AppException;
 import com.example.cinema.common.exception.ErrorCode;
@@ -29,6 +30,7 @@ public class VoucherService {
 
     VoucherRepository voucherRepository;
     VoucherRedemptionRepository voucherRedemptionRepository;
+    UserRepository userRepository;
     VoucherMapper voucherMapper;
 
     @Transactional
@@ -51,11 +53,28 @@ public class VoucherService {
     }
 
     @Transactional(readOnly = true)
-    public List<VoucherResponse> getPublicVouchers() {
+    public List<VoucherResponse> getPublicVouchers(String userEmail) {
         LocalDateTime now = LocalDateTime.now();
+        User currentUser = (userEmail != null && !userEmail.isBlank())
+                ? userRepository.findByEmail(userEmail).orElse(null)
+                : null;
+
         return voucherRepository.findPublicVouchers(now).stream()
-                .map(voucherMapper::toResponse)
+                .map(voucher -> {
+                    int usedByUser = (currentUser == null) ? 0 : (int) voucherRedemptionRepository
+                            .countActiveRedemptionsByUser(
+                                    voucher.getId(),
+                                    currentUser.getId(),
+                                    List.of(VoucherRedemptionStatus.RESERVED, VoucherRedemptionStatus.USED)
+                            );
+                    return voucherMapper.toResponse(voucher, usedByUser);
+                })
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<VoucherResponse> getPublicVouchers() {
+        return getPublicVouchers(null);
     }
 
     @Transactional(readOnly = true)
@@ -71,14 +90,38 @@ public class VoucherService {
     }
 
     @Transactional(readOnly = true)
-    public VoucherResponse getVoucherByCode(String code) {
+    public VoucherResponse getVoucherByCode(String code, String userEmail) {
         LocalDateTime now = LocalDateTime.now();
         String normalizedCode = code.trim().toUpperCase();
         Voucher voucher = voucherRepository.findByCode(normalizedCode)
                 .filter(x -> Boolean.TRUE.equals(x.getIsActive())
                         && !now.isBefore(x.getStartAt()) && !now.isAfter(x.getEndAt()))
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
-        return voucherMapper.toResponse(voucher);
+
+        if (voucher.getReservedCount() + voucher.getUsedCount() >= voucher.getUsageLimit()) {
+            throw new AppException(ErrorCode.VOUCHER_USAGE_LIMIT_EXCEEDED);
+        }
+
+        int usedByUser = 0;
+        if (userEmail != null && !userEmail.isBlank()) {
+            User currentUser = userRepository.findByEmail(userEmail).orElse(null);
+            if (currentUser != null) {
+                usedByUser = (int) voucherRedemptionRepository.countActiveRedemptionsByUser(
+                        voucher.getId(),
+                        currentUser.getId(),
+                        List.of(VoucherRedemptionStatus.RESERVED, VoucherRedemptionStatus.USED)
+                );
+                if (usedByUser >= voucher.getPerUserLimit()) {
+                    throw new AppException(ErrorCode.VOUCHER_USER_LIMIT_EXCEEDED);
+                }
+            }
+        }
+        return voucherMapper.toResponse(voucher, usedByUser);
+    }
+
+    @Transactional(readOnly = true)
+    public VoucherResponse getVoucherByCode(String code) {
+        return getVoucherByCode(code, null);
     }
 
     @Transactional

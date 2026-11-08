@@ -18,6 +18,8 @@ public record VoucherResponse(
         Integer usedCount,
         Integer remainingQuota,
         Integer perUserLimit,
+        Integer userUsedCount,
+        Integer remainingUserQuota,
         LocalDateTime startAt,
         LocalDateTime endAt,
         Boolean isActive,
