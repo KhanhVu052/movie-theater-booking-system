@@ -16,6 +16,7 @@
 | `BUG-SEAT-ROW-E-COUPLE-NULL-04` | Module 1.4 (Couple Seat Matrix) | Toàn bộ hàng ghế E (COUPLE) bị mờ/khóa do cột pair_group trong DB bị NULL | High (Data & Logic Incomplete) | 🟡 PENDING (Chờ sửa) |
 | `BUG-SEAT-COUPLE-PRICE-DOUBLE-MULTIPLICATION-05` | Module 1.4 (Seat Selection & Pricing) | Giá ghế đôi (COUPLE) bị nhân đôi 2 lần: Giá gốc 80k thì cặp phải là 160k, nhưng hệ thống tính thành 320.000đ/cặp | High (Pricing Calculation Bug) | 🟡 PENDING (Chờ sửa) |
 | `FEAT-UX-NAVBAR-DUPLICATE-MY-BOOKINGS-06` | Client Navigation (`Navbar.jsx`) | Trùng lặp liên kết điều hướng: Cả "My Bookings" và "My Tickets" đều trỏ về `/my-bookings` -> Xóa "My Bookings" | Low (UI Redundancy) | 🟡 PENDING (Chờ sửa) |
+| `FEAT-ADMIN-GENRE-MANAGEMENT-UI-07` | Admin Portal (`AdminDashboard.jsx`) | Thiếu giao diện Quản lý Thể loại (Genre Management UI Tab) trên Admin Dashboard (Backend đã có 100% API) | Medium (Missing Admin Feature) | 🟡 PENDING (Chờ bổ sung) |
 | `TRACK-CASE-1.3.2-CUTOFF-PENDING` | Module 1.3 (Showtime Cutoff 15m) | Tạm hoãn kiểm thử: Chưa có suất chiếu trong khung giờ cận < 15 phút | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 | `TRACK-CASE-1.4.4-COUPLE-PENDING` | Module 1.4 (Couple Seat Rules) | Tạm hoãn kiểm thử: Luật ghế đôi chưa test được do hàng E đang bị mờ (Lỗi #4) | Info (QA Status) | ⏳ CHƯA TEST (Sẽ test sau) |
 
@@ -492,6 +493,83 @@ Hiện tượng này xảy ra do **sự xung đột cách hiểu và nhân đôi
 1. **Trong `frontend/src/components/Navbar.jsx`:**
    * Xóa bỏ khối `{token && (<Link to="/my-bookings">My Bookings</Link>)}` tại dòng 158–165.
    * Tại mobile drawer menu (dòng 403), tinh chỉnh nhãn `My Bookings & Tickets` thành `My Tickets` để đồng nhất ngôn ngữ thiết kế toàn hệ thống.
+
+---
+
+### 🧩 TÍNH NĂNG CHỜ BỔ SUNG #7: GIAO DIỆN QUẢN LÝ THỂ LOẠI (GENRE MANAGEMENT UI TAB) TRÊN ADMIN DASHBOARD
+
+> **Mã tính năng/yêu cầu:** `FEAT-ADMIN-GENRE-MANAGEMENT-UI-07`  
+> **Module bị ảnh hưởng:** Quản trị viên (Admin Portal - `frontend/src/pages/AdminDashboard.jsx`, `frontend/src/api/genreApi.js`)  
+> **Mức độ:** Medium (Thiếu giao diện Frontend cho nghiệp vụ Backend đã hoàn thiện / Missing Admin Feature UI)  
+> **Trạng thái:** Chờ xử lý (`PENDING`) - **Chưa can thiệp mã nguồn theo yêu cầu của User**
+
+---
+
+#### 1. MÔ TẢ HIỆN TƯỢNG (SYMPTOMS)
+* **Vị trí xảy ra:** Màn hình Quản trị viên `Admin Operations Console` (`http://localhost:5173/admin`).
+* **Các bước tái hiện:**
+  1. Đăng nhập Admin với tài khoản `admin@cinema.com` / `admin123`.
+  2. Bấm vào nút `🛡️ Admin Console` trên thanh Header để vào trang quản trị.
+  3. Quan sát thanh chọn Tab chức năng của Admin:
+     * Hiện tại chỉ có 6 tabs:
+       1. 📊 *Revenue Reports*
+       2. 📅 *Showtime Scheduling*
+       3. 💳 *Payments & Refunds*
+       4. 🎬 *Movie Catalog*
+       5. 🎟️ *Promotional Vouchers*
+       6. ⭐ *Review Moderation*
+     * **Hoàn toàn không có tab Thể loại (Genre Management)** để Admin có thể xem danh sách, thêm thể loại mới, đổi tên hoặc xóa thể loại trực tiếp trên màn hình.
+* **Kết quả thực tế:**
+  * Tester phải dùng lệnh cURL hoặc Postman/Swagger để kiểm tra nghiệp vụ Quản lý Thể loại (Mục 2.2 trong Kịch bản kiểm thử).
+* **Kỳ vọng chuẩn theo yêu cầu của Tester:**
+  * Bổ sung thêm tab thứ 7: **`🏷️ Genres` (Quản lý Thể loại)** vào thanh điều hướng Admin Dashboard.
+  * Cho phép Admin thực hiện đầy đủ các thao tác Thêm, Sửa, Xóa thể loại ngay trên giao diện web.
+
+---
+
+#### 2. NGUYÊN NHÂN GỐC RỄ (ROOT CAUSE)
+* **Phía Backend (`GenreController.java` & `GenreService.java`):**
+  * Đã được lập trình hoàn thiện 100% với đầy đủ các RESTful APIs chuẩn:
+    * `GET /api/v1/genres` (Lấy danh sách thể loại đang hoạt động)
+    * `GET /api/v1/genres/{id}` (Lấy chi tiết thể loại)
+    * `POST /api/v1/genres` (Tạo mới thể loại, tự động khôi phục nếu tên trùng với bản ghi đã soft-deleted)
+    * `PUT /api/v1/genres/{id}` (Đổi tên thể loại, kiểm tra chống trùng tên)
+    * `DELETE /api/v1/genres/{id}` (Xóa mềm `isActive = false`, có kiểm tra ràng buộc chống xóa nếu thể loại đang được gán cho phim qua mã lỗi `1205: GENRE_IN_USE`)
+* **Phía Frontend (`AdminDashboard.jsx`):**
+  * Chưa khai báo State `genres` và hàm `fetchGenres()`.
+  * Chưa có file API client `genreApi.js`.
+  * Chưa có nút chuyển tab `GENRES` và khối giao diện bảng danh sách / modal nhập liệu thể loại.
+
+---
+
+#### 3. GIẢI PHÁP TRIỂN KHAI KHI SỬA CODE (PROPOSED IMPLEMENTATION)
+
+##### Bước 1: Tạo file API Service Frontend (`frontend/src/api/genreApi.js`)
+```javascript
+import axiosClient from './axiosClient';
+
+export const genreApi = {
+  getAll: () => axiosClient.get('/genres'),
+  getById: (id) => axiosClient.get(`/genres/${id}`),
+  create: (data) => axiosClient.post('/genres', data),
+  update: (id, data) => axiosClient.put(`/genres/${id}`, data),
+  delete: (id) => axiosClient.delete(`/genres/${id}`),
+};
+```
+
+##### Bước 2: Bổ sung Tab `GENRES` vào `AdminDashboard.jsx`
+* Thêm nút Tab:
+  ```jsx
+  <button onClick={() => setActiveTab('GENRES')} className={...}>
+    <Tag className="w-3.5 h-3.5" />
+    <span>Movie Genres</span>
+  </button>
+  ```
+* Thiết kế bảng danh sách Thể loại:
+  * Cột: ID, Tên thể loại (Genre Name), Trạng thái (Active/Inactive), Thao tác (Chỉnh sửa tên, Xóa).
+  * Nút CTA: **"+ Add New Genre"** mở Modal nhập tên thể loại.
+  * Xử lý lỗi thông minh: Khi xóa thể loại đang có phim, bắt mã lỗi `1205` từ Backend và hiển thị Toast đỏ: *"Cannot delete genre because it is currently linked to one or more movies."*
+  * Hỗ trợ sửa tên thể loại (`Edit Modal`) với kiểm tra trùng lặp.
 
 ---
 

@@ -288,7 +288,7 @@
 
 ### MODULE 2.2: QUẢN LÝ THỂ LOẠI (GENRE) & KHÔI PHỤC SOFT-DELETE
 
-> ℹ️ *Ghi chú cho Tester:* Hiện tại Backend đã hoàn thiện 100% API cho Genre (`POST/GET/PUT/DELETE /api/v1/genres`), trong khi Frontend đang chờ bổ sung tab riêng trên UI (mã theo dõi `FEAT-ADMIN-GENRE-MANAGEMENT-UI-08`). Bạn có thể kiểm tra trực tiếp qua API hoặc công cụ Swagger/Postman/cURL.
+> ℹ️ *Ghi chú cho Tester:* Hiện tại Backend đã hoàn thiện 100% API cho Genre (`POST/GET/PUT/DELETE /api/v1/genres`), trong khi Frontend đang chờ bổ sung tab riêng trên UI (mã theo dõi `FEAT-ADMIN-GENRE-MANAGEMENT-UI-07` trong Bug Log). Bạn có thể kiểm tra trực tiếp qua API hoặc công cụ Swagger/Postman/cURL; tab giao diện này sẽ được xây dựng bổ sung đầy đủ vào Admin Dashboard khi chuyển sang giai đoạn fix code.
 
 #### Case 2.2.1: Thêm thể loại mới
 * **Cách thực hiện (cURL):**
