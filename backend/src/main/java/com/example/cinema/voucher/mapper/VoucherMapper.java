@@ -26,7 +26,13 @@ public class VoucherMapper {
     }
 
     public VoucherResponse toResponse(Voucher voucher) {
+        return toResponse(voucher, 0);
+    }
+
+    public VoucherResponse toResponse(Voucher voucher, int userUsedCount) {
         int remaining = Math.max(0, voucher.getUsageLimit() - (voucher.getReservedCount() + voucher.getUsedCount()));
+        int perUser = voucher.getPerUserLimit() != null ? voucher.getPerUserLimit() : 1;
+        int remainingUser = Math.max(0, perUser - userUsedCount);
         return VoucherResponse.builder()
                 .id(voucher.getId())
                 .code(voucher.getCode())
@@ -39,6 +45,8 @@ public class VoucherMapper {
                 .usedCount(voucher.getUsedCount())
                 .remainingQuota(remaining)
                 .perUserLimit(voucher.getPerUserLimit())
+                .userUsedCount(userUsedCount)
+                .remainingUserQuota(remainingUser)
                 .startAt(voucher.getStartAt())
                 .endAt(voucher.getEndAt())
                 .isActive(voucher.getIsActive())

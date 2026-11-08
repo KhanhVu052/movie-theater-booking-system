@@ -12,6 +12,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,8 +32,11 @@ public class VoucherController {
     VoucherService voucherService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<VoucherResponse>>> getPublicVouchers() {
-        return ResponseEntity.ok(ApiResponse.success(voucherService.getPublicVouchers()));
+    public ResponseEntity<ApiResponse<List<VoucherResponse>>> getPublicVouchers(
+            Authentication authentication
+    ) {
+        String userEmail = (authentication != null) ? authentication.getName() : null;
+        return ResponseEntity.ok(ApiResponse.success(voucherService.getPublicVouchers(userEmail)));
     }
 
     @GetMapping("/admin")
@@ -42,8 +46,12 @@ public class VoucherController {
     }
 
     @GetMapping("/code/{code}")
-    public ResponseEntity<ApiResponse<VoucherResponse>> getVoucherByCode(@PathVariable String code) {
-        return ResponseEntity.ok(ApiResponse.success(voucherService.getVoucherByCode(code)));
+    public ResponseEntity<ApiResponse<VoucherResponse>> getVoucherByCode(
+            @PathVariable String code,
+            Authentication authentication
+    ) {
+        String userEmail = (authentication != null) ? authentication.getName() : null;
+        return ResponseEntity.ok(ApiResponse.success(voucherService.getVoucherByCode(code, userEmail)));
     }
 
     @PostMapping

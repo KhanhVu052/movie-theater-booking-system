@@ -41,8 +41,11 @@ public record MovieRequest(
         @Pattern(regexp = "^(https?://.*)?$", message = "Poster URL must be http(s)")
         String posterUrl,
 
-        @Size(max = 500)
-        @Pattern(regexp = "^(https://.*)?$", message = "Trailer URL must start with https://")
+        @Size(max = 500, message = "Trailer URL must not exceed 500 characters")
+        @Pattern(
+                regexp = "^(https://((www\\.|m\\.)?youtube\\.com/(watch\\?v=|embed/|shorts/)|youtu\\.be/)[\\w-]{11}([?&].*)?)?$",
+                message = "Trailer URL must be a valid https:// YouTube URL (youtube.com or youtu.be)"
+        )
         String trailerUrl,
 
         @NotNull(message = "Movie status is required")

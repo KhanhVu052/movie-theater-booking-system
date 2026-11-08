@@ -112,6 +112,8 @@ export default function Home() {
   const [selectedGenre, setSelectedGenre] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [heroIndex, setHeroIndex] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const MOVIES_PER_PAGE = 8;
 
   // Quick Booking Bar States
   const [quickMovieId, setQuickMovieId] = useState('');
@@ -125,7 +127,7 @@ export default function Home() {
   const [trailerModal, setTrailerModal] = useState(null);
   const [copiedCode, setCopiedCode] = useState('');
 
-  // 1. Fetch initial Movies, Cinemas, Vouchers from Backend
+  // 1. Fetch initial Movies (NOW_SHOWING + COMING_SOON), Cinemas, Vouchers from Backend
   useEffect(() => {
     let isMounted = true;
 
@@ -133,28 +135,27 @@ export default function Home() {
       setLoading(true);
       setError('');
       try {
-        const [moviesRes, cinemasRes, vouchersRes] = await Promise.allSettled([
-          movieApi.getAllMovies({ page: 1, size: 100 }),
+        const [nowShowingRes, comingSoonRes, cinemasRes, vouchersRes] = await Promise.allSettled([
+          movieApi.getAllMovies({ status: 'NOW_SHOWING', page: 1, size: 100 }),
+          movieApi.getAllMovies({ status: 'COMING_SOON', page: 1, size: 100 }),
           movieApi.getAllCinemas(),
           movieApi.getActiveVouchers(),
         ]);
 
         if (!isMounted) return;
 
-        if (moviesRes.status === 'fulfilled') {
-          const movieList = extractPayload(moviesRes.value);
+        if (nowShowingRes.status === 'fulfilled' || comingSoonRes.status === 'fulfilled') {
+          const nowShowingList =
+            nowShowingRes.status === 'fulfilled' ? extractPayload(nowShowingRes.value) : [];
+          const comingSoonList =
+            comingSoonRes.status === 'fulfilled' ? extractPayload(comingSoonRes.value) : [];
+          const movieList = [...nowShowingList, ...comingSoonList];
           setMovies(movieList);
 
-          // If paramMovieId exists in URL, preselect that movie
           if (paramMovieId) {
             setQuickMovieId(String(paramMovieId));
-          } else {
-            const firstNowShowing = movieList.find(
-              (m) => m.status === 'NOW_SHOWING'
-            );
-            if (firstNowShowing) {
-              setQuickMovieId(String(firstNowShowing.id));
-            }
+          } else if (nowShowingList.length > 0) {
+            setQuickMovieId(String(nowShowingList[0].id));
           }
         } else {
           setError('Unable to load movie list from server.');
@@ -301,6 +302,16 @@ export default function Home() {
       return matchesTab && matchesGenre && matchesSearch;
     });
   }, [movies, activeTab, selectedGenre, searchQuery, isSearching]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, selectedGenre, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMovies.length / MOVIES_PER_PAGE));
+  const paginatedMovies = useMemo(() => {
+    const start = (currentPage - 1) * MOVIES_PER_PAGE;
+    return filteredMovies.slice(start, start + MOVIES_PER_PAGE);
+  }, [filteredMovies, currentPage]);
 
   const handleBookMovie = useCallback(
     (movieId) => {
@@ -722,8 +733,9 @@ export default function Home() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {filteredMovies.map((movie) => (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {paginatedMovies.map((movie) => (
                   <div
                     key={movie.id}
                     className="bg-[#18120c] border border-[#362919] hover:border-[#6e522b] rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 shadow-[0_12px_30px_rgba(0,0,0,0.65)] group"
@@ -831,7 +843,43 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-            )}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-10 pt-4">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="px-3.5 py-2 rounded-lg bg-[#16110b] border border-[#3d2f1d] text-xs font-bold text-[#d4c3ad] hover:border-[#e6c27a] disabled:opacity-40 cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-9 h-9 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                        currentPage === pageNum
+                          ? 'bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#dda938] text-[#1a1209]'
+                          : 'bg-[#140f0a] border-[#2e2316] text-[#ab9a84] hover:border-[#5e4727]'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="px-3.5 py-2 rounded-lg bg-[#16110b] border border-[#3d2f1d] text-xs font-bold text-[#d4c3ad] hover:border-[#e6c27a] disabled:opacity-40 cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
+          )}
           </section>
 
           {/* 5. VOUCHERS & PROMOTIONS SECTION */}

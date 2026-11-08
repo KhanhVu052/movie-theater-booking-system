@@ -165,6 +165,12 @@ export default function SeatSelection() {
     return max;
   }, [rowGroups]);
 
+  const hasCoupleSeats = useMemo(
+    () => seats.some((s) => s.seatType === 'COUPLE' || s.pairGroup != null),
+    [seats]
+  );
+  const hasCoupleSeatsInRoom = hasCoupleSeats;
+
   // Map of selected seat objects
   const selectedSeatObjects = useMemo(() => {
     const idSet = new Set(selectedSeatIds);
@@ -234,44 +240,40 @@ export default function SeatSelection() {
       return;
     }
 
-    setSelectedSeatIds((prev) => {
-      let nextSelected;
-      if (partner) {
-        if (prev.includes(seat.id)) {
-          // Deselect both seats of the couple pair
-          nextSelected = prev.filter((id) => id !== seat.id && id !== partner.id);
-        } else {
-          // Both seats must be selected together
-          if (prev.length + 2 > 8) {
-            const maxMsg = 'You can only select up to 8 seats per booking.';
-            setSelectionNotice(maxMsg);
-            showToast(maxMsg, 'warning');
-            return prev;
-          }
-          nextSelected = [...prev, seat.id, partner.id];
-        }
+    let nextSelected;
+    if (partner) {
+      if (selectedSeatIds.includes(seat.id)) {
+        nextSelected = selectedSeatIds.filter((id) => id !== seat.id && id !== partner.id);
       } else {
-        if (prev.includes(seat.id)) {
-          nextSelected = prev.filter((id) => id !== seat.id);
-        } else {
-          if (prev.length >= 8) {
-            const maxMsg = 'You can only select up to 8 seats per booking.';
-            setSelectionNotice(maxMsg);
-            showToast(maxMsg, 'warning');
-            return prev;
-          }
-          nextSelected = [...prev, seat.id];
+        if (selectedSeatIds.length + 2 > 8) {
+          const maxMsg = 'You can only select up to 8 seats per booking.';
+          setSelectionNotice(maxMsg);
+          showToast(maxMsg, 'warning');
+          return;
         }
+        nextSelected = [...selectedSeatIds, seat.id, partner.id];
       }
-
-      if (causesOrphanSeat(seats, nextSelected)) {
-        const warningMsg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
-        setSelectionNotice(warningMsg);
-        showToast(warningMsg, 'warning');
+    } else {
+      if (selectedSeatIds.includes(seat.id)) {
+        nextSelected = selectedSeatIds.filter((id) => id !== seat.id);
+      } else {
+        if (selectedSeatIds.length >= 8) {
+          const maxMsg = 'You can only select up to 8 seats per booking.';
+          setSelectionNotice(maxMsg);
+          showToast(maxMsg, 'warning');
+          return;
+        }
+        nextSelected = [...selectedSeatIds, seat.id];
       }
+    }
 
-      return nextSelected;
-    });
+    setSelectedSeatIds(nextSelected);
+
+    if (causesOrphanSeat(seats, nextSelected)) {
+      const warningMsg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
+      setSelectionNotice(warningMsg);
+      showToast(warningMsg, 'warning');
+    }
   };
 
   // Voucher apply handler via manual form
@@ -644,10 +646,14 @@ export default function SeatSelection() {
                   <span className="w-4 h-4 rounded-t border bg-[#2b1b0b] border-[#966b28]" />
                   <span className="text-[#fce092] font-semibold">VIP ({formatCurrency(seatPrices.VIP)})</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-t border bg-[#2e131e] border-[#8a2449]" />
-                  <span className="text-[#fda4af] font-semibold">Couple ({formatCurrency(seatPrices.COUPLE_PAIR)}/pair)</span>
-                </div>
+                {hasCoupleSeats && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-t border bg-[#2e131e] border-[#8a2449]" />
+                    <span className="text-[#fda4af] font-semibold">
+                      Couple ({formatCurrency(seatPrices.COUPLE_PAIR)}/pair)
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-t border bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#fce092]" />
                   <span className="font-semibold text-[#f3cb62]">Selected</span>
@@ -964,7 +970,11 @@ export default function SeatSelection() {
               ) : (
                 availableVouchers.map((voucher) => {
                   const minOrder = voucher.minOrderValue || 0;
-                  const isEligible = subtotal >= minOrder && subtotal > 0;
+                  const isUserLimitReached =
+                    voucher.remainingUserQuota !== undefined &&
+                    voucher.remainingUserQuota !== null &&
+                    voucher.remainingUserQuota <= 0;
+                  const isEligible = subtotal >= minOrder && subtotal > 0 && !isUserLimitReached;
                   const isApplied = appliedVoucher?.code === voucher.code;
                   const shortage = minOrder - subtotal;
 
@@ -976,6 +986,8 @@ export default function SeatSelection() {
                           ? 'border-[#f3cb62] bg-[#291e12] ring-1 ring-[#f3cb62]/50 shadow-[0_0_15px_rgba(243,203,98,0.2)]'
                           : isEligible
                           ? 'border-[#785325] hover:border-[#f3cb62] bg-[#1f160e] hover:bg-[#241a10] shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
+                          : isUserLimitReached
+                          ? 'border-red-950/40 bg-[#120d09] opacity-50'
                           : 'border-[#291e13] bg-[#120d09] opacity-55'
                       }`}
                     >
@@ -996,12 +1008,17 @@ export default function SeatSelection() {
                                 Active
                               </span>
                             )}
-                            {!isEligible && (
+                            {isUserLimitReached ? (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-950/80 border border-red-700/60 text-red-300 font-bold flex items-center gap-1">
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>Limit Reached</span>
+                              </span>
+                            ) : !isEligible ? (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#241a10] border border-[#3d2b17] text-[#8a765d] flex items-center gap-1">
                                 <Lock className="w-2.5 h-2.5" />
                                 <span>Locked</span>
                               </span>
-                            )}
+                            ) : null}
                           </div>
                           <p
                             className={`text-xs font-semibold ${
@@ -1042,6 +1059,14 @@ export default function SeatSelection() {
                             >
                               Apply
                             </button>
+                          ) : isUserLimitReached ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs font-bold text-zinc-500 cursor-not-allowed"
+                            >
+                              Limit Reached
+                            </button>
                           ) : (
                             <button
                               type="button"
@@ -1054,8 +1079,15 @@ export default function SeatSelection() {
                         </div>
                       </div>
 
-                      {/* Subtotal shortage warning for locked vouchers */}
-                      {!isEligible && (
+                      {/* Notice */}
+                      {isUserLimitReached ? (
+                        <div className="mt-2.5 pt-2 border-t border-[#1f160e] text-[11px] text-red-400/80 flex items-center gap-1.5">
+                          <Lock className="w-3 h-3 shrink-0" />
+                          <span>
+                            You have reached the usage limit for this voucher ({voucher.userUsedCount}/{voucher.perUserLimit} used).
+                          </span>
+                        </div>
+                      ) : !isEligible ? (
                         <div className="mt-2.5 pt-2 border-t border-[#1f160e] text-[11px] text-amber-500/70 flex items-center gap-1.5">
                           <Info className="w-3 h-3 shrink-0" />
                           <span>
@@ -1066,7 +1098,7 @@ export default function SeatSelection() {
                                 )} more to your ticket selection to qualify.`}
                           </span>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })
