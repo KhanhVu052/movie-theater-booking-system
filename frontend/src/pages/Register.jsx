@@ -149,8 +149,14 @@ export default function Register() {
     if (error) setError('');
   };
 
+  const EMAIL_TLD_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!EMAIL_TLD_REGEX.test(formData.email.trim())) {
+      setError('Email must be a valid email address with a domain extension (e.g. name@domain.com)');
+      return;
+    }
     if (!formData.password || formData.password.length < 8) {
       setError('Password must be at least 8 characters');
       return;
@@ -294,6 +300,8 @@ export default function Register() {
                   type="email"
                   name="email"
                   required
+                  pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                  title="Please enter a valid email address with domain extension (e.g., name@domain.com)"
                   value={formData.email}
                   onChange={handleChange}
                   className="w-full bg-[#140f0a] border border-[#3d3020] rounded-lg px-4 py-2.5 text-sm text-[#f5ece0] focus:outline-none focus:border-[#e0b354] focus:ring-1 focus:ring-[#e0b354]/30 transition-all"
