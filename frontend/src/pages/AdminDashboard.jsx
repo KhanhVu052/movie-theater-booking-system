@@ -158,6 +158,71 @@ export default function AdminDashboard() {
   const [reviewsList, setReviewsList] = useState([]);
   const [_loadingReviews, setLoadingReviews] = useState(false);
 
+  // 7. GENRES STATE (Module 2.2)
+  const [genresList, setGenresList] = useState([]);
+  const [loadingGenres, setLoadingGenres] = useState(false);
+  const [showGenreModal, setShowGenreModal] = useState(false);
+  const [editingGenre, setEditingGenre] = useState(null);
+  const [genreNameInput, setGenreNameInput] = useState('');
+
+  const fetchGenres = useCallback(async () => {
+    setLoadingGenres(true);
+    try {
+      const res = await adminApi.getGenres();
+      const raw = res?.data?.data ?? res?.data ?? [];
+      setGenresList(Array.isArray(raw) ? raw : []);
+    } catch {
+      showToast('Failed to load movie genres.', 'error');
+    } finally {
+      setLoadingGenres(false);
+    }
+  }, [showToast]);
+
+  const handleSaveGenreSubmit = async (e) => {
+    e.preventDefault();
+    const name = genreNameInput.trim();
+    if (!name) return;
+    try {
+      if (editingGenre) {
+        await adminApi.updateGenre(editingGenre.id, { name });
+        showToast(`Genre updated to "${name}".`, 'success');
+      } else {
+        await adminApi.createGenre({ name });
+        showToast(`Genre "${name}" created/restored successfully.`, 'success');
+      }
+      setShowGenreModal(false);
+      setEditingGenre(null);
+      setGenreNameInput('');
+      fetchGenres();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to save genre.', 'error');
+    }
+  };
+
+  const handleDeleteGenre = async (genre) => {
+    const confirmed = await confirm({
+      title: 'Delete Movie Genre',
+      message: `Are you sure you want to delete genre "${genre.name}"?`,
+      confirmText: 'Delete Genre',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    });
+    if (!confirmed) return;
+
+    try {
+      await adminApi.deleteGenre(genre.id);
+      showToast(`Genre "${genre.name}" has been deactivated.`, 'info');
+      fetchGenres();
+    } catch (err) {
+      const code = err.response?.data?.code;
+      if (code === 1205) {
+        showToast('Cannot delete genre: It is currently associated with active movies (Code 1205).', 'error');
+      } else {
+        showToast(err.response?.data?.message || 'Failed to delete genre.', 'error');
+      }
+    }
+  };
+
   // Global notice / feedback
   const [notice, setNotice] = useState('');
   const [actionError, setActionError] = useState('');
@@ -318,9 +383,13 @@ export default function AdminDashboard() {
       fetchCinemasAndRooms();
       fetchMovies();
     } else if (activeTab === 'PAYMENTS') fetchPayments();
-    else if (activeTab === 'MOVIES') fetchMovies();
+    else if (activeTab === 'MOVIES') {
+      fetchMovies();
+      fetchGenres();
+    }
     else if (activeTab === 'VOUCHERS') fetchVouchers();
     else if (activeTab === 'REVIEWS') fetchReviews();
+    else if (activeTab === 'GENRES') fetchGenres();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -708,6 +777,19 @@ export default function AdminDashboard() {
               >
                 <MessageSquare className="w-4 h-4 text-[#e0b354]" />
                 <span>Review Moderation</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('GENRES')}
+                className={`px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === 'GENRES'
+                    ? 'bg-[#241a10] border border-[#e0b354] text-[#f3cb62]'
+                    : 'text-[#ab9a84] hover:text-[#f2e8dc]'
+                }`}
+              >
+                <Tag className="w-4 h-4 text-[#e0b354]" />
+                <span>Movie Genres</span>
               </button>
             </div>
 
@@ -1633,6 +1715,111 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+
+            {/* TAB 7: GENRES MANAGEMENT (Module 2.2) */}
+            {activeTab === 'GENRES' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="font-body font-bold text-lg text-[#f7efe4]">
+                      Movie Genres Catalog
+                    </h2>
+                    <p className="text-xs text-[#8a765d] mt-0.5">
+                      Manage movie genre classifications and category tags.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={fetchGenres}
+                      className="px-3.5 py-1.5 rounded-lg bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#e6c27a] flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Refresh</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingGenre(null);
+                        setGenreNameInput('');
+                        setShowGenreModal(true);
+                      }}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add New Genre</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-[#140f0a] border border-[#2e2316] rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs text-[#b8a690]">
+                    <thead className="bg-[#1c140c] text-[#e6c27a] uppercase font-bold border-b border-[#2e2316]">
+                      <tr>
+                        <th className="p-3.5">ID</th>
+                        <th className="p-3.5">Genre Name</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#241a10]">
+                      {loadingGenres ? (
+                        <tr>
+                          <td colSpan="4" className="p-8 text-center text-[#8a765d]">
+                            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-[#e0b354]" />
+                            Loading genres...
+                          </td>
+                        </tr>
+                      ) : genresList.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="p-8 text-center text-[#8a765d]">
+                            No genres found.
+                          </td>
+                        </tr>
+                      ) : (
+                        genresList.map((genre) => (
+                          <tr key={genre.id} className="hover:bg-[#1a130d]">
+                            <td className="p-3.5 font-mono text-[#8a765d]">#{genre.id}</td>
+                            <td className="p-3.5 font-bold text-[#f5ece0]">{genre.name}</td>
+                            <td className="p-3.5">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  genre.isActive !== false
+                                    ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
+                                    : 'bg-red-950/60 text-red-400 border border-red-800'
+                                }`}
+                              >
+                                {genre.isActive !== false ? 'ACTIVE' : 'INACTIVE'}
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-right space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingGenre(genre);
+                                  setGenreNameInput(genre.name);
+                                  setShowGenreModal(true);
+                                }}
+                                className="px-2.5 py-1 rounded bg-[#241a10] border border-[#4d3c26] text-[11px] font-semibold text-[#e6c27a] hover:border-[#e0b354] cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteGenre(genre)}
+                                className="px-2.5 py-1 rounded bg-red-950/40 border border-red-800/60 text-[11px] font-semibold text-red-300 hover:bg-red-900/50 cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
@@ -2322,6 +2509,67 @@ export default function AdminDashboard() {
                       <span>Activate Campaign</span>
                     </>
                   )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* GENRE ADD / EDIT MODAL */}
+      {showGenreModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#18120c] border border-[#4d3c26] rounded-2xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#2e2316] pb-3">
+              <h2 className="font-body font-bold text-base text-[#f7efe4] flex items-center gap-2">
+                <Tag className="w-4 h-4 text-[#e0b354]" />
+                <span>{editingGenre ? 'Edit Genre' : 'Create New Genre'}</span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGenreModal(false);
+                  setEditingGenre(null);
+                  setGenreNameInput('');
+                }}
+                className="text-[#ab9a84] hover:text-[#f3cb62]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveGenreSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[#ab9a84] mb-1 font-semibold">
+                  Genre Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Science Fiction, Anime, Thriller..."
+                  value={genreNameInput}
+                  onChange={(e) => setGenreNameInput(e.target.value)}
+                  className="w-full bg-[#120d09] border border-[#3d3020] rounded-lg p-2.5 text-[#f5ece0] focus:outline-none focus:border-[#e0b354]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#2e2316]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowGenreModal(false);
+                    setEditingGenre(null);
+                    setGenreNameInput('');
+                  }}
+                  className="px-4 py-2 rounded-lg bg-[#241a10] border border-[#3d2f1d] text-xs font-semibold text-[#b8a690] hover:text-[#f7efe4]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-gradient-to-b from-[#f3cb62] to-[#dda938] text-[#1a1209] font-bold text-xs shadow-md cursor-pointer"
+                >
+                  {editingGenre ? 'Update Genre' : 'Save Genre'}
                 </button>
               </div>
             </form>
