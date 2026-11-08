@@ -12,6 +12,7 @@
 |---|---|---|---|---|
 | `BUG-AUTH-EMAIL-FORMAT-VALIDATION-01` | Module 1.1 (Auth & Register) | Đăng ký thành công với email không chuẩn domain (`abc@xyz`) do thiếu regex TLD | Medium (Validation Gap) | 🟡 PENDING (Chờ sửa) |
 | `FEAT-UX-COMING-SOON-PRE-SALE-02` | Module 1.2 (Movie Detail & Catalog) | Giao diện phim Sắp chiếu (`COMING_SOON`): Cần ẩn thanh 7 ngày rỗng và Cơ chế xử lý vé đặt trước (`Pre-Sale`) | Medium (UX Optimization) | 🟡 PENDING (Chờ sửa) |
+| `BUG-SEAT-TOAST-DUPLICATE-03` | Module 1.4 (Seat Selection) | Thông báo cảnh báo luật ghế lẻ bị lặp đúp 2 lần (Duplicate Toast) khi chọn 1 ghế | Low (UI Polish) | 🟡 PENDING (Chờ sửa) |
 
 ---
 
@@ -197,5 +198,82 @@ if (isComingSoon && hasPreSaleShowtimes) {
 
 // Mặc định (NOW_SHOWING): Render thanh 7 ngày như hiện tại
 ```
+
+---
+
+### 🐛 LỖI #3: THÔNG BÁO CẢNH BÁO GHẾ LẺ BỊ NHÂN ĐÔI (DUPLICATE TOAST) KHI CHỌN 1 GHẾ
+
+> **Mã lỗi:** `BUG-SEAT-TOAST-DUPLICATE-03`  
+> **Module bị ảnh hưởng:** Module 1.4 (Case 1.4.2: Sơ đồ ghế & Cảnh báo luật ghế lẻ - `SeatSelection.jsx`)  
+> **Mức độ:** Low (Lỗi hiển thị giao diện / UI Glitch in React StrictMode)  
+> **Trạng thái:** Chờ xử lý (`PENDING`) - **Chưa can thiệp mã nguồn theo yêu cầu của User**
+
+---
+
+#### 1. MÔ TẢ HIỆN TƯỢNG (SYMPTOMS)
+* **Vị trí xảy ra:** Màn hình chọn ghế (`/booking/seat-selection/:showtimeId`).
+* **Các bước tái hiện:**
+  1. Vào màn hình chọn ghế của một suất chiếu bất kỳ (ví dụ: phim *Obsession*, phòng *IMAX Hall 2149*).
+  2. Bấm chọn một ghế đơn lẻ tạo ra vi phạm luật ghế lẻ (ví dụ: bấm chọn ghế `D7`, bỏ trống ghế `D8` ở cuối hàng).
+* **Hiện tượng quan sát được:**
+  * Ở góc dưới cùng bên phải màn hình, đồng thời xuất hiện **2 thông báo toast màu nâu/cam xếp chồng lên nhau**:
+    1. `⚠️ Cannot leave a single empty seat (orphan seat). Please select adjacent seats.`
+    2. `⚠️ Cannot leave a single empty seat (orphan seat). Please select adjacent seats.`
+  * Cả 2 toast đều có nút đóng `✕` và hiển thị đúp cùng một nội dung tại cùng một tích tắc.
+
+---
+
+#### 2. NGUYÊN NHÂN GỐC RỄ (ROOT CAUSE)
+
+##### A. Vi phạm quy tắc hàm thuần khiết (Side-Effect in State Updater):
+Trong file [`frontend/src/pages/SeatSelection.jsx`](file:///d:/movie-theater-booking-system/frontend/src/pages/SeatSelection.jsx) (Dòng 267–274):
+```javascript
+setSelectedSeatIds((prev) => {
+  let nextSelected;
+  ...
+  // ❌ LỖI: Gọi hàm gây tác dụng phụ (Side-Effect) bên trong hàm cập nhật State
+  if (causesOrphanSeat(seats, nextSelected)) {
+    const warningMsg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
+    setSelectionNotice(warningMsg);
+    showToast(warningMsg, 'warning'); // <- Gây ra gọi 2 lần
+  }
+
+  return nextSelected;
+});
+```
+
+##### B. Cơ chế kích hoạt kép của `<React.StrictMode>`:
+* Trong môi trường phát triển (Development Mode), React bọc ứng dụng trong `<React.StrictMode>`.
+* React StrictMode sẽ **cố tình thực thi hàm updater `(prev) => { ... }` 2 lần liên tiếp** nhằm mục đích giúp lập trình viên phát hiện các hàm có chứa Side-Effect (tác vụ không thuần khiết).
+* Vì `showToast(...)` và `setSelectionNotice(...)` bị đặt nằm bên trong `setSelectedSeatIds((prev) => ...)`, hàm `showToast` bị gọi 2 lần chỉ trong 1 lần click chuột, tạo ra 2 bản ghi toast trùng lặp trong Context State.
+
+---
+
+#### 3. GIẢI PHÁP ĐỀ XUẤT (SOLUTIONS TO FIX)
+
+Khi được phép can thiệp code:
+1. **Tách việc tính toán ghế mới và việc bắn Toast ra khỏi hàm State Updater:**
+   * Tính toán trước mảng `nextSelected` bên ngoài `setSelectedSeatIds`.
+   * Kiểm tra điều kiện `causesOrphanSeat(seats, nextSelected)` ở phạm vi hàm xử lý sự kiện `handleSeatClick`.
+   * Chỉ gọi `showToast` đúng **1 lần duy nhất** trước hoặc sau khi cập nhật state:
+   ```javascript
+   const handleSeatClick = (seat) => {
+     // 1. Tính toán nextSelected trước
+     const nextSelected = calculateNextSelectedSeats(selectedSeatIds, seat, partner);
+     
+     // 2. Cập nhật state thuần khiết
+     setSelectedSeatIds(nextSelected);
+
+     // 3. Bắn Toast bên ngoài updater (đảm bảo chỉ gọi đúng 1 lần)
+     if (causesOrphanSeat(seats, nextSelected)) {
+       const warningMsg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
+       setSelectionNotice(warningMsg);
+       showToast(warningMsg, 'warning');
+     }
+   };
+   ```
+2. **Bổ sung cơ chế Deduplication trong `ToastContext.jsx`:**
+   * Trong `ToastContext.jsx`, có thể thêm cơ chế debounce / deduplicate: Nếu một toast có cùng `message` được gọi trong vòng 300ms thì tự động bỏ qua để tránh mọi trường hợp bắn trùng lặp từ React render.
+
 
 
