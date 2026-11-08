@@ -165,6 +165,12 @@ export default function SeatSelection() {
     return max;
   }, [rowGroups]);
 
+  const hasCoupleSeats = useMemo(
+    () => seats.some((s) => s.seatType === 'COUPLE' || s.pairGroup != null),
+    [seats]
+  );
+  const hasCoupleSeatsInRoom = hasCoupleSeats;
+
   // Map of selected seat objects
   const selectedSeatObjects = useMemo(() => {
     const idSet = new Set(selectedSeatIds);
@@ -234,44 +240,40 @@ export default function SeatSelection() {
       return;
     }
 
-    setSelectedSeatIds((prev) => {
-      let nextSelected;
-      if (partner) {
-        if (prev.includes(seat.id)) {
-          // Deselect both seats of the couple pair
-          nextSelected = prev.filter((id) => id !== seat.id && id !== partner.id);
-        } else {
-          // Both seats must be selected together
-          if (prev.length + 2 > 8) {
-            const maxMsg = 'You can only select up to 8 seats per booking.';
-            setSelectionNotice(maxMsg);
-            showToast(maxMsg, 'warning');
-            return prev;
-          }
-          nextSelected = [...prev, seat.id, partner.id];
-        }
+    let nextSelected;
+    if (partner) {
+      if (selectedSeatIds.includes(seat.id)) {
+        nextSelected = selectedSeatIds.filter((id) => id !== seat.id && id !== partner.id);
       } else {
-        if (prev.includes(seat.id)) {
-          nextSelected = prev.filter((id) => id !== seat.id);
-        } else {
-          if (prev.length >= 8) {
-            const maxMsg = 'You can only select up to 8 seats per booking.';
-            setSelectionNotice(maxMsg);
-            showToast(maxMsg, 'warning');
-            return prev;
-          }
-          nextSelected = [...prev, seat.id];
+        if (selectedSeatIds.length + 2 > 8) {
+          const maxMsg = 'You can only select up to 8 seats per booking.';
+          setSelectionNotice(maxMsg);
+          showToast(maxMsg, 'warning');
+          return;
         }
+        nextSelected = [...selectedSeatIds, seat.id, partner.id];
       }
-
-      if (causesOrphanSeat(seats, nextSelected)) {
-        const warningMsg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
-        setSelectionNotice(warningMsg);
-        showToast(warningMsg, 'warning');
+    } else {
+      if (selectedSeatIds.includes(seat.id)) {
+        nextSelected = selectedSeatIds.filter((id) => id !== seat.id);
+      } else {
+        if (selectedSeatIds.length >= 8) {
+          const maxMsg = 'You can only select up to 8 seats per booking.';
+          setSelectionNotice(maxMsg);
+          showToast(maxMsg, 'warning');
+          return;
+        }
+        nextSelected = [...selectedSeatIds, seat.id];
       }
+    }
 
-      return nextSelected;
-    });
+    setSelectedSeatIds(nextSelected);
+
+    if (causesOrphanSeat(seats, nextSelected)) {
+      const warningMsg = 'Cannot leave a single empty seat (orphan seat). Please select adjacent seats.';
+      setSelectionNotice(warningMsg);
+      showToast(warningMsg, 'warning');
+    }
   };
 
   // Voucher apply handler via manual form
@@ -644,10 +646,14 @@ export default function SeatSelection() {
                   <span className="w-4 h-4 rounded-t border bg-[#2b1b0b] border-[#966b28]" />
                   <span className="text-[#fce092] font-semibold">VIP ({formatCurrency(seatPrices.VIP)})</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-t border bg-[#2e131e] border-[#8a2449]" />
-                  <span className="text-[#fda4af] font-semibold">Couple ({formatCurrency(seatPrices.COUPLE_PAIR)}/pair)</span>
-                </div>
+                {hasCoupleSeats && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-t border bg-[#2e131e] border-[#8a2449]" />
+                    <span className="text-[#fda4af] font-semibold">
+                      Couple ({formatCurrency(seatPrices.COUPLE_PAIR)}/pair)
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 rounded-t border bg-gradient-to-b from-[#f3cb62] to-[#dda938] border-[#fce092]" />
                   <span className="font-semibold text-[#f3cb62]">Selected</span>
