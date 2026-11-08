@@ -6,6 +6,9 @@ import jakarta.validation.constraints.Size;
 public record GenreRequest(
         @NotBlank(message = "Genre name must not be blank")
         @Size(max = 100, message = "Genre name must not exceed 100 characters")
-        String name
+        String name,
+
+        @Size(max = 500, message = "Genre description must not exceed 500 characters")
+        String description
 ) {
 }

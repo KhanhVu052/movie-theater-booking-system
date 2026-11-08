@@ -648,6 +648,9 @@ npm run lint
 npm test -- --run
 npm run build
 
+
+---
+
 ## VẤN ĐỀ 11: Tối ưu sơ đồ ghế Couple thực tế (Xóa ghế lẻ E5)
 - **Vấn đề:** Các phòng chiếu nhỏ (Room 2 đến 7) có 5 cột, dẫn đến hàng E kẹp 2 ghế Couple và 1 ghế VIP (E5) trông mất thẩm mỹ.
 - **Giải pháp:** Ghế Couple thực tế to hơn ghế thường. Cần xóa hoàn toàn ghế E5 ở hàng cuối của các phòng này để hàng E chỉ còn đúng 4 ghế (2 cặp Couple).
@@ -661,3 +664,24 @@ WHERE s.room_id BETWEEN 2 AND 7 AND s.row_name = 'E' AND s.seat_number = 5;
 -- 2. Xóa ghế vật lý E5 khỏi bảng seats
 DELETE FROM seats
 WHERE room_id BETWEEN 2 AND 7 AND row_name = 'E' AND seat_number = 5;
+```
+
+---
+
+## VẤN ĐỀ 12: Bổ sung trường Description cho Genre
+- **Vấn đề:** Thể loại phim chưa có mô tả. Bảng genres trong DB thiếu cột description.
+- **Giải pháp:** Thêm cột vào DB, cập nhật Entity, DTO và Frontend.
+- **Mã nguồn thực thi:**
+
+Thêm vào file `V8__optimize_couple_seats_and_genre_desc.sql` vừa tạo ở trên:
+```sql
+-- 3. Thêm cột description cho bảng genres
+ALTER TABLE genres ADD COLUMN description VARCHAR(500) NULL;
+```
+
+- **Cập nhật Backend (`Genre.java`, `GenreRequest.java`, `GenreResponse.java`, `GenreMapper.java`, `GenreService.java`):**
+  - Thêm thuộc tính `String description;` độ dài max 500 ký tự.
+  - Ánh xạ dữ liệu ở Mapper và hàm `updateGenre`, `createGenre`.
+
+- **Cập nhật `AdminDashboard.jsx`:**
+  - Thêm trường `description` vào state (ví dụ `genreDescInput`), bổ sung thẻ `<textarea>` vào modal Thêm/Sửa Thể loại và hiển thị mô tả ra bảng danh sách (nếu có).
