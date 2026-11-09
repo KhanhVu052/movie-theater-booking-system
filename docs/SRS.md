@@ -122,7 +122,7 @@ Do InnoDB vẫn có thể phát sinh Deadlock trên các index phụ hoặc gap 
 
 • Nghiệm thu: 2 Admin gửi request đồng thời xếp 2 suất chiếu giao giờ nhau trong cùng 1 phòng -> Chỉ 1 request thành công. Admin không thể tắt phòng đang có suất chiếu tương lai. Admin không thể ngừng chiếu phim khi còn suất chiếu SCHEDULED trong tương lai; phim ENDED bị chặn đặt vé hoàn toàn.
 FR-SHOW-02
-Hủy suất chiếu & Điều phối hoàn tiền tự động (Luôn hủy mềm - AF-06, D-08 [ĐÃ CHỐT])
+Hủy suất chiếu & Đánh dấu giao dịch cần hoàn tiền và theo dõi xác nhận thủ công (Luôn hủy mềm - AF-06, D-08 [ĐÃ CHỐT])
 Admin thực hiện hủy một suất chiếu đang SCHEDULED. Hệ thống tuân thủ nghiêm ngặt thứ tự khóa tài nguyên chống Deadlock (SRS mục 4.4):
 1. Khóa suất chiếu (showtimes) bằng PESSIMISTIC_WRITE.
 2. Kiểm tra tính hợp lệ của thời điểm hủy:
@@ -131,11 +131,11 @@ Admin thực hiện hủy một suất chiếu đang SCHEDULED. Hệ thống tu�
 3. Luôn luôn thực hiện Soft Cancellation: Chuyển trạng thái suất chiếu sang CANCELLED (`showtime.setStatus(CANCELLED)`), tuyệt đối không xóa cứng bản ghi `showtimes` và `showtime_seats` trong cơ sở dữ liệu (NFR-DATA-01).
 4. Khóa và cập nhật toàn bộ `showtime_seats` thuộc suất chiếu về `AVAILABLE`, đặt `held_by_booking_id = null`.
 5. Nếu có booking (CONFIRMED, PENDING_PAYMENT):
-   - Với đơn CONFIRMED: chuyển booking sang CANCELLED, tìm các giao dịch thanh toán SUCCESS có refund_status = NONE để chuyển sang REFUND_REQUIRED, đồng thời giải phóng và hoàn lại voucher đã sử dụng (USED -> RELEASED, giảm used_count).
+   - Với đơn CONFIRMED: chuyển booking sang CANCELLED, tìm các giao dịch thanh toán SUCCESS có refund_status = NONE để chuyển sang REFUND_REQUIRED (giao dịch được đưa vào danh sách chờ Admin đối soát và bấm xác nhận hoàn tiền thủ công qua confirmManualRefund, hệ thống không tự động gọi API hoàn tiền sang cổng thanh toán), đồng thời giải phóng và hoàn lại voucher đã sử dụng (USED -> RELEASED, giảm used_count).
    - Với đơn PENDING_PAYMENT: chuyển booking sang CANCELLED, giải phóng voucher đang giữ (RESERVED -> RELEASED, giảm reserved_count).
 • Lỗi: Suất chiếu không tồn tại -> 404 Not Found (mã 1307). Suất chiếu đã CANCELLED -> 409 Conflict (mã 1310). Suất chiếu đã hoặc đang diễn ra (startTime <= now) -> 409 Conflict (mã 1313: SHOWTIME_ALREADY_STARTED).
 
-• Nghiệm thu: Hủy suất chiếu chưa có đơn đặt vé: suất chiếu và toàn bộ ghế vẫn được lưu vết lịch sử với trạng thái CANCELLED, không bị xóa cứng (ShowtimeWorkflowIntegrationTest). Hủy suất chiếu có đơn CONFIRMED đã thanh toán: Đơn chuyển CANCELLED, giao dịch chuyển REFUND_REQUIRED, ghế được trả về trống, voucher được hoàn lại. Suất chiếu đã bắt đầu không thể hủy (mã 1313).
+• Nghiệm thu: Hủy suất chiếu chưa có đơn đặt vé: suất chiếu và toàn bộ ghế vẫn được lưu vết lịch sử với trạng thái CANCELLED, không bị xóa cứng (ShowtimeWorkflowIntegrationTest). Hủy suất chiếu có đơn CONFIRMED đã thanh toán: Đơn chuyển CANCELLED, giao dịch chuyển REFUND_REQUIRED (được Admin xác nhận thủ công), ghế được trả về trống, voucher được hoàn lại. Suất chiếu đã bắt đầu không thể hủy (mã 1313).
 FR-BOOK-01
 Hiển thị sơ đồ ghế và Luật ghế lẻ (Orphan Seat Detection – cập nhật v3.0)
 Trả về danh sách ghế của suất chiếu (showtime_seats) kèm vị trí hàng/cột, hạng ghế (NORMAL, VIP, COUPLE), giá vé và trạng thái hiển thị. Nếu ghế có status = 'HELD' nhưng đơn đang giữ ghế đó đã quá hạn (bookings.expires_at < NOW()), hệ thống trả về trạng thái hiển thị là AVAILABLE.
@@ -1156,7 +1156,7 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
   + Bổ sung mã lỗi 1507 vào FR-BOOK-02 và hoàn thiện khóa bi quan bảng users ở đầu chuỗi giao dịch createBooking.
   + Cập nhật mục 4.4: Bổ sung khóa bảng users (FOR UPDATE) đầu tiên trong chuỗi khóa chống Deadlock.
 - Phiên bản 2.4 (2026-11-06):
-  + Bổ sung FR-SHOW-02: Quy trình Hủy suất chiếu & Điều phối hoàn tiền tự động (chống deadlock, hoàn tiền tự động cho đơn CONFIRMED, thu hồi/hoàn voucher phù hợp).
+  + Bổ sung FR-SHOW-02: Quy trình Hủy suất chiếu & Đánh dấu giao dịch cần hoàn tiền và theo dõi xác nhận thủ công (chống deadlock, gắn cờ REFUND_REQUIRED cho đơn CONFIRMED, thu hồi/hoàn voucher phù hợp).
   + Cập nhật mục 4.4 (Thứ tự khóa): Bổ sung khóa bảng showtimes (X ở hủy suất, S ở tạo booking) vào đầu chuỗi khóa tài nguyên chống Deadlock.
   + Loại bỏ mã lỗi deprecated SHOWTIME_HAS_ACTIVE_BOOKINGS (1311).
   + Cập nhật mục 7.3: Bổ sung bộ Integration Test backend (ShowtimeWorkflowIntegrationTest) và bộ test frontend/QA script.
