@@ -1,236 +1,235 @@
-# 🎬 GoToro Cinema — Movie Theater Booking System
+# 🎬 GoToro Cinema — Enterprise Movie Theater Booking Platform
 
 [![CI Pipeline](https://github.com/KhanhVu052/movie-theater-booking-system/actions/workflows/ci.yml/badge.svg)](https://github.com/KhanhVu052/movie-theater-booking-system/actions/workflows/ci.yml)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8.3-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Vitest](https://img.shields.io/badge/Vitest-5.1-FCC72B?logo=vitest&logoColor=black)](https://vitest.dev/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 
-A modern, production-grade movie theater booking and auditorium operations platform designed for high-concurrency seat reservation, strict financial transaction settlement, and an immersive Japanese Lacquer (*Urushi*) & Gold Leaf (*Kinpaku*) cinematic aesthetic.
+An enterprise-grade cinema ticketing and auditorium operations platform engineered with **Java 21**, **Spring Boot 3**, **MySQL 8.0**, and **React 19**. Built to handle high-concurrency seat reservation bursts with strict ACID financial transaction guarantees, deadlock-free pessimistic locking, dynamic pricing policies, and automated refund pipelines.
 
 ---
 
-## 🌟 Key Features
+## 📸 Screenshots
 
-### 👤 Customer Experience
-* **Hero Spotlight & Movie Catalog**: Interactive browsing for Now Showing and Coming Soon titles, genre filters, and trailer modal previews.
-* **Interactive Auditorium Seat Layout (FR-BOOK-01)**: Real-time visual seat map supporting Standard, VIP, and Couple seating tiers.
-* **10-Minute Hold Concurrency Guarantee (FR-BOOK-02)**: Concurrency-safe seat reservation powered by Database Pessimistic Write Locks (`SELECT ... FOR UPDATE`), strictly preventing double bookings across concurrent users.
-* **Promotional Voucher Engine (FR-VOUC-01)**: Dynamic quota reservation supporting percentage and fixed discounts with minimum order thresholds and maximum discount ceilings.
-* **VNPAY Sandbox Gateway Integration (FR-PAY-01)**: Online payment checkout with up to 3 payment retry attempts per reservation and live hold countdown clock.
-* **Digital Admission Pass & E-Ticket (FR-PAY-02)**: Instant QR Code graphic, simulated barcode, and printable admission pass (`window.print()`).
-* **Reservations History & Reviews (FR-REV-01)**: Customer booking ledger, in-page E-Ticket viewer modal, and verified post-screening ratings (1–5 stars) and reviews.
-* **User Profile & Account Drawer**: Live account details fetched from `GET /api/v1/auth/me`.
-
-### 🛡️ Administrative Operations Console (`/admin`)
-* **Realized Revenue Reports (FR-REP-01)**: Date-range filtered financial auditing strictly aggregating confirmed `SUCCESS` transactions with `refund_status = 'NONE'`.
-* **Auditorium Showtime Scheduling (FR-SHOW-01)**: Conflict detection engine enforcing room database locks and an automatic 15-minute hall cleaning buffer (`cleaning_end_time = end_time + 15m`).
-* **Payment Ledger & Manual Refund Settlement (FR-PAY-02)**: Comprehensive audit log tracking VNPay transaction references and providing one-click manual refund settlement for transactions flagged as `REFUND_REQUIRED`.
-* **Movie Catalog & Voucher Controls**: Publishing new cinema titles and activating promotional voucher campaigns with usage quotas.
-* **Viewer Feedback Moderation**: Administrative moderation for customer reviews and star ratings.
+| Feature View | Preview | Highlights |
+|:---|:---:|:---|
+| **Customer Portal & Movie Catalog** | *(Screenshot Placeholder)* | Hero spotlight carousel, Now Showing / Coming Soon tabs, dynamic 8-movie pagination, and YouTube trailer modals. |
+| **Auditorium Seat Selection** | *(Screenshot Placeholder)* | Real-time seat matrix, Standard, VIP, and Couple seating tiers, orphan seat protection, and responsive legend. |
+| **10-Minute Hold & Checkout** | *(Screenshot Placeholder)* | Synchronized 10-minute hold countdown timer, promotional voucher redemption, and VNPay sandbox integration. |
+| **E-Ticket & QR Admission** | *(Screenshot Placeholder)* | Verified admission passes with scannable QR code, barcode, and printable thermal ticket view. |
+| **Admin Operations Console** | *(Screenshot Placeholder)* | Real-time cinema auditing, conflict-free showtime scheduling, manual refund processing, and genre management. |
+| **Executive Revenue Analytics** | *(Screenshot Placeholder)* | Date-filtered realized revenue reports, movie performance breakdowns, and room occupancy calculations. |
 
 ---
 
 ## 🏗️ System Architecture
 
-The application is structured as a **Modular Monolith** combined with a layered domain pattern:
+```mermaid
+flowchart TD
+    subgraph Client["Frontend Client (React 19 + Vite SPA)"]
+        UI["Customer Portal & Admin Console"]
+        Axios["Axios Client (JWT Interceptor)"]
+    end
 
+    subgraph Security["Security & Routing Layer"]
+        Filter["Spring Security Filter Chain"]
+        JWT["JWT Auth Provider & RBAC Guard"]
+    end
+
+    subgraph Backend["Spring Boot 3 Backend Service"]
+        Controller["REST Controllers (/api/v1/*)"]
+        Retry["DeadlockRetryExecutor (Exponential Backoff)"]
+        Services["Domain Services (Booking, Showtime, Payment, Voucher)"]
+        Scheduler["Hold Reclaimer Scheduler (@Scheduled 30s)"]
+    end
+
+    subgraph Data["Persistence & External Services"]
+        MySQL[("MySQL 8.0 (InnoDB)
+        Pessimistic Write Locks:
+        SELECT ... FOR UPDATE")]
+        Flyway["Flyway Schema Migrations (V1 - V8)"]
+        VNPay["VNPay Payment Gateway (HMAC SHA-512)"]
+    end
+
+    UI --> Axios
+    Axios --> Filter
+    Filter --> JWT
+    JWT --> Controller
+    Controller --> Retry
+    Retry --> Services
+    Scheduler --> Services
+    Services --> MySQL
+    Services --> VNPay
+    Flyway -.-> MySQL
 ```
-movie-theater-booking-system/
-├── backend/                  # Spring Boot 4 + Java 21 REST API
-│   ├── src/main/java/com/example/cinema/
-│   │   ├── auth/             # JWT Authentication & RBAC (CUSTOMER, ADMIN)
-│   │   ├── movie/            # Movie catalog, genres, cast
-│   │   ├── showtime/         # Cinemas, auditoriums, physical & showtime seats
-│   │   ├── booking/          # Pessimistic lock seat holding & 10m expiry scheduler
-│   │   ├── payment/          # VNPAY Sandbox integration, IPN callback & refunds
-│   │   ├── voucher/          # Campaign quotas & redemption rules
-│   │   ├── review/           # Customer rating & post-screening reviews
-│   │   └── common/           # Global exception handler, BaseResponse, Security
-├── frontend/                 # React 19 + Vite SPA
-│   ├── src/
-│   │   ├── api/              # Axios HTTP client with 401 interceptor
-│   │   ├── components/       # Navbar, UserProfileModal, ETicketModal
-│   │   ├── context/          # ToastContext & confirmation dialogs
-│   │   ├── pages/            # Home, Detail, SeatSelection, Payment, MyBookings, Admin
-│   │   ├── utils/            # formatters, voucherUtils, bookingUtils
-│   │   └── test/             # Vitest automated business rule test suite
-└── docs/
-    └── SRS.md                # Software Requirements Specification (v3.4)
-```
 
 ---
 
-## 🔒 Concurrency & Lock Ordering Rules
+## 🌟 Core Architectural Highlights
 
-To prevent Deadlocks under high concurrency (e.g. 50 users simultaneously requesting the same seat):
-1. **Lock Ordering Hierarchy**:
-   1. `users` table (`SELECT ... FOR UPDATE` in `createBooking` to lock user row first and enforce pending limit)
-   2. `showtimes` table (`SELECT ... FOR UPDATE` when cancelling showtime, or `SELECT ... FOR SHARE` when creating booking)
-   3. `bookings` table (`SELECT ... FOR UPDATE ORDER BY id ASC`)
-   4. `showtime_seats` table (`SELECT ... FOR UPDATE ORDER BY id ASC`)
-   5. `vouchers` table (`SELECT ... FOR UPDATE`)
-2. **Expired Hold Recovery**:
-   - If an existing reservation holding a seat has expired (`expires_at < NOW()`), the booking is transitioned to `EXPIRED`, voucher quota is released, and the seat is made `AVAILABLE` atomically for the waiting transaction.
-3. **Automated Cleanup Scheduler**:
-   - A background `@Scheduled` job sweeps every 30 seconds to reclaim unpurchased expired holds without blocking active payment callbacks.
+### 1. High-Concurrency Seat Reservation & Deadlock Prevention
+* **Deterministic Lock Ordering**: Prevents database deadlocks during flash-sale booking spikes by acquiring row-level pessimistic write locks in a strict hierarchy:
+  1. `users` row lock (`SELECT ... FOR UPDATE` to enforce active pending order ceilings)
+  2. `showtimes` shared lock (`SELECT ... FOR SHARE`)
+  3. `bookings` row lock (`ORDER BY id ASC`)
+  4. `showtime_seats` row locks (`ORDER BY id ASC`)
+  5. `vouchers` row lock (`SELECT ... FOR UPDATE`)
+* **Deadlock Auto-Recovery**: Critical database transactions are wrapped in a `DeadlockRetryExecutor` implementing exponential backoff jitter on transient MySQL deadlock exceptions (`Error Code: 1213`).
+* **10-Minute Hold Expiration**: When a user selects seats, inventory is held for exactly 10 minutes. An automated background sweeper (`@Scheduled` every 30 seconds) and on-demand transactional checks atomically release abandoned holds and restore voucher quotas.
+* **Orphan Seat Detection Algorithm**: Validates that customer selections do not leave awkward single isolated empty seats in a row, maximizing theater occupancy efficiency.
+
+### 2. Financial Integrity & Automated Refunds
+* **Realized Revenue Auditing**: Revenue reporting strictly aggregates only confirmed `SUCCESS` payments where `refund_status = 'NONE'`, ensuring financial reporting reflects cash actually retained.
+* **Showtime Cancellation Pipeline**: Canceling a showtime automatically cascades across all associated confirmed bookings, marks payments as `REFUND_REQUIRED`, restores customer voucher usage limits, and records audit logs.
+* **Customer-Initiated Cancellation**: Customers can cancel tickets and request a 100% refund up to 60 minutes before showtime. Cancellations within the 60-minute cutoff are strictly rejected.
+
+### 3. Promotional Voucher Engine with Per-User Quotas
+* Supports percentage-based and fixed-amount discounts with configurable minimum order values and maximum discount caps.
+* **Per-User Usage Tracking**: Backend calculates `userUsedCount` and `remainingUserQuota`. When a customer reaches their individual limit, the voucher is visually dimmed, locked, and prevented from applying.
+
+### 4. Conflict-Free Auditorium Scheduling
+* Enforces room collision detection ensuring no two screenings overlap in the same hall.
+* Automatically schedules an enforced **15-minute cleaning buffer** (`cleaning_end_time = end_time + 15m`) after every movie duration.
 
 ---
 
-## 🛡️ Architectural Decision D-06: JWT Storage & XSS Mitigation
-
-* **Storage Strategy**: JWT access tokens are stored in browser `localStorage` for Single-Page Application (SPA) simplicity, stateless client-side authorization header injection (`Authorization: Bearer <token>`), and frictionless local development without cross-domain cookie quirks.
-* **XSS Defense-in-Depth**:
-  1. **React JSX Auto-Escaping**: React natively escapes all variable interpolations in JSX, neutralizing DOM injection vectors.
-  2. **Strict Backend Input Validation**: Jakarta Validation constraints (`@NotBlank`, `@Size(min = 8, max = 50)`, `@Email`, regex) validate every request body and query parameter before processing.
-  3. **Short Expiration & Real-Time Account Invalidation**: Access tokens carry a bounded validity period, and backend filters/services verify account active status (`user.isActive == true`) on every critical transaction (such as `createBooking` and `loadUserByUsername`), immediately revoking compromised tokens without waiting for JWT expiry.
-  4. **Strict HTTP Headers**: Production deployments mandate Strict Content Security Policy (CSP), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and HTTPS enforcement.
-* **Production Recommendation**: For high-compliance enterprise environments, migrate to `HttpOnly`, `SameSite=Strict` secure cookies combined with rotating refresh tokens stored in a distributed Redis session store.
-
----
-
-## 🚀 Quick Start Guide
+## 🚀 Quick Start & Installation
 
 ### Prerequisites
-* **Java**: JDK 21+
+* **Java**: OpenJDK 21+
 * **Node.js**: v20 or v22 LTS
-* **Database**: MySQL 8.0+
-* **Build Tools**: Maven Wrapper (`mvnw`), npm
+* **Container Engine**: Docker & Docker Compose (for local database)
+* **Build Tools**: Maven Wrapper (`./mvnw`), npm
 
 ---
 
-### 1. Database Setup
-The easiest way is Docker Compose, which creates the `cinema_booking_db` database for you:
+### Step 1: Start MySQL Database
+Launch the preconfigured MySQL 8.0 database container:
 ```bash
-docker compose up -d mysql
+docker compose up -d
 ```
+*Port:* `127.0.0.1:3306` | *Database:* `cinema_booking_db` | *User:* `root` | *Password:* `root`
 
-Using your own MySQL instead? Create the database and point the app at it with environment variables (see step 2):
+*(Optional: If using your own local MySQL server, execute:)*
 ```sql
 CREATE DATABASE cinema_booking_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
-Defaults match `docker-compose.yml` (`root` / `root` on `localhost:3306`). Override with `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`.
 
 ---
 
-### 2. Configure Secrets (environment variables)
-Secrets are **not** stored in the repository. **Bắt buộc** phải tạo file `.env` từ `.env.example` trước khi khởi động dự án:
+### Step 2: Configure Environment Variables
+Copy the sample environment template and generate a cryptographically secure JWT secret:
+
+**Linux / macOS:**
 ```bash
 cp .env.example .env
-# JWT secret (required): paste the output into JWT_SECRET in .env
+# Generate 48-byte Base64 key and update JWT_SECRET in .env
 openssl rand -base64 48
 ```
-| Variable | Required | Purpose |
-|---|---|---|
-| `JWT_SECRET` | yes | Base64 signing key for JWT, at least 32 bytes. The app refuses to start without it. |
-| `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` | for first run | Creates the first `ADMIN` account when the database has none (password min 8 chars). |
-| `DEV_TOOLS_ENABLED` | no (default `false`) | `true` enables the demo-only "simulate payment" endpoint (SRS FR-DEV-01). |
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | no | Database connection overrides (default: `localhost:3306`). |
-| `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` | no | VNPay sandbox credentials. |
 
-> **Lưu ý bảo mật:** Script `run-backend.bat` trên Windows sẽ tự động kiểm tra sự tồn tại của `.env` và nạp toàn bộ biến môi trường trước khi chạy `mvnw`. Nếu chưa tạo `.env`, script sẽ dừng ngay với thông báo lỗi và thoát mã `2`.
+**Windows (PowerShell):**
+```powershell
+Copy-Item .env.example .env
+# Generate Base64 key:
+[Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+```
+
+Ensure `.env` contains:
+```env
+DB_URL=jdbc:mysql://localhost:3306/cinema_booking_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+DB_USERNAME=root
+DB_PASSWORD=root
+JWT_SECRET=<YOUR_GENERATED_BASE64_KEY>
+BOOTSTRAP_ADMIN_EMAIL=admin@cinema.com
+BOOTSTRAP_ADMIN_PASSWORD=GoToroAdminSecure2026@Password
+DEV_TOOLS_ENABLED=true
+```
 
 ---
 
-### 3. Run the Backend
-```bash
-# Windows (khuyến nghị - tự động nạp .env)
-run-backend.bat
+### Step 3: Run Backend Service
 
-# Linux / macOS (nạp .env rồi chạy)
+**Linux / macOS:**
+```bash
 set -a; source .env; set +a
 cd backend
 ./mvnw spring-boot:run
 ```
-The REST API will launch at `http://localhost:8080`.
 
-#### Accounts
-* **Administrator**: created on first start from `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` (Role: `ADMIN`). There is no built-in default password.
-* **Customer**: Self-register via the UI or `POST /api/v1/auth/register`
-
-#### Demo without a public VNPay callback
-VNPay confirms payments by calling the IPN URL (server-to-server), which cannot reach `localhost`. For a local demo, set `DEV_TOOLS_ENABLED=true` and run the frontend with `npm run dev`: the payment page then offers an extra "Instant Test Payment" option. It follows the same rules as a real in-time IPN (booking must be `PENDING_PAYMENT`, not expired, seats still held) and is never shown in production builds.
+**Windows:**
+```cmd
+run-backend.bat
+```
+*API Base URL:* **`http://localhost:8080`**  
+Flyway will automatically execute migrations `V1` through `V8` on first boot.
 
 ---
 
-### 4. Run the Frontend
+### Step 4: Run Frontend Application
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-The development server will launch at `http://localhost:5173`.
+*Web Client URL:* **`http://localhost:5173`**
 
 ---
 
-## 🧪 Testing & Code Quality
+## 🔑 Default Credentials
 
-### Comprehensive Test Suite (Frontend + API QA)
-To execute all frontend unit/integration tests and backend QA API checks in one go, ensure the backend is running and provide administrator credentials:
+| Role | Email | Password | Permissions |
+|:---|:---|:---|:---|
+| **System Administrator** | `admin@cinema.com` | `GoToroAdminSecure2026@Password` | Full access to `/admin`: scheduling, catalog, vouchers, revenue reports, refunds |
+| **Demo Customer** | Self-register via `/register` | *(User chosen)* | Browse movies, select seats, apply vouchers, hold & checkout, review |
+
+> **Local Sandbox Demo Note:** When `DEV_TOOLS_ENABLED=true`, the checkout page features an instant payment simulation option that verifies all hold validity rules without requiring external VNPay merchant network callbacks.
+
+---
+
+## 🧪 Testing & CI/CD Pipeline
+
+The project is backed by comprehensive automated test suites enforcing business rules, database integrity, and code quality.
+
+### Automated Testing Commands
+
 ```bash
-# On Windows command prompt:
-set ADMIN_EMAIL=admin@cinema.com
-set ADMIN_PASSWORD=YourPassword
-run-all-tests.bat
-
-# Or via npm inside frontend directory:
+# 1. Run Frontend Unit Tests (69 Vitest specifications)
 cd frontend
-ADMIN_EMAIL=admin@cinema.com ADMIN_PASSWORD=YourPassword npm run test:all
-```
-
-### Frontend Automated Testing (Vitest)
-```bash
-cd frontend
-# Run all automated test suites
 npm test
 
-# Run tests in watch mode
-npm run test:watch
-```
-
-### Frontend Code Quality (ESLint)
-```bash
+# 2. Run Frontend Lint (ESLint)
 cd frontend
 npm run lint
-```
-*Current Status: 0 errors, 0 warnings.*
 
-### Backend Tests (Maven)
-```bash
+# 3. Compile & Run Backend Tests (Maven)
 cd backend
 ./mvnw test
 ```
-> Backend integration tests (such as `ShowtimeWorkflowIntegrationTest`) run with Spring profile `test` (`@ActiveProfiles("test")`, configuring `application-test.yaml`). MySQL must be running to verify database constraints and concurrency locks. Connection parameters default to `localhost:3306`, `root`, blank password, but can be customized using environment variables:
-> - `DB_URL` (default: `jdbc:mysql://localhost:3306/cinema_booking_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true`)
-> - `DB_USERNAME` (default: `root`)
-> - `DB_PASSWORD` (default: empty)
+
+### GitHub Actions CI Workflow (`.github/workflows/ci.yml`)
+Every push and pull request to `main` triggers isolated multi-job continuous integration:
+* **Frontend CI Job**:
+  * Environment: `ubuntu-latest` with Node.js 22.
+  * Verifies dependency tree (`npm ci`), code formatting & standards (`npm run lint`), business rule tests (`npm test`), and production asset bundling (`npm run build`).
+* **Backend CI Job**:
+  * Environment: `ubuntu-latest` with Eclipse Temurin JDK 21.
+  * Executes `./mvnw -B verify` running automated unit tests and integration tests with **Testcontainers** (spinning up ephemeral MySQL Docker containers to validate Flyway schema migrations, pessimistic locking queries, and JPA persistence rules).
 
 ---
 
-## 📜 Specification Compliance
-This project strictly implements and fulfills the software specification outlined in `docs/SRS.md`:
-* **FR-SHOW-01**: Showtime scheduling with room collision prevention and 15m cleaning end time.
-* **FR-SHOW-02**: Showtime cancellation with automated refund pipeline (`REFUND_REQUIRED`), voucher restoration, and strict deadlock-free locking order.
-* **FR-SEAT-02**: Couple / sofa seat atomic pair reservation, pair_group link, and base price calculation.
-* **FR-PRICE-01**: Dynamic pricing matrix policy (early bird discount, peak hour surcharge, weekend surcharge, minimum price floor).
-* **FR-BOOK-01**: Real-time seat inventory projection based on hold expiration state and orphan seat rule.
-* **FR-BOOK-02**: Concurrency-safe seat holding for up to 8 seats per order.
-* **FR-BOOK-03**: Background hold reclamation scheduler every 30 seconds.
-* **FR-BOOK-04**: Pending reservation ceiling enforcement (max 2 active holds per user, HTTP 429).
-* **FR-VOUC-01**: Voucher validation, quota reservation, and ceiling caps.
-* **FR-PAY-01**: VNPAY payment attempt generation with retry limit of 3.
-* **FR-PAY-02**: Server-to-Server IPN verification and `REFUND_REQUIRED` handling.
-* **FR-REV-01**: Post-screening verified customer review policy.
-* **FR-REP-01**: Realized revenue calculation excluding refund-required payments.
-* **FR-DEV-01**: Demo-only payment simulation and showtime fast-forward, off by default (`DEV_TOOLS_ENABLED`).
-* **NFR-SEC-02**: No secrets in the repository; JWT secret and first-admin credentials come from environment variables.
+## 📖 Documentation Index
 
-For the parts of the SRS roadmap that are not built yet (Notification/RabbitMQ, Redis caching, Swagger, high-concurrency stress tests IT-01 through IT-04) see SRS section 7.3.
+* **[Software Requirements Specification (SRS)](./docs/SRS.md)**: Full functional requirements, pricing policy formulas, and domain rules.
+* **[E2E Acceptance Test Manual](./docs/KICH_BAN_KIEM_THU_TOAN_DIEN_CUOI_CUNG.md)**: Click-by-click manual testing handbook.
+* **[Release Changelog](./docs/CHANGELOG.md)**: Historical release notes and sprint improvements.
+* **[Documentation Hub](./docs/README.md)**: Central directory for all architectural specifications.
 
 ---
 
 ## 📄 License
-This project is developed for educational and demonstration purposes. All rights reserved.
+This repository is an enterprise-grade portfolio project developed for demonstration and engineering showcase purposes. All rights reserved.
