@@ -82,11 +82,21 @@ flowchart TD
 
 ---
 
-## 📸 Screenshots
+## 📸 Application Screenshots
 
-| Home & Movie Selection | Seat Matrix & Types | E-Ticket & Checkout |
+### 🎬 Customer Experience & Booking Flow
+| Movie Showcase & Browsing | Seat Matrix & Selection | VNPay Payment & Checkout |
 |:---:|:---:|:---:|
-| <img src="LINK_ANH_1_DIEN_VAO_DAY" alt="Home Page" width="300"/> | <img src="LINK_ANH_2_DIEN_VAO_DAY" alt="Seat Selection" width="300"/> | <img src="LINK_ANH_3_DIEN_VAO_DAY" alt="Checkout" width="300"/> |
+| <img src="docs/images/giao_dien_1.jpg" alt="Movie Showcase" width="320"/> | <img src="docs/images/dat_ve_1.jpg" alt="Seat Matrix" width="320"/> | <img src="docs/images/thanh_toan.jpg" alt="Checkout" width="320"/> |
+
+| Booking Success & E-Ticket | Showtime Schedules | Film Details Modal |
+|:---:|:---:|:---:|
+| <img src="docs/images/thanh_toan_thanh_cong.jpg" alt="E-Ticket Receipt" width="320"/> | <img src="docs/images/giao_dien_2.jpg" alt="Showtime Schedules" width="320"/> | <img src="docs/images/giao_dien_3.jpg" alt="Film Details" width="320"/> |
+
+### 🛠️ Administrative Operations
+| Real-time Admin Dashboard & Analytics |
+|:---:|
+| <img src="docs/images/admin_dashboard.jpg" alt="Admin Dashboard" width="700"/> |
 
 ---
 
