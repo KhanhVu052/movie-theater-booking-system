@@ -1,3 +1,4 @@
+﻿> **WARNING:** This document is archived for historical purposes. It contains outdated architectural claims (e.g., automated refunds, Redis dependencies) that have been deprecated or replaced in the current production codebase. Do not use this as a reference for the current system state.
 # TÀI LIỆU KỸ THUẬT: BẢN VÁ CHỐT SỔ CUỐI CÙNG (NHÓM 1 & NHÓM 2)
 
 > **Chỉ thị cho AI Coding Assistant:** Tài liệu này là nguồn chân lý duy nhất (Single Source of Truth) cho đợt chốt sổ dự án GoToro Cinema. Hãy áp dụng **chính xác 100%** các đoạn mã nguồn, câu lệnh SQL và cấu hình dưới đây vào codebase. Không tự ý sáng tạo hoặc làm khác thiết kế.

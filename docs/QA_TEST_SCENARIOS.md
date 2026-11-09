@@ -147,7 +147,7 @@
 ---
 
 ### 🟢 GIAI ĐOẠN 6: TRANG "MY TICKETS" & HỦY VÉ HOÀN TIỀN (> 60 PHÚT)
-*Mục tiêu: Xem vé điện tử có mã QR và kiểm tra chính sách hủy vé tự động hoàn tiền.*
+*Mục tiêu: Xem vé điện tử có mã QR và kiểm tra quy trình hủy vé, gắn cờ theo dõi hoàn tiền.*
 
 - [ ] **Bước 6.1: Xem vé tại My Tickets:**
   - Bấm vào nút **`🎟️ My Tickets`** trên góc phải thanh Header.
@@ -159,11 +159,12 @@
   - Tìm vé có suất chiếu diễn ra sau hơn 60 phút nữa (suất chiếu buổi chiều hoặc ngày mai).
   - Quan sát thấy nút màu đỏ: **`Cancel Ticket & Refund`**.
   - Bấm vào nút **`Cancel Ticket & Refund`**.
-  - Một hộp thoại xác nhận hiện ra thông báo chính sách hoàn tiền 100%. Bấm **Xác nhận Hủy**.
+  - Một hộp thoại xác nhận hiện ra. Bấm **Xác nhận Hủy**.
   - **👉 Quan sát kết quả:**
-    - Trạng thái vé lập tức đổi sang màu xám/đỏ: **`CANCELLED`** (hoặc `REFUNDED`).
+    - Trạng thái vé lập tức đổi sang màu xám/đỏ: **`CANCELLED`**.
+    - Hệ thống sẽ đánh dấu đơn hàng thành trạng thái `REFUND_REQUIRED`. Giao dịch hoàn tiền thực tế sẽ do Admin thực hiện và xác nhận thủ công trên hệ thống (Refund tracking with manual settlement).
     - Mở lại sơ đồ ghế của suất chiếu đó: Các ghế bạn vừa hủy đã ngay lập tức trở lại màu trắng (Available), sẵn sàng cho người khác đặt.
-    - Mã voucher bạn đã dùng cũng được tự động hoàn lại lượt dùng cho tài khoản của bạn.
+    - Mã voucher bạn đã dùng cũng được hoàn lại lượt dùng cho tài khoản của bạn.
 
 ---
 

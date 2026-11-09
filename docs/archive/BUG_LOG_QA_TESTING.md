@@ -1,3 +1,4 @@
+﻿> **WARNING:** This document is archived for historical purposes. It contains outdated architectural claims (e.g., automated refunds, Redis dependencies) that have been deprecated or replaced in the current production codebase. Do not use this as a reference for the current system state.
 # NHẬT KÝ THEO DÕI VÀ BÁO CÁO LỖI KIỂM THỬ (QA BUG LOG)
 > **Dự án:** GoToro Cinema Management System  
 > **Phiên bản:** QA Testing Phase - 08/11/2026  

@@ -1,3 +1,4 @@
+﻿> **WARNING:** This document is archived for historical purposes. It contains outdated architectural claims (e.g., automated refunds, Redis dependencies) that have been deprecated or replaced in the current production codebase. Do not use this as a reference for the current system state.
 # BỘ KỊCH BẢN & CẨM NANG HƯỚNG DẪN KIỂM THỬ TOÀN DIỆN GOTORO CINEMA
 > **Phiên bản:** Enterprise Quality Assurance & Tester Handbook v5.0  
 > **Môi trường thực thi:** Local Environment  

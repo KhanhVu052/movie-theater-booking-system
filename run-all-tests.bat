@@ -1,8 +1,9 @@
 @echo off
 echo ================================================================
-echo   RUNNING GOTORO CINEMA AUTOMATED TEST SUITE (FRONTEND + API)
+echo   RUNNING GOTORO CINEMA AUTOMATED TEST SUITE (FULL STACK)
 echo ================================================================
 echo.
+
 if "%ADMIN_EMAIL%"=="" goto warn_missing_credentials
 if "%ADMIN_PASSWORD%"=="" goto warn_missing_credentials
 goto run_tests
@@ -16,10 +17,34 @@ echo   run-all-tests.bat
 echo.
 
 :run_tests
-cd frontend
-call npm run test:all
+echo ================================================================
+echo   [1/2] RUNNING BACKEND INTEGRATION TESTS (Maven Failsafe)
+echo ================================================================
+cd backend
+call .\mvnw.cmd -B verify
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Backend integration/unit tests failed! Aborting test suite.
+    cd ..
+    exit /b 1
+)
 cd ..
+
 echo.
 echo ================================================================
-echo   AUTOMATED TEST RUN COMPLETE
+echo   [2/2] RUNNING FRONTEND TEST SUITE (Vitest + Integration)
+echo ================================================================
+cd frontend
+call npm run test:all
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Frontend test suite failed!
+    cd ..
+    exit /b 1
+)
+cd ..
+
+echo.
+echo ================================================================
+echo   [SUCCESS] ALL TEST SUITES PASSED CLEANLY
 echo ================================================================

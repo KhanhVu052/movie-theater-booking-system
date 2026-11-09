@@ -1,3 +1,4 @@
+﻿> **WARNING:** This document is archived for historical purposes. It contains outdated architectural claims (e.g., automated refunds, Redis dependencies) that have been deprecated or replaced in the current production codebase. Do not use this as a reference for the current system state.
 # AUDIT FIXES — KẾ HOẠCH SỬA LỖI TOÀN DIỆN SAU ĐỢT KIỂM TRA (PHASE 0, G2, G3)
 
 > **Dành cho:** Developer và AI Coding Assistant trên Antigravity.  

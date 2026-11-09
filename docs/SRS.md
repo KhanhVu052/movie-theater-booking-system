@@ -1156,7 +1156,7 @@ Mỗi khách hàng chỉ được đánh giá tối đa 1 lần cho mỗi bộ p
   + Bổ sung mã lỗi 1507 vào FR-BOOK-02 và hoàn thiện khóa bi quan bảng users ở đầu chuỗi giao dịch createBooking.
   + Cập nhật mục 4.4: Bổ sung khóa bảng users (FOR UPDATE) đầu tiên trong chuỗi khóa chống Deadlock.
 - Phiên bản 2.4 (2026-11-06):
-  + Bổ sung FR-SHOW-02: Quy trình Hủy suất chiếu & Đánh dấu giao dịch cần hoàn tiền và theo dõi xác nhận thủ công (chống deadlock, gắn cờ REFUND_REQUIRED cho đơn CONFIRMED, thu hồi/hoàn voucher phù hợp).
+  + Bổ sung FR-SHOW-02: Quy trình Hủy suất chiếu & Đánh dấu giao dịch cần hoàn tiền và theo dõi xác nhận thủ công *(Deprecated - Replaced by manual confirmation workflow)* (chống deadlock, gắn cờ REFUND_REQUIRED cho đơn CONFIRMED, thu hồi/hoàn voucher phù hợp).
   + Cập nhật mục 4.4 (Thứ tự khóa): Bổ sung khóa bảng showtimes (X ở hủy suất, S ở tạo booking) vào đầu chuỗi khóa tài nguyên chống Deadlock.
   + Loại bỏ mã lỗi deprecated SHOWTIME_HAS_ACTIVE_BOOKINGS (1311).
   + Cập nhật mục 7.3: Bổ sung bộ Integration Test backend (ShowtimeWorkflowIntegrationTest) và bộ test frontend/QA script.

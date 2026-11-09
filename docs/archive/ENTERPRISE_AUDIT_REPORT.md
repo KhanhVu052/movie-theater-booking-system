@@ -1,3 +1,4 @@
+﻿> **WARNING:** This document is archived for historical purposes. It contains outdated architectural claims (e.g., automated refunds, Redis dependencies) that have been deprecated or replaced in the current production codebase. Do not use this as a reference for the current system state.
 ________________________________________
 PHẦN 1: TỔNG KIỂM TRA
 Mức sẵn sàng production: khoảng 70% cho demo/portfolio công khai, khoảng 55-60% nếu chạy thật.
