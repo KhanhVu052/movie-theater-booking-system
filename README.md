@@ -29,7 +29,7 @@ flowchart TD
 
     subgraph Backend["Spring Boot 3 Backend Service"]
         Controller["REST Controllers (/api/v1/*)"]
-        Retry["DeadlockRetryExecutor (Exponential Backoff)"]
+        Retry["DeadlockRetryExecutor (Linear Backoff & Jitter)"]
         Services["Domain Services (Booking, Showtime, Payment, Voucher)"]
         Scheduler["Hold Reclaimer Scheduler (@Scheduled 30s)"]
     end
@@ -63,7 +63,7 @@ flowchart TD
   3. `bookings` row lock (`ORDER BY id ASC`)
   4. `showtime_seats` row locks (`ORDER BY id ASC`)
   5. `vouchers` row lock (`SELECT ... FOR UPDATE`)
-* **Deadlock Auto-Recovery**: Critical database transactions are wrapped in a `DeadlockRetryExecutor` implementing exponential backoff jitter on transient MySQL deadlock exceptions (`Error Code: 1213`).
+* **Deadlock Auto-Recovery**: Critical database transactions are wrapped in a `DeadlockRetryExecutor` implementing linear backoff with randomized jitter (`nextLong(40, 120) * attempt`, max 2 retries) on transient MySQL deadlock exceptions (`Error Code: 1213`) to fail-fast and avoid connection starvation or retry storms.
 * **10-Minute Hold Expiration**: When a user selects seats, inventory is held for exactly 10 minutes. An automated background sweeper (`@Scheduled` every 30 seconds) and on-demand transactional checks atomically release abandoned holds and restore voucher quotas.
 * **Orphan Seat Detection Algorithm**: Validates that customer selections do not leave awkward single isolated empty seats in a row, maximizing theater occupancy efficiency.
 

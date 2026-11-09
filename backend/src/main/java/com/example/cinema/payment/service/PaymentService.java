@@ -231,7 +231,8 @@ public class PaymentService {
     @Transactional
     public VnPayIpnResponse processVnPayIpn(Map<String, String> params) {
         if (!VnPayUtil.verifySignature(params, vnPayProperties.getHashSecret())) {
-            log.warn("[VNPay IPN] Invalid signature detected for params: {}", params);
+            log.warn("[VNPay IPN] Invalid signature detected for txnRef: {}", params.get("vnp_TxnRef"));
+            log.debug("[VNPay IPN] Invalid signature unmasked payload: {}", params);
             return VnPayIpnResponse.of("97", "Invalid Checksum");
         }
 

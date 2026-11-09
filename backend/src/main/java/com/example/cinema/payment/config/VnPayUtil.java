@@ -7,6 +7,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -53,6 +54,15 @@ public class VnPayUtil {
         return payUrl + "?" + hashData + "&vnp_SecureHash=" + secureHash;
     }
 
+    public boolean verifySignature(String calculatedHash, String receivedHash) {
+        if (calculatedHash == null || receivedHash == null) {
+            return false;
+        }
+        byte[] a = calculatedHash.toLowerCase().getBytes(StandardCharsets.UTF_8);
+        byte[] b = receivedHash.trim().toLowerCase().getBytes(StandardCharsets.UTF_8);
+        return MessageDigest.isEqual(a, b);
+    }
+
     public boolean verifySignature(Map<String, String> requestParams, String hashSecret) {
         if (requestParams == null || !requestParams.containsKey("vnp_SecureHash")) {
             return false;
@@ -82,7 +92,7 @@ public class VnPayUtil {
                 .collect(Collectors.joining("&"));
 
         String calculatedHash = hmacSHA512(hashSecret, hashData);
-        return calculatedHash.equalsIgnoreCase(receivedHash.trim());
+        return verifySignature(calculatedHash, receivedHash);
     }
 
     public String formatVnPayDate(LocalDateTime dateTime) {
