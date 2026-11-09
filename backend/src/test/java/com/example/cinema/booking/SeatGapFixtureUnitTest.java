@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,66 +36,71 @@ public class SeatGapFixtureUnitTest {
         objectMapper = new ObjectMapper();
     }
 
-    private Path resolveFixturePath() {
-        Path p = Paths.get("docs", "fixtures", "seat-gap-cases.json");
-        if (Files.exists(p)) {
-            return p;
+    private InputStream resolveFixtureStream() throws IOException {
+        InputStream is = getClass().getResourceAsStream("/fixtures/seat-gap-cases.json");
+        if (is != null) {
+            return is;
         }
-        p = Paths.get("..", "docs", "fixtures", "seat-gap-cases.json");
+        Path p = Paths.get("src", "test", "resources", "fixtures", "seat-gap-cases.json");
         if (Files.exists(p)) {
-            return p;
+            return Files.newInputStream(p);
         }
-        throw new IllegalStateException("Cannot find docs/fixtures/seat-gap-cases.json");
+        p = Paths.get("backend", "src", "test", "resources", "fixtures", "seat-gap-cases.json");
+        if (Files.exists(p)) {
+            return Files.newInputStream(p);
+        }
+        throw new IllegalStateException("Cannot find fixtures/seat-gap-cases.json in classpath or filesystem");
     }
 
     @Test
-    @DisplayName("Verify all test cases from docs/fixtures/seat-gap-cases.json (AF-05)")
+    @DisplayName("Verify all test cases from fixtures/seat-gap-cases.json (AF-05)")
     void testAllCasesFromSharedFixture() throws IOException {
-        Path fixturePath = resolveFixturePath();
-        JsonNode root = objectMapper.readTree(fixturePath.toFile());
-        assertThat(root.isArray()).isTrue();
-        assertThat(root.size()).isGreaterThanOrEqualTo(8);
+        try (InputStream is = resolveFixtureStream()) {
+            JsonNode root = objectMapper.readTree(is);
+            assertThat(root.isArray()).isTrue();
+            assertThat(root.size()).isGreaterThanOrEqualTo(8);
 
-        for (JsonNode caseNode : root) {
-            String caseId = caseNode.get("id").asText();
-            String name = caseNode.get("name").asText();
-            boolean expectOrphan = caseNode.get("expectOrphan").asBoolean();
+            for (JsonNode caseNode : root) {
+                String caseId = caseNode.get("id").asText();
+                String name = caseNode.get("name").asText();
+                boolean expectOrphan = caseNode.get("expectOrphan").asBoolean();
 
-            List<ShowtimeSeat> seats = new ArrayList<>();
-            for (JsonNode sn : caseNode.get("seats")) {
-                Seat seat = Seat.builder()
-                        .id(sn.get("id").asLong())
-                        .rowName(sn.has("rowName") ? sn.get("rowName").asText() : "A")
-                        .seatNumber(sn.has("seatNumber") ? sn.get("seatNumber").asInt() : 1)
-                        .isActive(!sn.has("isActive") || sn.get("isActive").asBoolean())
-                        .build();
+                List<ShowtimeSeat> seats = new ArrayList<>();
+                for (JsonNode sn : caseNode.get("seats")) {
+                    Seat seat = Seat.builder()
+                            .id(sn.get("id").asLong())
+                            .rowName(sn.has("rowName") ? sn.get("rowName").asText() : "A")
+                            .seatNumber(sn.has("seatNumber") ? sn.get("seatNumber").asInt() : 1)
+                            .isActive(!sn.has("isActive") || sn.get("isActive").asBoolean())
+                            .build();
 
-                ShowtimeSeat ss = ShowtimeSeat.builder()
-                        .id(sn.get("id").asLong())
-                        .seat(seat)
-                        .status(ShowtimeSeatStatus.valueOf(sn.get("status").asText()))
-                        .build();
+                    ShowtimeSeat ss = ShowtimeSeat.builder()
+                            .id(sn.get("id").asLong())
+                            .seat(seat)
+                            .status(ShowtimeSeatStatus.valueOf(sn.get("status").asText()))
+                            .build();
 
-                seats.add(ss);
-            }
+                    seats.add(ss);
+                }
 
-            List<Long> selectedIds = new ArrayList<>();
-            for (JsonNode idNode : caseNode.get("selectedSeatIds")) {
-                selectedIds.add(idNode.asLong());
-            }
+                List<Long> selectedIds = new ArrayList<>();
+                for (JsonNode idNode : caseNode.get("selectedSeatIds")) {
+                    selectedIds.add(idNode.asLong());
+                }
 
-            if (expectOrphan) {
-                assertThatThrownBy(() -> validator.validateOrphanSeats(seats, selectedIds))
-                        .as("Case %s (%s) should trigger ORPHAN_SEAT_DETECTED", caseId, name)
-                        .isInstanceOf(AppException.class)
-                        .satisfies(ex -> {
-                            AppException appEx = (AppException) ex;
-                            assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.ORPHAN_SEAT_DETECTED);
-                        });
-            } else {
-                assertThatCode(() -> validator.validateOrphanSeats(seats, selectedIds))
-                        .as("Case %s (%s) should NOT trigger orphan seat error", caseId, name)
-                        .doesNotThrowAnyException();
+                if (expectOrphan) {
+                    assertThatThrownBy(() -> validator.validateOrphanSeats(seats, selectedIds))
+                            .as("Case %s (%s) should trigger ORPHAN_SEAT_DETECTED", caseId, name)
+                            .isInstanceOf(AppException.class)
+                            .satisfies(ex -> {
+                                AppException appEx = (AppException) ex;
+                                assertThat(appEx.getErrorCode()).isEqualTo(ErrorCode.ORPHAN_SEAT_DETECTED);
+                            });
+                } else {
+                    assertThatCode(() -> validator.validateOrphanSeats(seats, selectedIds))
+                            .as("Case %s (%s) should NOT trigger orphan seat error", caseId, name)
+                            .doesNotThrowAnyException();
+                }
             }
         }
     }

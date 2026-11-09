@@ -9,20 +9,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Vitest](https://img.shields.io/badge/Vitest-5.1-FCC72B?logo=vitest&logoColor=black)](https://vitest.dev/)
 
-An enterprise-grade cinema ticketing and auditorium operations platform engineered with **Java 21**, **Spring Boot 3**, **MySQL 8.0**, and **React 19**. Built to handle high-concurrency seat reservation bursts with strict ACID financial transaction guarantees, deadlock-free pessimistic locking, dynamic pricing policies, and automated refund pipelines.
-
----
-
-## 📸 Screenshots
-
-| Feature View | Preview | Highlights |
-|:---|:---:|:---|
-| **Customer Portal & Movie Catalog** | *(Screenshot Placeholder)* | Hero spotlight carousel, Now Showing / Coming Soon tabs, dynamic 8-movie pagination, and YouTube trailer modals. |
-| **Auditorium Seat Selection** | *(Screenshot Placeholder)* | Real-time seat matrix, Standard, VIP, and Couple seating tiers, orphan seat protection, and responsive legend. |
-| **10-Minute Hold & Checkout** | *(Screenshot Placeholder)* | Synchronized 10-minute hold countdown timer, promotional voucher redemption, and VNPay sandbox integration. |
-| **E-Ticket & QR Admission** | *(Screenshot Placeholder)* | Verified admission passes with scannable QR code, barcode, and printable thermal ticket view. |
-| **Admin Operations Console** | *(Screenshot Placeholder)* | Real-time cinema auditing, conflict-free showtime scheduling, manual refund processing, and genre management. |
-| **Executive Revenue Analytics** | *(Screenshot Placeholder)* | Date-filtered realized revenue reports, movie performance breakdowns, and room occupancy calculations. |
+A portfolio project demonstrating high-concurrency ticket booking, strict transactional locking, and idempotent online payment settlement. Engineered with **Java 21**, **Spring Boot 3**, **MySQL 8.0**, and **React 19**. Built to handle high-concurrency seat reservation bursts with strict ACID financial transaction guarantees, deadlock-free pessimistic locking, dynamic pricing policies, and automated refund pipelines.
 
 ---
 
@@ -48,9 +35,7 @@ flowchart TD
     end
 
     subgraph Data["Persistence & External Services"]
-        MySQL[("MySQL 8.0 (InnoDB)
-        Pessimistic Write Locks:
-        SELECT ... FOR UPDATE")]
+        MySQL[("MySQL 8.0 (InnoDB)<br/>Pessimistic Write Locks:<br/>SELECT ... FOR UPDATE")]
         Flyway["Flyway Schema Migrations (V1 - V8)"]
         VNPay["VNPay Payment Gateway (HMAC SHA-512)"]
     end
@@ -99,6 +84,9 @@ flowchart TD
 
 ## 🚀 Quick Start & Installation
 
+> [!NOTE]
+> The scripts `run-backend.bat` and `run-all-tests.bat` in the repository root are convenience utilities for Windows environments. macOS and Linux users can execute the equivalent `./mvnw` and `npm` commands directly as detailed below.
+
 ### Prerequisites
 * **Java**: OpenJDK 21+
 * **Node.js**: v20 or v22 LTS
@@ -113,6 +101,9 @@ Launch the preconfigured MySQL 8.0 database container:
 docker compose up -d
 ```
 *Port:* `127.0.0.1:3306` | *Database:* `cinema_booking_db` | *User:* `root` | *Password:* `root`
+
+> [!NOTE]
+> The included `docker-compose.yml` configuration (with default credentials `root` / `root`) is strictly intended for local development convenience. Never deploy default credentials or unhardened root access to staging or production environments.
 
 *(Optional: If using your own local MySQL server, execute:)*
 ```sql
@@ -145,7 +136,7 @@ DB_USERNAME=root
 DB_PASSWORD=root
 JWT_SECRET=<YOUR_GENERATED_BASE64_KEY>
 BOOTSTRAP_ADMIN_EMAIL=admin@cinema.com
-BOOTSTRAP_ADMIN_PASSWORD=GoToroAdminSecure2026@Password
+BOOTSTRAP_ADMIN_PASSWORD=<YOUR_ADMIN_PASSWORD>
 DEV_TOOLS_ENABLED=true
 ```
 
@@ -164,6 +155,8 @@ cd backend
 ```cmd
 run-backend.bat
 ```
+*(Alternatively on Windows PowerShell: `cd backend; .\mvnw.cmd spring-boot:run`)*
+
 *API Base URL:* **`http://localhost:8080`**  
 Flyway will automatically execute migrations `V1` through `V8` on first boot.
 
@@ -184,8 +177,10 @@ npm run dev
 
 | Role | Email | Password | Permissions |
 |:---|:---|:---|:---|
-| **System Administrator** | `admin@cinema.com` | `GoToroAdminSecure2026@Password` | Full access to `/admin`: scheduling, catalog, vouchers, revenue reports, refunds |
+| **System Administrator** | Configured via `BOOTSTRAP_ADMIN_EMAIL` in `.env` | Configured via `BOOTSTRAP_ADMIN_PASSWORD` in `.env` | Full access to `/admin`: scheduling, catalog, vouchers, revenue reports, refunds |
 | **Demo Customer** | Self-register via `/register` | *(User chosen)* | Browse movies, select seats, apply vouchers, hold & checkout, review |
+
+> **Security & Admin Credentials Note:** The system initializes the administrator account from your `.env` variables (`BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`) on first startup. Check your `.env` file for the exact credentials configured for your local environment.
 
 > **Local Sandbox Demo Note:** When `DEV_TOOLS_ENABLED=true`, the checkout page features an instant payment simulation option that verifies all hold validity rules without requiring external VNPay merchant network callbacks.
 
@@ -210,6 +205,7 @@ npm run lint
 cd backend
 ./mvnw test
 ```
+*(On Windows, you can also run `run-all-tests.bat` to execute both test suites in sequence.)*
 
 ### GitHub Actions CI Workflow (`.github/workflows/ci.yml`)
 Every push and pull request to `main` triggers isolated multi-job continuous integration:
@@ -225,11 +221,11 @@ Every push and pull request to `main` triggers isolated multi-job continuous int
 ## 📖 Documentation Index
 
 * **[Software Requirements Specification (SRS)](./docs/SRS.md)**: Full functional requirements, pricing policy formulas, and domain rules.
-* **[E2E Acceptance Test Manual](./docs/KICH_BAN_KIEM_THU_TOAN_DIEN_CUOI_CUNG.md)**: Click-by-click manual testing handbook.
+* **[E2E Acceptance Test Manual (QA_TEST_SCENARIOS.md)](./docs/QA_TEST_SCENARIOS.md)**: Comprehensive click-by-click manual testing handbook.
 * **[Release Changelog](./docs/CHANGELOG.md)**: Historical release notes and sprint improvements.
 * **[Documentation Hub](./docs/README.md)**: Central directory for all architectural specifications.
 
 ---
 
 ## 📄 License
-This repository is an enterprise-grade portfolio project developed for demonstration and engineering showcase purposes. All rights reserved.
+This repository is an open-source portfolio project demonstrating high-concurrency ticket booking, strict transactional locking, and idempotent online payment settlement. All rights reserved.

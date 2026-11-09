@@ -1,8 +1,8 @@
 # BỘ KỊCH BẢN KIỂM THỬ TRỰC TIẾP TRÊN GIAO DIỆN WEB (100% WEB UI TEST HANDBOOK)
 ## HỆ THỐNG ĐẶT VÉ RẠP CHIẾU PHIM GOTORO CINEMA
 
+> **[Language: Vietnamese / Tiếng Việt]** — *Comprehensive manual test scenario handbook for local QA verification.*  
 > **Mục đích:** Tài liệu hướng dẫn Tester thao tác trực tiếp 100% trên trình duyệt Web (`http://localhost:5173`), kiểm thử bằng mắt và click chuột từ đầu đến cuối mọi tính năng, mọi bản vá lỗi và mọi ngóc ngách của hệ thống.  
-> **Nhánh Git chạy ứng dụng:** `test/qa-full-fixes-integrated` *(Đã khởi động sẵn Frontend & Backend)*  
 > **Phiên bản:** Final Release Acceptance Checklist v8.0  
 
 ---
@@ -19,7 +19,7 @@
 ### 2. Thông tin tài khoản có sẵn để test
 | Vai trò | Email đăng nhập | Mật khẩu | Mục đích sử dụng |
 |---|---|---|---|
-| **ADMIN (Quản trị viên)** | `admin@cinema.com` | `GoToroAdminSecure2026@Password` | Test toàn bộ chức năng trong Admin Dashboard |
+| **ADMIN (Quản trị viên)** | Configured via `BOOTSTRAP_ADMIN_EMAIL` in `.env` | Configured via `BOOTSTRAP_ADMIN_PASSWORD` in `.env` | Test toàn bộ chức năng trong Admin Dashboard |
 | **KHÁCH HÀNG 1** | `khanh.2149@cinema.com` (hoặc tự đăng ký mới) | `Customer@12345` | Đặt vé, chọn ghế đôi, áp voucher, thanh toán, hủy vé |
 | **KHÁCH HÀNG 2 (Ẩn danh)** | Tự đăng ký email mới | `Customer@12345` | Mở ở Tab Ẩn danh (Ctrl + Shift + N) để test tranh chấp ghế |
 
@@ -167,8 +167,8 @@
 # PHẦN 2: KIỂM THỬ GIAO DIỆN QUẢN TRỊ VIÊN (ADMIN DASHBOARD)
 
 *Thao tác: Đăng xuất tài khoản khách hàng -> Đăng nhập bằng tài khoản Quản trị viên:*  
-* **Email:** `admin@cinema.com`  
-* **Mật khẩu:** `GoToroAdminSecure2026@Password`  
+* **Email:** Giá trị cấu hình trong biến môi trường `BOOTSTRAP_ADMIN_EMAIL` (mặc định: `admin@cinema.com`)  
+* **Mật khẩu:** Giá trị cấu hình trong biến môi trường `BOOTSTRAP_ADMIN_PASSWORD` trong file `.env`  
 * **Đường dẫn:** `http://localhost:5173/admin`
 
 ---

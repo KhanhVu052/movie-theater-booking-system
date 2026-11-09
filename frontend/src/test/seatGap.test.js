@@ -6,10 +6,12 @@ import { causesOrphanSeat, findOrphanSeatIds } from '../utils/seatGap';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const fixturePath = path.resolve(__dirname, '../../../docs/fixtures/seat-gap-cases.json');
+const backendFixturePath = path.resolve(__dirname, '../../../backend/src/test/resources/fixtures/seat-gap-cases.json');
+const docsFixturePath = path.resolve(__dirname, '../../../docs/fixtures/seat-gap-cases.json');
+const fixturePath = fs.existsSync(backendFixturePath) ? backendFixturePath : docsFixturePath;
 const fixtureCases = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
-describe('Shared Seat Gap Cases Fixture (AF-05, docs/fixtures/seat-gap-cases.json)', () => {
+describe('Shared Seat Gap Cases Fixture (AF-05, backend/src/test/resources/fixtures/seat-gap-cases.json)', () => {
   it.each(fixtureCases)('$id: $name', (tc) => {
     const isOrphan = causesOrphanSeat(tc.seats, tc.selectedSeatIds);
     expect(isOrphan).toBe(tc.expectOrphan);
