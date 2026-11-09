@@ -665,7 +665,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <p className="text-xs text-[#ab9a84] mt-0.5">
-                Real-time cinema auditing, revenue reporting (FR-REP-01), showtime scheduling (FR-SHOW-01), refunds (FR-PAY-02), and catalog controls.
+                Real-time cinema auditing, revenue reporting, showtime scheduling, refunds, and catalog controls.
               </p>
             </div>
           </div>
@@ -726,7 +726,7 @@ export default function AdminDashboard() {
                 }`}
               >
                 <TrendingUp className="w-4 h-4 text-[#e0b354]" />
-                <span>Revenue Reports (FR-REP-01)</span>
+                <span>Revenue Reports</span>
               </button>
 
               <button
@@ -739,7 +739,7 @@ export default function AdminDashboard() {
                 }`}
               >
                 <Clock className="w-4 h-4 text-[#e0b354]" />
-                <span>Showtime Scheduling (FR-SHOW-01)</span>
+                <span>Showtime Scheduling</span>
               </button>
 
               <button
@@ -925,7 +925,7 @@ export default function AdminDashboard() {
                           {revenueData.totalPendingRefunds || 0}
                         </div>
                         <p className="text-[11px] text-[#8a765d]">
-                          Payments requiring manual admin settlement (FR-PAY-02).
+                          Payments requiring manual admin settlement.
                         </p>
                       </div>
                     </div>
@@ -994,7 +994,7 @@ export default function AdminDashboard() {
                   <div>
                     <h2 className="font-body font-bold text-lg text-[#f7efe4] flex items-center gap-2">
                       <Clock className="w-5 h-5 text-[#e0b354]" />
-                      <span>Auditorium Showtime Schedules (FR-SHOW-01)</span>
+                      <span>Auditorium Showtime Schedules</span>
                     </h2>
                     <p className="text-xs text-[#ab9a84]">
                       Schedules are protected against hall overlaps with an enforced 15-minute cleaning buffer.
@@ -1333,7 +1333,7 @@ export default function AdminDashboard() {
                   <div>
                     <h2 className="font-body font-bold text-lg text-[#f7efe4] flex items-center gap-2">
                       <CreditCard className="w-5 h-5 text-[#e0b354]" />
-                      <span>Payment Transactions &amp; Refund Settlement (FR-PAY-02)</span>
+                      <span>Payment Transactions &amp; Refund Settlement</span>
                     </h2>
                     <p className="text-xs text-[#ab9a84]">
                       Audit all payment attempts and settle transactions marked as REFUND_REQUIRED.
@@ -1852,7 +1852,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between border-b border-[#2e2316] pb-3">
               <h2 className="font-body font-bold text-base text-[#f7efe4] flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#e0b354]" />
-                <span>Schedule New Showtime (FR-SHOW-01)</span>
+                <span>Schedule New Showtime</span>
               </h2>
               <button
                 type="button"
