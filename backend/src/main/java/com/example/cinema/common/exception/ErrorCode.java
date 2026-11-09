@@ -47,7 +47,7 @@ public enum ErrorCode {
     SHOWTIME_TIME_CONFLICT(1308, "Showtime overlaps with an existing scheduled showtime in the same room", HttpStatus.CONFLICT),
     MOVIE_NOT_AVAILABLE_FOR_SHOWTIME(1309, "Cannot schedule showtime for a movie that has already ENDED", HttpStatus.CONFLICT),
     SHOWTIME_ALREADY_CANCELLED(1310, "Showtime is already cancelled", HttpStatus.CONFLICT),
-    // 1311 was deprecated and removed in favor of FR-SHOW-02 automated refund pipeline
+    // 1311 was deprecated and removed in favor of FR-SHOW-02 manual refund confirmation pipeline
     ROOM_HAS_FUTURE_SHOWTIMES(1312, "Cannot deactivate room with scheduled future showtimes", HttpStatus.CONFLICT),
     SHOWTIME_ALREADY_STARTED(1313, "Cannot cancel a showtime that has already started", HttpStatus.CONFLICT),
 

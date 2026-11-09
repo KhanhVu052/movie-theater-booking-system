@@ -9,7 +9,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Vitest](https://img.shields.io/badge/Vitest-5.1-FCC72B?logo=vitest&logoColor=black)](https://vitest.dev/)
 
-A portfolio project demonstrating high-concurrency ticket booking, strict transactional locking, and idempotent online payment settlement. Engineered with **Java 21**, **Spring Boot 3**, **MySQL 8.0**, and **React 19**. Built to handle high-concurrency seat reservation bursts with strict ACID financial transaction guarantees, deadlock-free pessimistic locking, dynamic pricing policies, and automated refund pipelines.
+A portfolio project demonstrating high-concurrency ticket booking, strict transactional locking, and idempotent online payment settlement. Engineered with **Java 21**, **Spring Boot 3**, **MySQL 8.0**, and **React 19**. Built to handle high-concurrency seat reservation bursts with strict ACID financial transaction guarantees, deadlock-free pessimistic locking, dynamic pricing policies, and a refund-tracking workflow with admin-confirmed settlement.
 
 ---
 
@@ -67,10 +67,10 @@ flowchart TD
 * **10-Minute Hold Expiration**: When a user selects seats, inventory is held for exactly 10 minutes. An automated background sweeper (`@Scheduled` every 30 seconds) and on-demand transactional checks atomically release abandoned holds and restore voucher quotas.
 * **Orphan Seat Detection Algorithm**: Validates that customer selections do not leave awkward single isolated empty seats in a row, maximizing theater occupancy efficiency.
 
-### 2. Financial Integrity & Automated Refunds
+### 2. Financial Integrity & Refund Tracking
 * **Realized Revenue Auditing**: Revenue reporting strictly aggregates only confirmed `SUCCESS` payments where `refund_status = 'NONE'`, ensuring financial reporting reflects cash actually retained.
-* **Showtime Cancellation Pipeline**: Canceling a showtime automatically cascades across all associated confirmed bookings, marks payments as `REFUND_REQUIRED`, restores customer voucher usage limits, and records audit logs.
-* **Customer-Initiated Cancellation**: Customers can cancel tickets and request a 100% refund up to 60 minutes before showtime. Cancellations within the 60-minute cutoff are strictly rejected.
+* **Showtime Cancellation Pipeline**: Canceling a showtime automatically cascades across all associated confirmed bookings, marks payments as `REFUND_REQUIRED` (settled manually by an admin, with `refunded_by` and `refund_note` recorded), and restores customer voucher usage limits.
+* **Customer-Initiated Cancellation**: Customers can cancel tickets up to 60 minutes before showtime, flagging the transaction as `REFUND_REQUIRED` for administrative confirmation. Cancellations within the 60-minute cutoff are strictly rejected.
 
 ### 3. Promotional Voucher Engine with Per-User Quotas
 * Supports percentage-based and fixed-amount discounts with configurable minimum order values and maximum discount caps.
@@ -219,11 +219,11 @@ npm test
 cd frontend
 npm run lint
 
-# 3. Compile & Run Backend Tests (Maven)
+# 3. Compile & Run Full Backend Test Suite (Surefire Unit Tests + Failsafe Integration Suite)
 cd backend
-./mvnw test
+./mvnw clean verify
 ```
-*(On Windows, you can also run `run-all-tests.bat` to execute both test suites in sequence.)*
+*(Note: `./mvnw verify` executes both the fast isolated unit test suite via Maven Surefire and the comprehensive Testcontainers integration suite via the Maven Failsafe plugin. To run only isolated unit tests without Docker, execute `./mvnw test`.)*
 
 ### GitHub Actions CI Workflow (`.github/workflows/ci.yml`)
 Every push and pull request to `main` triggers isolated multi-job continuous integration:
