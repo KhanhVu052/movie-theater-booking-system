@@ -52,7 +52,7 @@ class VnPayUtilTest {
     @Test
     @DisplayName("G4-05: verifySignature handles null and missing hash securely")
     void verifySignature_handlesEdgeCasesSecurely() {
-        assertThat(VnPayUtil.verifySignature((Map<String, String>) null, secretKey)).isFalse();
+        assertThat(VnPayUtil.verifySignature(null, secretKey)).isFalse();
         assertThat(VnPayUtil.verifySignature(Map.of(), secretKey)).isFalse();
         assertThat(VnPayUtil.verifySignature(Map.of("vnp_TxnRef", "123"), secretKey)).isFalse();
         assertThat(VnPayUtil.verifySignature(Map.of("vnp_SecureHash", ""), secretKey)).isFalse();
@@ -60,13 +60,13 @@ class VnPayUtilTest {
 
     @Test
     @DisplayName("Verify constant-time HMAC signature comparison against timing attacks")
-    void verifySignature_constantTimeComparison() {
+    void constantTimeEquals_againstTimingAttacks() {
         String hash = "a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0";
-        assertThat(VnPayUtil.verifySignature(hash, hash)).isTrue();
-        assertThat(VnPayUtil.verifySignature(hash, " " + hash.toUpperCase() + " ")).isTrue();
-        assertThat(VnPayUtil.verifySignature(hash, hash.substring(0, hash.length() - 1) + "1")).isFalse();
-        assertThat(VnPayUtil.verifySignature((String) null, hash)).isFalse();
-        assertThat(VnPayUtil.verifySignature(hash, (String) null)).isFalse();
+        assertThat(VnPayUtil.constantTimeEquals(hash, hash)).isTrue();
+        assertThat(VnPayUtil.constantTimeEquals(hash, " " + hash.toUpperCase() + " ")).isTrue();
+        assertThat(VnPayUtil.constantTimeEquals(hash, hash.substring(0, hash.length() - 1) + "1")).isFalse();
+        assertThat(VnPayUtil.constantTimeEquals(null, hash)).isFalse();
+        assertThat(VnPayUtil.constantTimeEquals(hash, null)).isFalse();
     }
 }
 

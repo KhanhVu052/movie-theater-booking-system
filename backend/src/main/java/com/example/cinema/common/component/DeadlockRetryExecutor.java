@@ -12,8 +12,10 @@ import java.util.function.Supplier;
 /**
  * Executes database operations with transient concurrency contention retry handling.
  * <p>
- * Employs a <b>Linear backoff with randomized jitter (nextLong(40, 120) * attempt, max 2 retries)</b>
- * strategy designed to fail-fast and avoid database connection starvation or retry storms.
+ * Implements a bounded linear backoff retry mechanism with randomized jitter
+ * ({@code ThreadLocalRandom.current().nextLong(40, 120) * attempt}, max 2 retries).
+ * This design enforces fail-fast behavior and prevents connection starvation or retry storms
+ * during high database lock contention.
  */
 @Slf4j
 @Component
@@ -24,8 +26,9 @@ public class DeadlockRetryExecutor {
     /**
      * Executes the given action with retry logic on deadlock and lock acquisition exceptions.
      * <p>
-     * Retry Strategy: Linear backoff with randomized jitter (nextLong(40, 120) * attempt, max 2 retries)
-     * nhằm fail-fast và tránh connection starvation/retry storms.
+     * Implements a bounded linear backoff retry mechanism with randomized jitter
+     * ({@code nextLong(40, 120) * attempt}, max 2 retries). This design enforces fail-fast
+     * behavior and prevents connection starvation or retry storms during high database lock contention.
      *
      * @param operationName Name or descriptor of the transactional operation for auditing
      * @param action        Supplier executing the database operation

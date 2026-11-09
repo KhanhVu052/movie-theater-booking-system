@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -54,12 +55,12 @@ public class VnPayUtil {
         return payUrl + "?" + hashData + "&vnp_SecureHash=" + secureHash;
     }
 
-    public boolean verifySignature(String calculatedHash, String receivedHash) {
+    public boolean constantTimeEquals(String calculatedHash, String receivedHash) {
         if (calculatedHash == null || receivedHash == null) {
             return false;
         }
-        byte[] a = calculatedHash.toLowerCase().getBytes(StandardCharsets.UTF_8);
-        byte[] b = receivedHash.trim().toLowerCase().getBytes(StandardCharsets.UTF_8);
+        byte[] a = calculatedHash.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8);
+        byte[] b = receivedHash.trim().toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8);
         return MessageDigest.isEqual(a, b);
     }
 
@@ -92,7 +93,7 @@ public class VnPayUtil {
                 .collect(Collectors.joining("&"));
 
         String calculatedHash = hmacSHA512(hashSecret, hashData);
-        return verifySignature(calculatedHash, receivedHash);
+        return constantTimeEquals(calculatedHash, receivedHash);
     }
 
     public String formatVnPayDate(LocalDateTime dateTime) {
