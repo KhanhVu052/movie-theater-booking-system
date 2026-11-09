@@ -18,7 +18,7 @@
 
 ### 2. Thông tin tài khoản có sẵn để test
 
-> ⚠️ **SECURITY NOTICE:** All credentials listed below are disposable, local-only test data automatically seeded by Flyway for QA purposes. They are NOT real accounts and contain no production secrets.
+> ⚠️ **SECURITY NOTICE:** The Customer credentials listed below are disposable, local-only test data automatically seeded by Flyway. The Admin account is strictly configured via local `.env` variables. None of these represent production secrets.
 
 | Vai trò | Email đăng nhập | Mật khẩu | Mục đích sử dụng |
 |---|---|---|---|

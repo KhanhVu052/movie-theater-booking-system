@@ -54,7 +54,7 @@ flowchart TD
 
 ---
 
-## 🌟 Core Architectural Highlights
+## ⚡ Key Engineering Highlights
 
 ### 1. High-Concurrency Seat Reservation & Deadlock Prevention
 * **Deterministic Lock Ordering**: Prevents database deadlocks during flash-sale booking spikes by acquiring row-level pessimistic write locks in a strict hierarchy:
@@ -79,6 +79,14 @@ flowchart TD
 ### 4. Conflict-Free Auditorium Scheduling
 * Enforces room collision detection ensuring no two screenings overlap in the same hall.
 * Automatically schedules an enforced **15-minute cleaning buffer** (`cleaning_end_time = end_time + 15m`) after every movie duration.
+
+---
+
+## 📸 Screenshots
+
+| Home & Movie Selection | Seat Matrix & Types | E-Ticket & Checkout |
+|:---:|:---:|:---:|
+| <img src="LINK_ANH_1_DIEN_VAO_DAY" alt="Home Page" width="300"/> | <img src="LINK_ANH_2_DIEN_VAO_DAY" alt="Seat Selection" width="300"/> | <img src="LINK_ANH_3_DIEN_VAO_DAY" alt="Checkout" width="300"/> |
 
 ---
 
