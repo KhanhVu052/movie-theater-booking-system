@@ -17,6 +17,9 @@
 * **Trang Quản trị Admin:** `http://localhost:5173/admin`
 
 ### 2. Thông tin tài khoản có sẵn để test
+
+> ⚠️ **SECURITY NOTICE:** All credentials listed below are disposable, local-only test data automatically seeded by Flyway for QA purposes. They are NOT real accounts and contain no production secrets.
+
 | Vai trò | Email đăng nhập | Mật khẩu | Mục đích sử dụng |
 |---|---|---|---|
 | **ADMIN (Quản trị viên)** | Configured via `BOOTSTRAP_ADMIN_EMAIL` in `.env` | Configured via `BOOTSTRAP_ADMIN_PASSWORD` in `.env` | Test toàn bộ chức năng trong Admin Dashboard |

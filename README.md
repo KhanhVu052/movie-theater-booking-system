@@ -1,8 +1,8 @@
-# 🎬 GoToro Cinema — Enterprise Movie Theater Booking Platform
+# 🎬 GoToro Cinema — High-Concurrency Movie Theater Booking Platform
 
 [![CI Pipeline](https://github.com/KhanhVu052/movie-theater-booking-system/actions/workflows/ci.yml/badge.svg)](https://github.com/KhanhVu052/movie-theater-booking-system/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3.4-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8.3-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -228,4 +228,4 @@ Every push and pull request to `main` triggers isolated multi-job continuous int
 ---
 
 ## 📄 License
-This repository is an open-source portfolio project demonstrating high-concurrency ticket booking, strict transactional locking, and idempotent online payment settlement. All rights reserved.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
